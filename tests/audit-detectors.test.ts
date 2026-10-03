@@ -5,12 +5,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseDocument } from '../src/document.ts';
 import { buildReport, EVIDENCE_WORDS, LIMITS, renderText } from '../src/audit/report.ts';
-import { AUDIT_SOURCES, FAMILIES, MEASURED_NOTES, type Finding } from '../src/audit/detectors.ts';
+import { AUDIT_SOURCES, FAMILIES, MEASURED_NOTES, TRIPLET_DENSITY_PER_1000, type Finding } from '../src/audit/detectors.ts';
 import { REFERENCES } from '../src/craft/rules.ts';
 
 const report = (text: string, name = 'draft.md', form?: string) => buildReport(parseDocument(name, text, form ? { form } : {}), text);
 const all = (r: ReturnType<typeof report>) => [...r.tiers.hard, ...r.tiers.soft];
 const famOf = (text: string, family: string, name = 'draft.md') => all(report(text, name)).filter(f => f.family === family);
+
+/** Passages for the density family: 14 filler sentences (112 words) plus triplet sentences of 6 words, so the rate is known. */
+const FILLER = 'We met on Tuesday and walked home together. ';
+const TRIPLET_SENTENCE = 'We bought apples, pears, and plums. ';
+const passage = (triplets: number, filler = 14) => (FILLER.repeat(filler) + TRIPLET_SENTENCE.repeat(triplets)).trim();
 
 /** Each family: texts it must flag, near-misses it must not, and ordinary human writing it must not. */
 const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> = {
@@ -143,6 +148,12 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
     miss: ['In summary, we agree.\n\nThe next point follows.', 'First point.\n\nThe result was, in short, a draw.', 'First point.\n\nIn conclusion, the plan works.', 'In summary, the plan works.'],
     human: ['Thanks again for the lamp.\n\nSee you on Sunday.'],
   },
+  // group 3: density
+  'triplet-density': {
+    hit: [passage(2), passage(3), passage(2, 16)],
+    miss: [passage(1), passage(0), passage(3, 2), 'Mix flour, sugar, and salt. Add eggs, milk, and butter. Stir well. Bake for forty minutes.'],
+    human: ['We dried the soil at 60 C for 24 hours. Each sample was weighed twice on the same balance, and the readings agreed to 0.01 g. The cores came from three plots, which we sampled in March, and the log lists plots, depths, and dates. Nothing else changed between runs.'],
+  },
 };
 
 describe('detectors', () => {
@@ -273,6 +284,74 @@ describe('group 2 interactions', () => {
   });
 });
 
+describe('triplet-density', () => {
+  it('keeps the threshold in one exported constant, initially 9 per 1,000 words', () => {
+    expect(TRIPLET_DENSITY_PER_1000).toBe(9);
+  });
+  it('reports nothing just below the threshold and one finding just above it, in a passage of about 120 words', () => {
+    const below = passage(1); // 118 words, one list: 8.47 per 1,000
+    const above = passage(2); // 124 words, two lists: 16.13 per 1,000
+    expect(report(below).words).toBeGreaterThanOrEqual(100);
+    expect(report(above).words).toBe(124);
+    expect(report(below).measured.tripletListsPer1000).toBeLessThan(TRIPLET_DENSITY_PER_1000);
+    expect(report(above).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+    expect(famOf(below, 'triplet-density')).toEqual([]);
+    expect(famOf(above, 'triplet-density')).toHaveLength(1);
+  });
+  it('says how many lists there are and the rate, and marks the first list only', () => {
+    const [f] = famOf(passage(2), 'triplet-density');
+    expect(f.text).toBe('We bought apples, pears, and plums');
+    expect(f.why).toMatch(/2 three-item lists/);
+    expect(f.why).toMatch(/16\.1 per 1,000 words/);
+  });
+  it('reads the same quantity as the measured value', () => {
+    const r = report(passage(3));
+    const [f] = r.tiers.soft.filter(x => x.family === 'triplet-density');
+    expect(f.why).toContain(`${r.measured.tripletListsPer1000!.toFixed(1)} per 1,000 words`);
+  });
+  it('needs 100 words: a short passage dense with lists reports nothing', () => {
+    const t = passage(3, 2);
+    expect(report(t).words).toBeLessThan(100);
+    expect(report(t).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+    expect(famOf(t, 'triplet-density')).toEqual([]);
+  });
+  it('does not run on Fountain drafts', () => {
+    const text = 'Title: T\nForm: tv-drama\n\nINT. GARDEN - DAY\n\n' + passage(3) + '\n';
+    expect(all(report(text, 'g.fountain')).filter(f => f.family === 'triplet-density')).toEqual([]);
+  });
+});
+
+describe('new hallmark families on whole drafts', () => {
+  const BLOG = [
+    'Every team makes hundreds of decisions each quarter. Which vendor to choose, how to structure a database, whether to delay a launch for one more round of testing. Most of these choices are made in meetings or chat threads, and within a few months almost nobody can say exactly why they were made.',
+    'A decision record is a short note kept next to the work. It is worth noting that it does not need to be long, and that a paragraph is usually enough. Whether you’re running a team of five or a department of fifty, the same problem shows up.',
+    'Our own records began as a single shared page that we filled in after each meeting. In this post, we’ll look at what a useful decision record contains, how to keep the habit light enough that people actually follow it, and what we’ve learned from doing it ourselves.',
+  ].join('\n\n');
+  const POST = [
+    'We’re excited to share some news: Harbor & Pine, our small design studio, has launched a brand-identity service built specifically for local restaurants.',
+    'The package covers a logo, a colour palette, and a menu layout, and it leverages everything we have learned from logos to storefronts over the years. Prices start at $900 and a first draft takes two weeks.',
+    'In short, we would love to work with you. Send us a message or comment below, and let’s make your brand taste as good as your food.',
+  ].join('\n\n');
+  const PLAIN = 'The boiler was serviced on 12 March, and the engineer replaced the pressure valve. The flat has been warm since. Mina wants the radiators bled before November; I will do the two upstairs on Saturday and leave the kitchen one for her. The bill was $214, which the landlord has agreed to split with us.';
+  const NEW = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in', 'whether-youre', 'from-to-range', 'worth-noting', 'marketing-verbs', 'restating-closer', 'triplet-density'];
+  const families = (t: string) => [...new Set(all(report(t)).map(f => f.family).filter(f => NEW.includes(f)))];
+
+  it('finds several new families, with the expected spans, in the blog introduction', () => {
+    const fams = families(BLOG);
+    expect(fams).toEqual(expect.arrayContaining(['stock-opener', 'worth-noting', 'whether-youre', 'roadmap-sentence']));
+    expect(famOf(BLOG, 'stock-opener').map(f => f.text)).toEqual(['Every team']);
+    expect(famOf(BLOG, 'roadmap-sentence').map(f => f.text)).toEqual(['In this post, we’ll look at']);
+  });
+  it('finds several new families in the announcement post', () => {
+    const fams = families(POST);
+    expect(fams).toEqual(expect.arrayContaining(['announcement-filler', 'marketing-verbs', 'from-to-range', 'restating-closer']));
+    expect(famOf(POST, 'announcement-filler').map(f => f.text)).toEqual(['We’re excited to share']);
+  });
+  it('finds none in a plain human paragraph', () => {
+    expect(all(report(PLAIN))).toEqual([]);
+  });
+});
+
 describe('inline-header bullets, narrowed', () => {
   const list = (...labels: string[]) => labels.map(l => `- **${l}:** text`).join('\n');
   const hits = (text: string) => famOf(text, 'inline-header-bullets').length;
@@ -327,6 +406,7 @@ const SPANS: Array<[family: string, text: string, spans: string[]]> = [
   ['emoji-lead', '- ✅ Tests pass', ['✅ Tests pass']],
   ['title-case-heading', '## Understanding the Role of Technology in Modern Education', ['Understanding the Role of Technology in Modern Education']],
   ['mechanical-bold', 'Use **a**, then **b**, then **c**, then **d**. We met on Tuesday and walked home together.', ['**a**, then **b**, then **c**, then **d**']],
+  ['triplet-density', passage(2), ['We bought apples, pears, and plums']],
   ['whether-youre', 'Whether you’re a seasoned pro or a complete beginner, this guide helps.', ['Whether you’re a seasoned pro or a complete beginner']],
   ['whether-youre', 'Whether you are building a startup or running a large team, tools matter.', ['Whether you are building a startup or running a large team']],
   ['from-to-range', 'We serve clients from startups to enterprises.', ['from startups to enterprises']],

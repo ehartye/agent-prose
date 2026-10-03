@@ -45,7 +45,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose parse <file>` | the block IR with source line numbers |
 | `prose measure <file>` | style, lexicon, spoken, script, dialog and per-speaker features |
 | `prose lint <file>` | errors, warnings, info and the judgement rules for the draft's form |
-| `prose audit <file> [--form <id>] [--text]` | hard artifacts (leaked chat markup, chat residue), phrasing or structure hallmarks some readers associate with AI-generated text, by family with its evidence tier, a reason and a revision direction, and measured context (em dashes, sentence variation, lists of three); findings only, never a verdict on who wrote it; verse forms are skipped |
+| `prose audit <file> [--form <id>] [--text]` | hard artifacts (leaked chat markup, chat residue), phrasing or structure hallmarks some readers associate with AI-generated text, by family (including stock openers, announcement and roadmap sentences, "dive in", "whether you're", "worth noting", marketing verbs, a restating closer and dense lists of three) with its evidence tier, a reason and a revision direction, and measured context (em dashes, sentence variation, lists of three); findings only, never a verdict on who wrote it; verse forms are skipped |
 | `prose scan <file> [--form <id>] [--text] [--words]` | syllables, stress, rhyme scheme and meter of a verse draft (US English pronunciations; JSON, or `--text` for a table) |
 | `prose pronounce <word...>` | the dictionary pronunciation, syllables, stress and rhyme key of each word, with its source (dict, affix or guessed) |
 | `prose rules [--form <id>]` | the cited rules, optionally for one form |

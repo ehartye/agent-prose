@@ -34,7 +34,9 @@ directories above this file. If a command prints `E_RUNTIME_MISSING`, run the pr
      facts, or ask. The tool does not know other placeholders or tracking parameters: also scan for `[...]`, `{{...}}`,
      `TODO` and `utm_` yourself.
    - **Soft** families (vocabulary, undue-significance claims, trailing "highlighting..." clauses, "not just X but Y",
-     unnamed experts, inline-header bullets and others): phrasing or structure hallmarks some readers associate with
+     unnamed experts, inline-header bullets, stock openers and announcements, "In this post, we'll..." roadmaps, "let's
+     dive in", "whether you're X or Y", "from X to Y" ranges, "it's worth noting", marketing verbs, a restating closer
+     and a high rate of three-item lists, among others): phrasing or structure hallmarks some readers associate with
      AI-generated text. Human writers use these patterns too, so judge each span on its own and relay the count as
      "these patterns are present here", never as a verdict. Each family prints how well it is documented (`Evidence:`
      corpus studies, field guide or reader-reported); say so when a span rests on the weaker tier.
@@ -46,8 +48,8 @@ Read the draft once more for these, and list each one you find as the quoted spa
 moves below you used. They come from how readers describe generic prose, with weaker evidence than the tool's
 families, so treat them as judgement:
 
-- A stock opener ("Every team...", "We're excited to share...", "In today's...") or an announcement that delays the news.
-- A roadmap sentence ("In this post, we'll look at...") or a closing line that restates the piece.
+- A stock opener or announcement the tool's patterns miss (it reads only the passage's first sentence and the common wordings), or news that arrives late.
+- A roadmap sentence or a closing line that restates the piece in wording the tool does not match.
 - A stock closer, or a neat pun that reads engineered.
 - Three-item lists used by default, with no reason for three.
 - Abstract nouns where a named person, number, place or date belongs.

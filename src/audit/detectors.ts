@@ -264,6 +264,50 @@ function restatingCloser(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
   return [{ start: 0, end: first ? first[1] : u.text.length }];
 }
 
+/**
+ * Group 3: density. `TRIPLET_DENSITY_PER_1000` is the rate of three-item lists ("A, B, and C") per 1,000 words above which
+ * a passage of at least 100 words gets one finding, on its first such list. TODO(Task 3): replace the initial value with
+ * the 95th percentile of the human samples' rate. It is the same quantity as the measured `tripletListsPer1000`
+ * (same pattern, same word count), so the two always agree.
+ */
+export const TRIPLET_DENSITY_PER_1000 = 9;
+const DENSITY_MIN_WORDS = 100;
+
+const tripletStats = (() => {
+  const cache = new WeakMap<Unit[], { first?: { unit: number; start: number; end: number }; count: number; words: number }>();
+  return (units: Unit[]) => {
+    const hit = cache.get(units);
+    if (hit) return hit;
+    let count = 0, total = 0;
+    let first: { unit: number; start: number; end: number } | undefined;
+    units.forEach((u, n) => {
+      if (u.kind === 'heading') return;
+      total += words(u.text).length;
+      for (const m of u.text.matchAll(TRIPLET)) {
+        count++;
+        if (!first) {
+          const tail = /^[\p{L}'’-]*/u.exec(u.text.slice(m.index + m[0].length))![0];
+          first = { unit: n, start: m.index, end: m.index + m[0].length + tail.length };
+        }
+      }
+    });
+    const out = { first, count, words: total };
+    cache.set(units, out);
+    return out;
+  };
+})();
+
+function tripletDensity(_u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
+  const { first, count, words: total } = tripletStats(units);
+  if (!first || first.unit !== i || total < DENSITY_MIN_WORDS) return [];
+  const rate = per1000(count, total);
+  if (rate <= TRIPLET_DENSITY_PER_1000) return [];
+  return [{
+    start: first.start, end: first.end,
+    why: `${count} three-item lists in ${total} words, ${rate.toFixed(1)} per 1,000 words, above the ${TRIPLET_DENSITY_PER_1000} per 1,000 this audit uses; the first is marked.`,
+  }];
+}
+
 const INLINE_HEADER = /^\*\*([^*\n]{1,60}?)(?::\*\*|\*\*:)\s+\S/u;
 const EMOJI_LEAD = /^(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}️)/u;
 const BOLD = /\*\*[^*\n][^*]*?\*\*|(?<![\p{L}\p{N}_])__[^_\n][^_]*?__(?![\p{L}\p{N}_])/gu;
@@ -551,6 +595,13 @@ export const FAMILIES: Family[] = [
     why: 'The last paragraph opens by announcing a wrap-up, then repeats earlier points.',
     direction: 'End on the last new fact, or on the next step for the reader.',
     find: restatingCloser,
+  },
+  {
+    // Evidence: the field guide lists the habit of grouping things in threes ("rule of three"); no source gives a rate.
+    id: 'triplet-density', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
+    why: 'Three-item lists appear at a high rate in this passage, so the groupings read as a habit rather than a choice.',
+    direction: 'Keep the lists whose items are all needed; give the rest the number of items the facts have.',
+    find: tripletDensity,
   },
 ];
 
