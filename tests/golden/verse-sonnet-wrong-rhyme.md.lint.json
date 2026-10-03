@@ -1,0 +1,170 @@
+{
+  "path": "tests/fixtures/verse/sonnet-wrong-rhyme.md",
+  "format": "markdown",
+  "form": "sonnet-shakespearean",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "verse.form.rhyme-scheme",
+      "severity": "warn",
+      "message": "Lines 6 and 8 (\"day\" and \"June\") should rhyme in this form, but the end words do not rhyme",
+      "at": {
+        "line": 8
+      },
+      "measured": {
+        "first": 6,
+        "other": 8,
+        "class": "none"
+      },
+      "fix": "Reword one of the lines so the end words rhyme, or change the form.",
+      "tradeoffs": [
+        {
+          "rule": "verse.meter.deviation",
+          "note": "The same end words serve rhyme and meter; swapping a word to mend a rhyme can move a stress. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    }
+  ],
+  "info": [
+    {
+      "rule": "verse.meter.deviation",
+      "severity": "info",
+      "message": "Line 7: stress falls against the iambic meter at syllable 10 (meter is advisory)",
+      "at": {
+        "line": 7
+      },
+      "measured": {
+        "syllables": 9,
+        "deviations": [
+          9
+        ]
+      },
+      "tradeoffs": [
+        {
+          "rule": "verse.form.rhyme-scheme",
+          "note": "The same end words serve rhyme and meter; swapping a word to fix a stress can break a rhyme. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    },
+    {
+      "rule": "verse.pronunciation.ambiguous",
+      "severity": "info",
+      "message": "\"temperate\" has more than one pronunciation (line 7) that changes how the end word rhymes and whether the line fits the form’s syllable pattern; the tool uses the first, so check the reading you mean",
+      "at": {
+        "line": 7
+      },
+      "measured": {
+        "word": "temperate",
+        "lines": [
+          7
+        ],
+        "matters": [
+          "rhyme",
+          "count"
+        ]
+      }
+    },
+    {
+      "rule": "verse.form.rhyme-scheme",
+      "severity": "info",
+      "message": "Lines 7 and 9 (\"temperate\" and \"date\"): not a perfect rhyme in the dictionary; may be an eye rhyme or a historical pronunciation (US English dictionary)",
+      "at": {
+        "line": 9
+      },
+      "measured": [
+        {
+          "first": 7,
+          "other": 9,
+          "class": "eye",
+          "uncertain": false
+        }
+      ],
+      "fix": "Read the lines aloud; if they rhyme for you, leave them.",
+      "tradeoffs": [
+        {
+          "rule": "verse.meter.deviation",
+          "note": "The same end words serve rhyme and meter; swapping a word to mend a rhyme can move a stress. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    },
+    {
+      "rule": "verse.meter.deviation",
+      "severity": "info",
+      "message": "Line 11: stress falls against the iambic meter at syllable 1 (meter is advisory)",
+      "at": {
+        "line": 11
+      },
+      "measured": {
+        "syllables": 10,
+        "deviations": [
+          0
+        ]
+      },
+      "tradeoffs": [
+        {
+          "rule": "verse.form.rhyme-scheme",
+          "note": "The same end words serve rhyme and meter; swapping a word to fix a stress can break a rhyme. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    },
+    {
+      "rule": "verse.pronunciation.guessed",
+      "severity": "info",
+      "message": "5 words not in the dictionary, so the pronunciation was guessed: dimm'd (line 12), untrimm'd (line 14), ow'st (line 17), wander'st (line 18), grow'st (line 19); syllable, stress and rhyme results on those lines are weaker",
+      "at": {
+        "line": 12
+      },
+      "measured": {
+        "dimm'd": [
+          12
+        ],
+        "untrimm'd": [
+          14
+        ],
+        "ow'st": [
+          17
+        ],
+        "wander'st": [
+          18
+        ],
+        "grow'st": [
+          19
+        ]
+      },
+      "fix": "Check these words by ear; spell a regular word the regular way, or accept the weaker verdict."
+    },
+    {
+      "rule": "verse.meter.deviation",
+      "severity": "info",
+      "message": "Line 13: stress falls against the iambic meter at syllables 4 and 10 (meter is advisory)",
+      "at": {
+        "line": 13
+      },
+      "measured": {
+        "syllables": 11,
+        "deviations": [
+          3,
+          9
+        ]
+      },
+      "tradeoffs": [
+        {
+          "rule": "verse.form.rhyme-scheme",
+          "note": "The same end words serve rhyme and meter; swapping a word to fix a stress can break a rhyme. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    }
+  ],
+  "judgement": [
+    {
+      "rule": "verse.line-break.purpose",
+      "severity": "info",
+      "statement": "Each line ends where it does for a reason: sound, sense, speed or surprise.",
+      "sources": [
+        "poets-org-enjambment"
+      ]
+    }
+  ]
+}

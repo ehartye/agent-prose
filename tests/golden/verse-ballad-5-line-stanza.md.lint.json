@@ -1,0 +1,55 @@
+{
+  "path": "tests/fixtures/verse/ballad-5-line-stanza.md",
+  "format": "markdown",
+  "form": "ballad",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "verse.form.line-count",
+      "severity": "warn",
+      "message": "Stanza 2 has 5 lines; a ballad stanza has 4 (a quatrain)",
+      "at": {
+        "line": 9
+      },
+      "measured": {
+        "stanza": 2,
+        "lines": 5
+      },
+      "fix": "Break the stanza where the form does, or choose another form."
+    }
+  ],
+  "info": [
+    {
+      "rule": "verse.pronunciation.guessed",
+      "severity": "info",
+      "message": "3 words not in the dictionary, so the pronunciation was guessed: stoppeth (line 5), stopp'st (line 7), may'st (line 12); syllable, stress and rhyme results on those lines are weaker",
+      "at": {
+        "line": 5
+      },
+      "measured": {
+        "stoppeth": [
+          5
+        ],
+        "stopp'st": [
+          7
+        ],
+        "may'st": [
+          12
+        ]
+      },
+      "fix": "Check these words by ear; spell a regular word the regular way, or accept the weaker verdict."
+    }
+  ],
+  "judgement": [
+    {
+      "rule": "verse.line-break.purpose",
+      "severity": "info",
+      "statement": "Each line ends where it does for a reason: sound, sense, speed or surprise.",
+      "sources": [
+        "poets-org-enjambment"
+      ]
+    }
+  ]
+}

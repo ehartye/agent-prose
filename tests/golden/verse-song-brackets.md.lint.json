@@ -1,0 +1,44 @@
+{
+  "path": "tests/fixtures/verse/song-brackets.md",
+  "format": "markdown",
+  "form": "song",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "lyric.refrain.consistent",
+      "severity": "warn",
+      "message": "Chorus differs from the first Chorus: line 21 reads \"Where the porch light glows\" where the first has \"Where the porch light burns\"",
+      "at": {
+        "line": 21
+      },
+      "measured": {
+        "base": "chorus",
+        "occurrence": 2
+      },
+      "fix": "Make the repeat match the first, or keep the change on purpose."
+    }
+  ],
+  "info": [],
+  "judgement": [
+    {
+      "rule": "verse.line-break.purpose",
+      "severity": "info",
+      "statement": "Each line ends where it does for a reason: sound, sense, speed or surprise.",
+      "sources": [
+        "poets-org-enjambment"
+      ]
+    },
+    {
+      "rule": "lyric.stress-on-beat",
+      "severity": "info",
+      "statement": "Stressed syllables meet strong beats when the lyric is set to music.",
+      "sources": [
+        "gordon-magne-large-2011",
+        "berklee-songwriting-tools",
+        "coursera-songwriting-lyrics"
+      ]
+    }
+  ]
+}

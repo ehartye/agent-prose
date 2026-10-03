@@ -1,0 +1,107 @@
+{
+  "about": "Hand-labelled gold set for the verse dictionary spike. Syllable counts are the author's reading of each line as the published form scans it (an AI authored these labels; see docs/research/verse-dictionary-spike.md). `group` letters are perfect (or identity) end rhymes within one poem id and come from the published scheme; a line with no `group` has no end-rhyme partner in the set, or its published rhyme is not perfect in modern US English (those are listed in `pairs`). `uncertain: true` marks a syllable count the author is unsure of; such lines are excluded from syllable scoring (their rhyme group still counts, because the group comes from the published scheme). Labels were fixed before any dictionary output was inspected.",
+  "lines": [
+    { "poem": "amazing-grace", "text": "Amazing grace! how sweet the sound", "syllables": 8, "endWord": "sound", "group": "a" },
+    { "poem": "amazing-grace", "text": "That saved a wretch like me!", "syllables": 6, "endWord": "me", "group": "b" },
+    { "poem": "amazing-grace", "text": "I once was lost, but now am found,", "syllables": 8, "endWord": "found", "group": "a" },
+    { "poem": "amazing-grace", "text": "Was blind, but now I see.", "syllables": 6, "endWord": "see", "group": "b" },
+    { "poem": "amazing-grace", "text": "'Twas grace that taught my heart to fear,", "syllables": 8, "endWord": "fear", "group": "c" },
+    { "poem": "amazing-grace", "text": "And grace my fears relieved;", "syllables": 6, "endWord": "relieved", "group": "d" },
+    { "poem": "amazing-grace", "text": "How precious did that grace appear", "syllables": 8, "endWord": "appear", "group": "c" },
+    { "poem": "amazing-grace", "text": "The hour I first believed!", "syllables": 6, "endWord": "believed", "group": "d", "uncertain": true, "note": "common meter says 6 (hour as one syllable) but a reader may say two" },
+
+    { "poem": "sonnet-18", "text": "Shall I compare thee to a summer's day?", "syllables": 10, "endWord": "day", "group": "a" },
+    { "poem": "sonnet-18", "text": "Thou art more lovely and more temperate:", "syllables": 10, "endWord": "temperate", "note": "published scheme says b with 'date', but the unstressed rhyme is not perfect; see pairs" },
+    { "poem": "sonnet-18", "text": "Rough winds do shake the darling buds of May,", "syllables": 10, "endWord": "May", "group": "a" },
+    { "poem": "sonnet-18", "text": "And summer's lease hath all too short a date:", "syllables": 10, "endWord": "date" },
+    { "poem": "sonnet-18", "text": "But thy eternal summer shall not fade,", "syllables": 10, "endWord": "fade", "group": "e" },
+    { "poem": "sonnet-18", "text": "Nor lose possession of that fair thou ow'st;", "syllables": 10, "endWord": "ow'st", "group": "f" },
+    { "poem": "sonnet-18", "text": "Nor shall Death brag thou wander'st in his shade,", "syllables": 10, "endWord": "shade", "group": "e" },
+    { "poem": "sonnet-18", "text": "When in eternal lines to time thou grow'st:", "syllables": 10, "endWord": "grow'st", "group": "f" },
+    { "poem": "sonnet-18", "text": "So long as men can breathe or eyes can see,", "syllables": 10, "endWord": "see", "group": "g" },
+    { "poem": "sonnet-18", "text": "So long lives this, and this gives life to thee.", "syllables": 10, "endWord": "thee", "group": "g" },
+
+    { "poem": "sonnet-71", "text": "No longer mourn for me when I am dead", "syllables": 10, "endWord": "dead", "group": "a" },
+    { "poem": "sonnet-71", "text": "Than you shall hear the surly sullen bell", "syllables": 10, "endWord": "bell", "group": "b" },
+    { "poem": "sonnet-71", "text": "Give warning to the world that I am fled", "syllables": 10, "endWord": "fled", "group": "a" },
+    { "poem": "sonnet-71", "text": "From this vile world, with vildest worms to dwell:", "syllables": 10, "endWord": "dwell", "group": "b" },
+    { "poem": "sonnet-71", "text": "Nay, if you read this line, remember not", "syllables": 10, "endWord": "not", "group": "c" },
+    { "poem": "sonnet-71", "text": "The hand that writ it; for I love you so,", "syllables": 10, "endWord": "so", "group": "d" },
+    { "poem": "sonnet-71", "text": "That I in your sweet thoughts would be forgot,", "syllables": 10, "endWord": "forgot", "group": "c" },
+    { "poem": "sonnet-71", "text": "If thinking on me then should make you woe.", "syllables": 10, "endWord": "woe", "group": "d" },
+
+    { "poem": "sonnet-116", "text": "Let me not to the marriage of true minds", "syllables": 10, "endWord": "minds", "group": "a" },
+    { "poem": "sonnet-116", "text": "Admit impediments. Love is not love", "syllables": 10, "endWord": "love", "note": "scheme says b with 'remove': a historical eye rhyme, not perfect in modern US English" },
+    { "poem": "sonnet-116", "text": "Which alters when it alteration finds,", "syllables": 10, "endWord": "finds", "group": "a" },
+    { "poem": "sonnet-116", "text": "Or bends with the remover to remove:", "syllables": 10, "endWord": "remove" },
+
+    { "poem": "lear-beard", "text": "There was an Old Man with a beard,", "syllables": 8, "endWord": "beard", "group": "a" },
+    { "poem": "lear-beard", "text": "Who said, 'It is just as I feared!", "syllables": 8, "endWord": "feared", "group": "a" },
+    { "poem": "lear-beard", "text": "Two Owls and a Hen,", "syllables": 5, "endWord": "Hen", "group": "b" },
+    { "poem": "lear-beard", "text": "Four Larks and a Wren,", "syllables": 5, "endWord": "Wren", "group": "b" },
+    { "poem": "lear-beard", "text": "Have all built their nests in my beard!'", "syllables": 8, "endWord": "beard", "group": "a" },
+
+    { "poem": "lear-peru", "text": "There was an Old Man of Peru,", "syllables": 8, "endWord": "Peru", "group": "a" },
+    { "poem": "lear-peru", "text": "Who dreamed he was eating his shoe.", "syllables": 8, "endWord": "shoe", "group": "a" },
+    { "poem": "lear-peru", "text": "He awoke in the night", "syllables": 6, "endWord": "night", "group": "b", "uncertain": true, "note": "may be 'He woke in the night' (5)" },
+    { "poem": "lear-peru", "text": "In a terrible fright,", "syllables": 6, "endWord": "fright", "group": "b" },
+    { "poem": "lear-peru", "text": "And found it was perfectly true.", "syllables": 8, "endWord": "true", "group": "a" },
+
+    { "poem": "haiku-pond", "text": "An old silent pond", "syllables": 5, "endWord": "pond", "note": "author's plain 5/7/5 rendering of Basho's furu ike ya, not a quoted translation" },
+    { "poem": "haiku-pond", "text": "A frog jumps into the pond,", "syllables": 7, "endWord": "pond" },
+    { "poem": "haiku-pond", "text": "Splash! Silence again.", "syllables": 5, "endWord": "again" },
+
+    { "poem": "mariner-2", "text": "The Bridegroom's doors are opened wide,", "syllables": 8, "endWord": "wide" },
+    { "poem": "mariner-2", "text": "And I am next of kin;", "syllables": 6, "endWord": "kin", "group": "b" },
+    { "poem": "mariner-2", "text": "The guests are met, the feast is set:", "syllables": 8, "endWord": "set" },
+    { "poem": "mariner-2", "text": "May'st hear the merry din.", "syllables": 6, "endWord": "din", "group": "b" },
+
+    { "poem": "mariner-1", "text": "It is an ancient Mariner,", "syllables": 8, "endWord": "Mariner" },
+    { "poem": "mariner-1", "text": "And he stoppeth one of three.", "syllables": 7, "endWord": "three", "group": "b" },
+    { "poem": "mariner-1", "text": "'By thy long grey beard and glittering eye,", "syllables": 10, "endWord": "eye", "uncertain": true, "note": "glittering as three or two syllables" },
+    { "poem": "mariner-1", "text": "Now wherefore stopp'st thou me?'", "syllables": 6, "endWord": "me", "group": "b" },
+
+    { "poem": "annabel-lee", "text": "It was many and many a year ago,", "syllables": 11, "endWord": "ago", "group": "a" },
+    { "poem": "annabel-lee", "text": "In a kingdom by the sea,", "syllables": 7, "endWord": "sea", "group": "b" },
+    { "poem": "annabel-lee", "text": "That a maiden there lived whom you may know", "syllables": 10, "endWord": "know", "group": "a" },
+    { "poem": "annabel-lee", "text": "By the name of Annabel Lee;", "syllables": 8, "endWord": "Lee", "group": "b" },
+
+    { "poem": "west-wind", "text": "O wild West Wind, thou breath of Autumn's being,", "syllables": 11, "endWord": "being", "group": "a" },
+    { "poem": "west-wind", "text": "Thou, from whose unseen presence the leaves dead", "syllables": 10, "endWord": "dead" },
+    { "poem": "west-wind", "text": "Are driven, like ghosts from an enchanter fleeing,", "syllables": 12, "endWord": "fleeing", "group": "a", "uncertain": true, "note": "driven may be elided to driv'n" },
+
+    { "poem": "dickinson-frigate", "text": "There is no Frigate like a Book", "syllables": 8, "endWord": "Book" },
+    { "poem": "dickinson-frigate", "text": "To take us Lands away,", "syllables": 6, "endWord": "away" },
+    { "poem": "dickinson-frigate", "text": "Nor any Coursers like a Page", "syllables": 8, "endWord": "Page" },
+    { "poem": "dickinson-frigate", "text": "Of prancing Poetry --", "syllables": 6, "endWord": "Poetry" },
+    { "poem": "dickinson-frigate", "text": "This Traverse may the poorest take", "syllables": 8, "endWord": "take" },
+    { "poem": "dickinson-frigate", "text": "Without oppress of Toll --", "syllables": 6, "endWord": "Toll", "group": "b" },
+    { "poem": "dickinson-frigate", "text": "How frugal is the Chariot", "syllables": 8, "endWord": "Chariot" },
+    { "poem": "dickinson-frigate", "text": "That bears the Human soul.", "syllables": 6, "endWord": "soul", "group": "b" },
+
+    { "poem": "my-last-duchess", "text": "That's my last Duchess painted on the wall,", "syllables": 10, "endWord": "wall", "group": "a" },
+    { "poem": "my-last-duchess", "text": "Looking as if she were alive. I call", "syllables": 10, "endWord": "call", "group": "a" },
+    { "poem": "my-last-duchess", "text": "That piece a wonder, now: Fra Pandolf's hands", "syllables": 10, "endWord": "hands", "group": "b" },
+    { "poem": "my-last-duchess", "text": "Worked busily a day, and there she stands.", "syllables": 10, "endWord": "stands", "group": "b" },
+
+    { "poem": "marlowe-shepherd", "text": "If these delights thy mind may move,", "syllables": 8, "endWord": "move", "note": "scheme says a with 'love': a historical eye rhyme" },
+    { "poem": "marlowe-shepherd", "text": "Then live with me and be my love.", "syllables": 8, "endWord": "love" },
+
+    { "poem": "psalm-of-life", "text": "Tell me not, in mournful numbers,", "syllables": 8, "endWord": "numbers", "group": "a" },
+    { "poem": "psalm-of-life", "text": "Life is but an empty dream!", "syllables": 7, "endWord": "dream", "group": "b" },
+    { "poem": "psalm-of-life", "text": "For the soul is dead that slumbers,", "syllables": 8, "endWord": "slumbers", "group": "a" },
+    { "poem": "psalm-of-life", "text": "And things are not what they seem.", "syllables": 7, "endWord": "seem", "group": "b" }
+  ],
+  "pairs": [
+    { "a": "temperate", "b": "date", "rhymes": true, "kind": "weak", "note": "Sonnet 18 abab: unstressed -ate against stressed -ate" },
+    { "a": "love", "b": "remove", "rhymes": true, "kind": "historical", "note": "Sonnet 116 abab: eye rhyme" },
+    { "a": "move", "b": "love", "rhymes": true, "kind": "historical", "note": "Marlowe: eye rhyme" },
+    { "a": "away", "b": "Poetry", "rhymes": false, "kind": "slant", "note": "Dickinson: a and c end words, not perfect rhymes" },
+    { "a": "love", "b": "dove", "rhymes": true, "kind": "lexical" },
+    { "a": "love", "b": "move", "rhymes": false, "kind": "lexical" },
+    { "a": "heaven", "b": "seven", "rhymes": true, "kind": "lexical" },
+    { "a": "fire", "b": "choir", "rhymes": true, "kind": "lexical" },
+    { "a": "wind", "b": "sinned", "rhymes": true, "kind": "lexical", "note": "wind as the noun" },
+    { "a": "wind", "b": "find", "rhymes": false, "kind": "lexical", "note": "wind as the noun" }
+  ]
+}

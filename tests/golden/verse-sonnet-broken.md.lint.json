@@ -1,0 +1,149 @@
+{
+  "path": "tests/fixtures/verse/sonnet-broken.md",
+  "format": "markdown",
+  "form": "sonnet-shakespearean",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "verse.format.markup",
+      "severity": "warn",
+      "message": "Line 13 was read as a list-item (a verse line that starts like Markdown); start it with a word or escape the marker",
+      "at": {
+        "line": 13
+      },
+      "measured": {
+        "line": 13,
+        "kind": "list-item"
+      },
+      "fix": "Start the line with a word, or escape the marker with a backslash."
+    },
+    {
+      "rule": "verse.form.line-count",
+      "severity": "warn",
+      "message": "Expected 14 lines (sonnet-shakespearean), found 13",
+      "at": {
+        "line": 21
+      },
+      "measured": {
+        "expected": 14,
+        "actual": 13
+      },
+      "fix": "Add 1 line, or choose another form."
+    }
+  ],
+  "info": [
+    {
+      "rule": "verse.meter.deviation",
+      "severity": "info",
+      "message": "Line 7: stress falls against the iambic meter at syllable 10 (meter is advisory)",
+      "at": {
+        "line": 7
+      },
+      "measured": {
+        "syllables": 9,
+        "deviations": [
+          9
+        ]
+      },
+      "tradeoffs": [
+        {
+          "rule": "verse.form.rhyme-scheme",
+          "note": "The same end words serve rhyme and meter; swapping a word to fix a stress can break a rhyme. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    },
+    {
+      "rule": "verse.pronunciation.ambiguous",
+      "severity": "info",
+      "message": "\"temperate\" has more than one pronunciation (line 7) that changes whether the line fits the form’s syllable pattern; the tool uses the first, so check the reading you mean",
+      "at": {
+        "line": 7
+      },
+      "measured": {
+        "word": "temperate",
+        "lines": [
+          7
+        ],
+        "matters": [
+          "count"
+        ]
+      }
+    },
+    {
+      "rule": "verse.meter.deviation",
+      "severity": "info",
+      "message": "Line 11: stress falls against the iambic meter at syllable 1 (meter is advisory)",
+      "at": {
+        "line": 11
+      },
+      "measured": {
+        "syllables": 10,
+        "deviations": [
+          0
+        ]
+      },
+      "tradeoffs": [
+        {
+          "rule": "verse.form.rhyme-scheme",
+          "note": "The same end words serve rhyme and meter; swapping a word to fix a stress can break a rhyme. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    },
+    {
+      "rule": "verse.pronunciation.guessed",
+      "severity": "info",
+      "message": "4 words not in the dictionary, so the pronunciation was guessed: zxqvt (line 12), untrimm'd (line 14), ow'st (line 17), wander'st (line 18); syllable, stress and rhyme results on those lines are weaker",
+      "at": {
+        "line": 12
+      },
+      "measured": {
+        "zxqvt": [
+          12
+        ],
+        "untrimm'd": [
+          14
+        ],
+        "ow'st": [
+          17
+        ],
+        "wander'st": [
+          18
+        ]
+      },
+      "fix": "Check these words by ear; spell a regular word the regular way, or accept the weaker verdict."
+    },
+    {
+      "rule": "verse.meter.deviation",
+      "severity": "info",
+      "message": "Line 13: stress falls against the iambic meter at syllables 4 and 10 (meter is advisory)",
+      "at": {
+        "line": 13
+      },
+      "measured": {
+        "syllables": 11,
+        "deviations": [
+          3,
+          9
+        ]
+      },
+      "tradeoffs": [
+        {
+          "rule": "verse.form.rhyme-scheme",
+          "note": "The same end words serve rhyme and meter; swapping a word to fix a stress can break a rhyme. Fix the rhyme first, then re-read the meter."
+        }
+      ]
+    }
+  ],
+  "judgement": [
+    {
+      "rule": "verse.line-break.purpose",
+      "severity": "info",
+      "statement": "Each line ends where it does for a reason: sound, sense, speed or surprise.",
+      "sources": [
+        "poets-org-enjambment"
+      ]
+    }
+  ]
+}

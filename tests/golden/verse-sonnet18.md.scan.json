@@ -1,0 +1,399 @@
+{
+  "path": "tests/fixtures/verse/sonnet18.md",
+  "form": "sonnet-shakespearean",
+  "kind": "poem",
+  "dialect": "US English",
+  "trust": {
+    "dict": 109,
+    "affix": 0,
+    "guessed": 5,
+    "words": 114
+  },
+  "scheme": "abacdedefgfghh",
+  "nearScheme": "abaacdcdaeaeff",
+  "lines": [
+    {
+      "line": 6,
+      "stanza": 0,
+      "section": "Sonnet 18",
+      "text": "Shall I compare thee to a summer's day?",
+      "syllables": 10,
+      "stress": "??01???10?",
+      "endWord": "day",
+      "rhyme": "a",
+      "ending": "stop",
+      "flags": []
+    },
+    {
+      "line": 7,
+      "stanza": 0,
+      "section": "Sonnet 18",
+      "text": "Thou art more lovely and more temperate:",
+      "syllables": 9,
+      "syllablesAlt": 10,
+      "stress": "???10??10",
+      "endWord": "temperate",
+      "rhyme": "b",
+      "ending": "stop",
+      "flags": [
+        "ambiguous:temperate",
+        "meter:10"
+      ]
+    },
+    {
+      "line": 8,
+      "stanza": 0,
+      "section": "Sonnet 18",
+      "text": "Rough winds do shake the darling buds of May,",
+      "syllables": 10,
+      "stress": "?????10???",
+      "endWord": "may",
+      "rhyme": "a",
+      "ending": "weak",
+      "flags": []
+    },
+    {
+      "line": 9,
+      "stanza": 0,
+      "section": "Sonnet 18",
+      "text": "And summer's lease hath all too short a date;",
+      "syllables": 10,
+      "stress": "?10???????",
+      "endWord": "date",
+      "rhyme": "c",
+      "ending": "stop",
+      "flags": []
+    },
+    {
+      "line": 11,
+      "stanza": 1,
+      "section": "Sonnet 18",
+      "text": "Sometime too hot the eye of heaven shines,",
+      "syllables": 10,
+      "stress": "12?????10?",
+      "endWord": "shines",
+      "rhyme": "d",
+      "ending": "weak",
+      "flags": [
+        "meter:1"
+      ]
+    },
+    {
+      "line": 12,
+      "stanza": 1,
+      "section": "Sonnet 18",
+      "text": "And often is his gold complexion dimm'd;",
+      "syllables": 10,
+      "stress": "?10???010?",
+      "endWord": "dimm'd",
+      "rhyme": "e",
+      "ending": "stop",
+      "flags": [
+        "guessed:dimm'd"
+      ]
+    },
+    {
+      "line": 13,
+      "stanza": 1,
+      "section": "Sonnet 18",
+      "text": "And every fair from fair sometime declines,",
+      "syllables": 11,
+      "syllablesAlt": 10,
+      "stress": "?100???1201",
+      "endWord": "declines",
+      "rhyme": "d",
+      "ending": "weak",
+      "flags": [
+        "ambiguous:every",
+        "meter:4,10"
+      ]
+    },
+    {
+      "line": 14,
+      "stanza": 1,
+      "section": "Sonnet 18",
+      "text": "By chance or nature's changing course untrimm'd;",
+      "syllables": 10,
+      "stress": "???1010???",
+      "endWord": "untrimm'd",
+      "rhyme": "e",
+      "ending": "stop",
+      "flags": [
+        "guessed:untrimm'd"
+      ]
+    },
+    {
+      "line": 16,
+      "stanza": 2,
+      "section": "Sonnet 18",
+      "text": "But thy eternal summer shall not fade,",
+      "syllables": 10,
+      "stress": "??01010???",
+      "endWord": "fade",
+      "rhyme": "f",
+      "ending": "weak",
+      "flags": []
+    },
+    {
+      "line": 17,
+      "stanza": 2,
+      "section": "Sonnet 18",
+      "text": "Nor lose possession of that fair thou ow'st;",
+      "syllables": 10,
+      "stress": "??010?????",
+      "endWord": "ow'st",
+      "rhyme": "g",
+      "ending": "stop",
+      "flags": [
+        "guessed:ow'st"
+      ]
+    },
+    {
+      "line": 18,
+      "stanza": 2,
+      "section": "Sonnet 18",
+      "text": "Nor shall death brag thou wander'st in his shade,",
+      "syllables": 10,
+      "stress": "??????????",
+      "endWord": "shade",
+      "rhyme": "f",
+      "ending": "weak",
+      "flags": [
+        "guessed:wander'st"
+      ]
+    },
+    {
+      "line": 19,
+      "stanza": 2,
+      "section": "Sonnet 18",
+      "text": "When in eternal lines to time thou grow'st:",
+      "syllables": 10,
+      "stress": "??010?????",
+      "endWord": "grow'st",
+      "rhyme": "g",
+      "ending": "stop",
+      "flags": [
+        "guessed:grow'st"
+      ]
+    },
+    {
+      "line": 21,
+      "stanza": 3,
+      "section": "Sonnet 18",
+      "text": "So long as men can breathe or eyes can see,",
+      "syllables": 10,
+      "stress": "??????????",
+      "endWord": "see",
+      "rhyme": "h",
+      "ending": "weak",
+      "flags": []
+    },
+    {
+      "line": 22,
+      "stanza": 3,
+      "section": "Sonnet 18",
+      "text": "So long lives this, and this gives life to thee.",
+      "syllables": 10,
+      "stress": "??????????",
+      "endWord": "thee",
+      "rhyme": "h",
+      "ending": "stop",
+      "flags": []
+    }
+  ],
+  "pairs": [
+    {
+      "a": 0,
+      "b": 2,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 0,
+      "b": 3,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 0,
+      "b": 8,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 0,
+      "b": 10,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 1,
+      "b": 3,
+      "class": "eye",
+      "uncertain": false
+    },
+    {
+      "a": 2,
+      "b": 3,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 2,
+      "b": 8,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 2,
+      "b": 10,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 3,
+      "b": 8,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 3,
+      "b": 10,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 4,
+      "b": 6,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 5,
+      "b": 7,
+      "class": "perfect",
+      "uncertain": true
+    },
+    {
+      "a": 8,
+      "b": 10,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 9,
+      "b": 11,
+      "class": "perfect",
+      "uncertain": true
+    },
+    {
+      "a": 12,
+      "b": 13,
+      "class": "perfect",
+      "uncertain": false
+    }
+  ],
+  "meter": [
+    {
+      "line": 0,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": []
+    },
+    {
+      "line": 1,
+      "syllables": 9,
+      "expected": 10,
+      "deviations": [
+        9
+      ]
+    },
+    {
+      "line": 2,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": []
+    },
+    {
+      "line": 3,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": []
+    },
+    {
+      "line": 4,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": [
+        0
+      ]
+    },
+    {
+      "line": 5,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": [],
+      "skipped": "guessed"
+    },
+    {
+      "line": 6,
+      "syllables": 11,
+      "expected": 10,
+      "deviations": [
+        3,
+        9
+      ]
+    },
+    {
+      "line": 7,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": [],
+      "skipped": "guessed"
+    },
+    {
+      "line": 8,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": []
+    },
+    {
+      "line": 9,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": [],
+      "skipped": "guessed"
+    },
+    {
+      "line": 10,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": [],
+      "skipped": "guessed"
+    },
+    {
+      "line": 11,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": [],
+      "skipped": "guessed"
+    },
+    {
+      "line": 12,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": []
+    },
+    {
+      "line": 13,
+      "syllables": 10,
+      "expected": 10,
+      "deviations": []
+    }
+  ],
+  "notes": [
+    "Pronunciations come from CMUdict (US English); guessed words are estimated from spelling.",
+    "5 words were guessed; findings on those lines are weaker.",
+    "Pairs like temperate/date look like rhymes but differ in modern US pronunciation (eye rhyme or a historical rhyme)."
+  ]
+}

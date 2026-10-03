@@ -42,6 +42,8 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose parse <file>` | the block IR with source line numbers |
 | `prose measure <file>` | style, lexicon, spoken, script, dialog and per-speaker features |
 | `prose lint <file>` | errors, warnings, info and the judgement rules for the draft's form |
+| `prose scan <file> [--form <id>] [--text] [--words]` | syllables, stress, rhyme scheme and meter of a verse draft (US English pronunciations; JSON, or `--text` for a table) |
+| `prose pronounce <word...>` | the dictionary pronunciation, syllables, stress and rhyme key of each word, with its source (dict, affix or guessed) |
 | `prose rules [--form <id>]` | the cited rules, optionally for one form |
 | `prose init [--dir <dir>]` | create `.agent-prose/` (project.json, voices/ and a `.gitignore` for sets and taste data); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
 | `prose voice list [--dir <dir>]` | the voice bibles of the project found from a directory upward |
@@ -127,6 +129,38 @@ nodes:
     end: true
 ```
 
+## Verse
+
+Poems and song lyrics are Markdown too: one line of text per verse line, a blank line between stanzas.
+Set `form` in the frontmatter to one of nine verse forms: `free-verse`, `haiku`, `limerick`, `ballad`,
+`sonnet-shakespearean`, `sonnet-petrarchan`, `villanelle`, `sestina` or `song`. `prose measure` and
+`prose lint` then add syllables, stress, rhyme scheme and form checks.
+
+`prose scan <file>` shows each line's syllables, stress, rhyme letter and meter flags (`--text` prints a table):
+
+```
+line    syl  stress       rh  end word   text                                               flags
+   6     10  ??01???10?   a   day        Shall I compare thee to a summer's day?
+   7   9/10  ???10??10    b   temperate  Thou art more lovely and more temperate:           ambiguous:temperate meter:10
+```
+
+`prose pronounce <word...>` shows how a word is read:
+
+```jsonc
+// prose pronounce temperate zxqvt (trimmed)
+{ "word": "temperate", "source": "dict", "syllables": 2, "syllablesAlt": 3, "stress": "10", "rhymeKey": "EH M P R AH T" }
+{ "word": "zxqvt", "source": "guessed", "syllables": 1, "stress": "?", "rhymeKey": "zxqvt" }
+```
+
+Every word carries a trust tag: `dict` (found in the dictionary), `affix` (a regular ending on a dictionary
+word) or `guessed` (not found; a spelling estimate, so syllable, stress and rhyme results on that line are weaker).
+Pronunciations are US English only. Meter findings are advisory, because scansion is contested: only a
+polysyllable's dictionary stress against its slot counts, and lines with guessed words are skipped.
+
+Markdown caveat: a verse line that starts with `- `, `1. ` or `> ` is read as a list item, step or quote;
+lint reports it (`verse.format.markup`) and the line is still measured. A line starting with `#` becomes a
+heading (a section label) and is not counted as verse. Start such a line with a word, or escape the marker.
+
 ## Settings
 
 Measurements start from the form's defaults (`prose capabilities` lists the forms). A project
@@ -143,7 +177,7 @@ are timed by pages, so `wpm` there is an error. A bad `project.json` is `E_SCHEM
 
 ## Rules and citations
 
-`prose rules` lists 40 rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
+`prose rules` lists 54 rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
 and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Honesty notes
@@ -158,6 +192,13 @@ and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 Planned next: the LAN reading page with duels and read-aloud, and a learned taste model, then PDF and
 reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
+
+## Acknowledgements
+
+The verse engine's pronunciation data is a comment-stripped copy of the [CMU Pronouncing Dictionary](https://github.com/cmusphinx/cmudict)
+(copyright 1993-2015 Carnegie Mellon University), vendored in `craft/data/cmudict.dict.gz` with its licence in
+`craft/data/CMUDICT-LICENSE.txt`, as the CMU notice requests. The accuracy measurement is in
+[docs/research/verse-dictionary-spike.md](docs/research/verse-dictionary-spike.md).
 
 ## License
 

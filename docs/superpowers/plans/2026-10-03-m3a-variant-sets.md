@@ -1893,5 +1893,5 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ## After the plan
 
 - Review the whole branch (`@h-superpowers:requesting-code-review`), squash-merge to `main`, push, tag `v0.2.0`, and publish the marketplace entry (version bump PR on `hartye-claude-plugins`, as for 0.1.0).
-- Update the wiki: a backlog item for M3a (shipped), M3b and M3c items, and the architecture page.
+- Update the maintainer's notes: M3a shipped, M3b and M3c still to do, and the architecture summary.
 - Write the M3b plan (LAN server, session event log, reading page with lineup, duel, refine, line-anchored notes and read-aloud) and the M3c plan (Bradley-Terry fit, global/project/per-voice layers, `taste show|fit`, model predictions and ranking, active duel selection) from the beeps map recorded in this session.

@@ -1,0 +1,8 @@
+---
+form: limerick
+---
+There was an Old Man with a beard,
+Who said, "It is just as I feared!
+Two Owls and a Hen,
+Four Larks and a bird,
+Have all built their nests in my beard!"

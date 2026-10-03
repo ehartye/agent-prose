@@ -8,6 +8,7 @@ import { lint } from '../src/lint/lint.ts';
 import { initProject } from '../src/project.ts';
 import { measure } from '../src/measure/index.ts';
 import { VOICE_MIN_WORDS } from '../src/voice.ts';
+import { sestina, textOf, verse, villanelle } from './verse-drafts.ts';
 
 /** A draft written to its own temp directory; `voices` makes that directory a prose project holding these bibles. */
 interface Draft { file: string; text: string; voices?: Record<string, string> }
@@ -34,6 +35,10 @@ const md = (form: string, body: string, front = ''): Draft => ({ file: 'draft.md
 const fountain = (form: string, body: string, voices?: Record<string, string>): Draft =>
   ({ file: 'scene.fountain', text: `Title: T\nForm: ${form}\n\nINT. ROOM - DAY\n\n${body}\n`, ...(voices ? { voices } : {}) });
 const dialog = (form: string, lines: string[]): Draft => ({ file: 'talk.dialog.yaml', text: [`form: ${form}`, ...lines].join('\n') + '\n' });
+
+/** A verse fixture, or a built verse draft, as a Draft. */
+const fx = (name: string): Draft => ({ file: 'draft.md', text: textOf(name) });
+const plain = (text: string): Draft => ({ file: 'draft.md', text });
 
 const words = (n: number, w = 'word') => Array.from({ length: n }, () => w).join(' ');
 const sentence = (n: number) => `The ${words(n - 1, 'cat')}.`;
@@ -118,6 +123,23 @@ const ROWS: Row[] = [
     failing: fountain('tv-drama', say('GRIMBLE', 'Buy or leave, friend.'), VOICES) },
   { rule: 'voice.unvoiced', passing: fountain('tv-drama', say('GRIMBLE', 'Buy or leave.'), VOICES),
     failing: fountain('tv-drama', say('GRIMBLE', 'Buy or leave.') + '\n' + say('BOB', 'Just looking.'), VOICES) },
+
+  // verse and lyric rules: drafts are the fixtures in tests/fixtures/verse, or built by tests/verse-drafts.ts
+  { rule: 'verse.form.line-count', passing: fx('sonnet18.md'), failing: fx('sonnet-13-lines.md') },
+  { rule: 'verse.form.rhyme-scheme', passing: fx('limerick.md'), failing: fx('limerick-no-aabba.md') },
+  { rule: 'verse.form.syllables', passing: fx('haiku.md'), failing: fx('haiku-5-6-5.md') },
+  { rule: 'verse.form.refrain', passing: plain(villanelle()), failing: plain(villanelle({ refrain12: 'The light comes back along the shore' })) },
+  { rule: 'verse.form.end-words', passing: plain(sestina()), failing: plain(sestina({ swap: { line: 8, word: 'lamp' } })) },
+  { rule: 'verse.meter.deviation', passing: fx('limerick.md'),
+    failing: plain(textOf('sonnet-clean.md').replace('And all the gulls came down to search the night,', 'Mountain, river, ocean, island, tonight,')) },
+  { rule: 'verse.pronunciation.guessed', passing: fx('free-verse.md'), failing: plain(verse('free-verse', 'The glorpish moon\nrose over the hills')) },
+  { rule: 'verse.pronunciation.ambiguous', passing: fx('free-verse.md'), failing: fx('sonnet18.md') },
+  { rule: 'verse.rhyme.every-line', passing: fx('free-verse.md'), note: 'six or more lines, every end word rhymes with another',
+    failing: plain(verse('free-verse', 'The cat sat down all day\nand watched the rain go away\nthe bells rang out at night\nand filled the room with light\nwe walked down to the sea\nand left the rest to me')) },
+  { rule: 'verse.format.markup', passing: fx('free-verse.md'), failing: plain(verse('free-verse', 'The kettle ticks as it cools\n\n- and the window holds\na small grey rain')) },
+  { rule: 'lyric.refrain.consistent', passing: plain(textOf('song.md').replace('glows', 'burns')), failing: fx('song.md') },
+  { rule: 'lyric.sections.line-match', passing: fx('song.md'),
+    failing: plain(textOf('song.md').replace('Somebody called and I was there', 'Somebody called out my name across the water and I was there')) },
 ];
 
 describe('per-rule table', () => {

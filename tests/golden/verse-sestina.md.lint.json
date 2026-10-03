@@ -1,0 +1,20 @@
+{
+  "path": "tests/fixtures/verse/sestina.md",
+  "format": "markdown",
+  "form": "sestina",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "info": [],
+  "judgement": [
+    {
+      "rule": "verse.line-break.purpose",
+      "severity": "info",
+      "statement": "Each line ends where it does for a reason: sound, sense, speed or surprise.",
+      "sources": [
+        "poets-org-enjambment"
+      ]
+    }
+  ]
+}

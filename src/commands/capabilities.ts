@@ -14,6 +14,7 @@ export function registerCapabilities(program: Command, io: Io): void {
         name: 'prose', version: VERSION,
         formats: [...FORMATS],
         forms: FORMS.map(f => f.id),
+        verseForms: FORMS.filter(f => f.verse).map(f => f.id),
         rules: RULES.length,
         commands: program.commands.flatMap(c => c.commands.length ? c.commands.map(s => `${c.name()} ${s.name()}`) : [c.name()]).sort(),
         errorCodes: ERROR_CODES,

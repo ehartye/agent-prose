@@ -1,0 +1,137 @@
+{
+  "path": "tests/fixtures/verse/limerick.md",
+  "form": "limerick",
+  "kind": "poem",
+  "dialect": "US English",
+  "trust": {
+    "dict": 34,
+    "affix": 0,
+    "guessed": 0,
+    "words": 34
+  },
+  "scheme": "aabba",
+  "nearScheme": "aabba",
+  "lines": [
+    {
+      "line": 4,
+      "stanza": 0,
+      "section": null,
+      "text": "There was an Old Man with a beard,",
+      "syllables": 8,
+      "stress": "????????",
+      "endWord": "beard",
+      "rhyme": "a",
+      "ending": "weak",
+      "flags": []
+    },
+    {
+      "line": 5,
+      "stanza": 0,
+      "section": null,
+      "text": "Who said, \"It is just as I feared!",
+      "syllables": 8,
+      "stress": "????????",
+      "endWord": "feared",
+      "rhyme": "a",
+      "ending": "stop",
+      "flags": []
+    },
+    {
+      "line": 6,
+      "stanza": 0,
+      "section": null,
+      "text": "Two Owls and a Hen,",
+      "syllables": 5,
+      "stress": "?????",
+      "endWord": "hen",
+      "rhyme": "b",
+      "ending": "weak",
+      "flags": []
+    },
+    {
+      "line": 7,
+      "stanza": 0,
+      "section": null,
+      "text": "Four Larks and a Wren,",
+      "syllables": 5,
+      "stress": "?????",
+      "endWord": "wren",
+      "rhyme": "b",
+      "ending": "weak",
+      "flags": []
+    },
+    {
+      "line": 8,
+      "stanza": 0,
+      "section": null,
+      "text": "Have all built their nests in my beard!\"",
+      "syllables": 8,
+      "stress": "????????",
+      "endWord": "beard",
+      "rhyme": "a",
+      "ending": "stop",
+      "flags": []
+    }
+  ],
+  "pairs": [
+    {
+      "a": 0,
+      "b": 1,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 0,
+      "b": 4,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 1,
+      "b": 4,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 2,
+      "b": 3,
+      "class": "perfect",
+      "uncertain": false
+    }
+  ],
+  "meter": [
+    {
+      "line": 0,
+      "syllables": 8,
+      "expected": 9,
+      "deviations": []
+    },
+    {
+      "line": 1,
+      "syllables": 8,
+      "expected": 9,
+      "deviations": []
+    },
+    {
+      "line": 2,
+      "syllables": 5,
+      "expected": 6,
+      "deviations": []
+    },
+    {
+      "line": 3,
+      "syllables": 5,
+      "expected": 6,
+      "deviations": []
+    },
+    {
+      "line": 4,
+      "syllables": 8,
+      "expected": 9,
+      "deviations": []
+    }
+  ],
+  "notes": [
+    "Pronunciations come from CMUdict (US English); guessed words are estimated from spelling."
+  ]
+}

@@ -79,6 +79,7 @@
   "spoken": null,
   "script": null,
   "dialog": null,
+  "verse": null,
   "speakers": {},
   "voices": {
     "matches": {},

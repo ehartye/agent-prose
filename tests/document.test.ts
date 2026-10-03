@@ -10,10 +10,10 @@ import { fixture, run } from './helpers.ts';
 const code = (fn: () => unknown) => { try { fn(); } catch (e) { return (e as ProseError).code; } return 'none'; };
 
 describe('forms', () => {
-  it('registers the fifteen v1 forms', () => {
-    expect(FORMS.map(f => f.id)).toHaveLength(15);
+  it('registers the fifteen v1 forms and the verse forms', () => {
+    expect(FORMS.map(f => f.id)).toHaveLength(24);
     expect(getForm('tv-drama').format).toBe('fountain');
-    expect(code(() => getForm('limerick'))).toBe('E_USAGE');
+    expect(code(() => getForm('no-such-form'))).toBe('E_USAGE');
   });
 });
 
@@ -148,7 +148,7 @@ describe('form declared in the document', () => {
   const err = (fn: () => unknown) => { try { fn(); } catch (e) { return e as ProseError; } throw new Error('expected an error'); };
 
   it('reports an unknown form in metadata as E_SCHEMA at /form', () => {
-    const e = err(() => loadDocument(draft('a.md', '---\nform: limerick\n---\n\nHi.\n')));
+    const e = err(() => loadDocument(draft('a.md', '---\nform: ode\n---\n\nHi.\n')));
     expect([e.code, e.pointer]).toEqual(['E_SCHEMA', '/form']);
   });
 
@@ -158,6 +158,6 @@ describe('form declared in the document', () => {
   });
 
   it('keeps E_USAGE for a bad --form option', () => {
-    expect(err(() => loadDocument(draft('a.md', 'Hi.\n'), { form: 'limerick' })).code).toBe('E_USAGE');
+    expect(err(() => loadDocument(draft('a.md', 'Hi.\n'), { form: 'ode' })).code).toBe('E_USAGE');
   });
 });
