@@ -2,6 +2,7 @@ import { appendFileSync, closeSync, mkdirSync, openSync, readSync } from 'node:f
 import { StringDecoder } from 'node:string_decoder';
 import { dirname } from 'node:path';
 import { z } from 'zod';
+import { FEATURE_SET_ID } from './features.ts';
 import { projectKey } from './paths.ts';
 
 /**
@@ -104,7 +105,22 @@ export function appendVerdictsOnce(path: string, rows: Verdict[]): boolean[] {
   return fresh;
 }
 
-export interface LedgerRow { project: string; set: string; setUid: string; [k: string]: unknown }
+/**
+ * The model's side of a predictions-ledger row (`prose/ledger@1`), optional: rows written before the taste model have none and still read.
+ * `abstained` rows are not scored; `voided` is set when a model that predicted left no trustworthy file (a miss).
+ */
+export const LedgerModelSchema = z.strictObject({
+  pick: z.number().int().min(1).nullable(),
+  shortlist: z.array(z.number().int().min(1)),
+  hit: z.boolean(),
+  shortlistHit: z.boolean(),
+  abstained: z.boolean(),
+  sealValid: z.boolean(),
+  voided: z.enum(['edited', 'variant-changed', 'missing']).optional(),
+});
+export type LedgerModel = z.infer<typeof LedgerModelSchema>;
+
+export interface LedgerRow { project: string; set: string; setUid: string; model?: LedgerModel; [k: string]: unknown }
 
 /** Append a ledger row unless the ledger already has one for the same project key, set and set uid. */
 export function appendLedgerOnce(path: string, row: LedgerRow): boolean {
@@ -124,6 +140,8 @@ export interface VerdictLog {
   rows: Verdict[];
   /** Rows of another `prose/verdict@` version: kept out of `rows`, not an error. */
   unknownVersion: number;
+  /** Only with `countOtherFeatures`: rows of this schema version whose only fault is a `features` id other than the current one, counted instead of malformed. */
+  skippedFeatures?: number;
   /** Lines that are not a valid current verdict. */
   malformed: number;
   /** 1-based line numbers of the first 20 malformed lines. */
@@ -132,19 +150,52 @@ export interface VerdictLog {
 
 const MAX_LINES_LISTED = 20;
 
+export interface ReadOpts {
+  countOtherFeatures?: boolean;
+  /** A project key: lines that name this project are not read at all (the global log mirrors every project's picks, so the current project is read from its own log). */
+  excludeProject?: string;
+  /** Lines that are not JSON name no project, so a mirrored copy is recognised by its text: malformed lines in this set (collected from the project log) are not counted again. */
+  mirroredBad?: ReadonlySet<string>;
+  /** Receives the text of each malformed line that is not JSON (capped), for `mirroredBad`. */
+  collectBad?: Set<string>;
+}
+const MAX_BAD_TEXTS = 1000;
+
+function newLog(opts: ReadOpts): VerdictLog {
+  return { rows: [], unknownVersion: 0, ...(opts.countOtherFeatures ? { skippedFeatures: 0 } : {}), malformed: 0, malformedLines: [] };
+}
+
+function foldLine(log: VerdictLog, line: string, n: number, opts: ReadOpts): void {
+  const bad = () => { log.malformed++; if (log.malformedLines.length < MAX_LINES_LISTED) log.malformedLines.push(n); };
+  if (!line.trim()) return;
+  let raw: unknown;
+  try { raw = JSON.parse(line); }
+  catch {
+    if (opts.mirroredBad?.has(line)) return;
+    if (opts.collectBad && opts.collectBad.size < MAX_BAD_TEXTS) opts.collectBad.add(line);
+    bad(); return;
+  }
+  const named = (raw as { project?: unknown } | null)?.project;
+  if (opts.excludeProject !== undefined && typeof named === 'string' && projectKey(named) === opts.excludeProject) return;
+  const schema = (raw as { schema?: unknown } | null)?.schema;
+  if (typeof schema === 'string' && schema.startsWith('prose/verdict@') && schema !== VERDICT_SCHEMA) { log.unknownVersion++; return; }
+  const other = (raw as { features?: unknown } | null)?.features;
+  if (opts.countOtherFeatures && typeof other === 'string' && other !== FEATURE_SET_ID && VerdictSchema.safeParse({ ...(raw as object), features: FEATURE_SET_ID }).success) { log.skippedFeatures = (log.skippedFeatures ?? 0) + 1; return; }
+  const parsed = VerdictSchema.safeParse(raw);
+  if (parsed.success) log.rows.push(parsed.data); else bad();
+}
+
 /** Current-version rows, with counts of rows of other versions and of malformed lines. */
-export function readVerdicts(path: string): VerdictLog {
-  const log: VerdictLog = { rows: [], unknownVersion: 0, malformed: 0, malformedLines: [] };
-  const bad = (n: number) => { log.malformed++; if (log.malformedLines.length < MAX_LINES_LISTED) log.malformedLines.push(n); };
-  forEachLine(path, (line, n) => {
-    if (!line.trim()) return;
-    let raw: unknown;
-    try { raw = JSON.parse(line); } catch { bad(n); return; }
-    const schema = (raw as { schema?: unknown } | null)?.schema;
-    if (typeof schema === 'string' && schema.startsWith('prose/verdict@') && schema !== VERDICT_SCHEMA) { log.unknownVersion++; return; }
-    const parsed = VerdictSchema.safeParse(raw);
-    if (parsed.success) log.rows.push(parsed.data); else bad(n);
-  });
+export function readVerdicts(path: string, opts: ReadOpts = {}): VerdictLog {
+  const log = newLog(opts);
+  forEachLine(path, (line, n) => foldLine(log, line, n, opts));
+  return log;
+}
+
+/** `readVerdicts` over a log's text already read (for a server, which reads the file with async fs). */
+export function parseVerdicts(text: string, opts: ReadOpts = {}): VerdictLog {
+  const log = newLog(opts);
+  text.split('\n').forEach((line, i) => foldLine(log, line, i + 1, opts));
   return log;
 }
 

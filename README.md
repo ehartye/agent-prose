@@ -53,15 +53,29 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose set new <draft> --directions <list> [--count <n>] [--id <id>]` | start a variant set: base copy plus one file per variant to rewrite |
 | `prose set list`, `prose set show <id>`, `prose set annotate <id> <n>` (each takes `--dir <project>`) | list sets; show every variant's text, status and the kept ones; record a variant's angle label or note |
 | `prose set check <id> [--dir <project>]` | reject unchanged, near-duplicate and lint-failing variants; verify each moved in its direction |
-| `prose predict --set <id> --pick <n> [--shortlist <list>] --why <text> [--dir <project>]` | seal a guess of the owner's pick (kept variants only; freezes what is shown and a hash of each variant file) |
+| `prose predict --set <id> --pick <n> [--shortlist <list>] --why <text> [--dir <project>]` | seal a guess of the owner's pick (kept variants only; freezes what is shown and a hash of each variant file); also seals the taste model's own guess, or its abstention, in `model-prediction.json`. `--set <id> --model-only` is a repair: it seals only the model's guess for an agent prediction already sealed (after a crash between the two writes), and only before the pick |
 | `prose set pick <id> --pick <n> [--tags <list>] [--no-predict] [--dir <project>]` | record the owner's choice as taste verdicts and reveal whether the guess hit |
-| `prose taste stats [--all-projects] [--dir <project>]` | how often sealed predictions matched the owner's pick, and how many verdict rows the logs hold |
+| `prose taste show [--voice <id>] [--all-projects] [--dir <project>]` | the owner's style tendencies in plain words, learned from their picks and duels (global layer, plus project and voice layers once they have 15 pairs) |
+| `prose taste stats [--all-projects] [--dir <project>]` | for the agent and for the taste model: predictions, hits, shortlist hits, hit rate and recent rate (the model's abstentions are counted, not scored), how often the model beat, matched or lost to the agent on the same pick (the comparison uses the pick only), and how many verdict rows and duels the logs hold. Shortlist hits are meaningful only for sets of four or more variants (`shortlistEligible` counts them); with three or fewer shown, a three-wide shortlist covers everything |
 | `prose set duel <id> --a <n> --b <n> --outcome a\|b\|tie\|bothBad` | record a head-to-head from the reading page as one taste verdict (the page calls it; it never ships the set) |
 | `prose serve [--local] [--port <n>] [--foreground] [--stop] [--status]` | start or reuse the LAN reading server and print its link (the link carries the access token) |
 | `prose reading open --set <id> [--no-predict] [--prompt <text>] [--dir <project>]` | put a checked, predicted set on the reading page: freezes what is shown, registers the project, prints the link |
 | `prose reading wait --id <id> [--timeout <s>]` | block until the owner asks to refine, ships or abandons; prints champion, directions, notes with the unit text, and what to do next |
 | `prose reading round --id <id> --set <new-set>` | answer a refine request with a new set; its survivors join the session against the pinned champion |
 | `prose reading status\|list\|close` | the folded session state (and the reveal once shipped), the project's sessions, abandon an open session |
+
+## Taste
+
+`prose taste show` reads the owner's recorded choices (picks from `prose set pick` and head-to-head duels from the reading page) and fits a small model over twelve coarse, measured style features such as sentence length, contractions and hedging. It reports what the owner tends to choose, in order of confidence, as `strong`, `weak` or `unknown`.
+
+- **What it fits.** A pick counts as the winner beating each variant it was shown with, weighted so the whole pick is about one duel. A decisive duel counts as one win. A tie is no information and is not fitted. Both-bad counts as two half-weight losses to the centre of what was shown. Only rows measured with feature version `v1` are fitted; rows of another version are left out and reported in `counts.skippedVersion`.
+- **Layers.** Global (every other project), then project once the current project has 15 fitted pairs, then voice once 15 pairs name that voice. `prose taste show` uses the voice layer only when asked with `--voice <id>`; the single voice a draft resolves to (none or several: no voice layer) is used only when `prose predict` seals the model's guess. The 15-pair thresholds and the prior strengths are conventions inherited from another plugin and were not tuned on prose. Inside a project it uses the layers that have enough data; with `--all-projects` (or outside a project, which is an error without that flag, as for `taste stats`) it reports the global layer only, from every project.
+- **Sparse data is normal.** With no usable pairs it says there is not enough data yet, exits 0, and the model abstains. Most owners will have tens of choices, not hundreds, so error bars stay wide for a long time.
+- **A sealed model prediction.** `prose predict` also computes the model's pick and top-three shortlist for the shown variants, or an abstention with a reason, and seals it in its own file, `model-prediction.json` (the agent's `prediction.json` is untouched). `prose set pick` reveals and scores both. An abstention is not a miss: stats count it separately and score only the sessions where the model predicted. What sealing does and does not do: the tool never prints the model's pick or ranking before the owner picks, and it seals the guess (a SHA-256 over the guess and a marker file beside it) so an edit is detected at the pick. It is not secret: the file is readable on disk, deleting both files hides the model's result for that set, and a forged file with a recomputed hash cannot be detected (there is no key). The agent's independence therefore rests on the agent not reading it. A crash between writing the agent's prediction and the model's leaves that set unscored for the model; `prose predict --set <id> --model-only` repairs it, before the pick. The skill says never to read it before the owner picks.
+- **Reading the stats.** The agent-versus-model comparison (`modelBetter`, `same`, `agentBetter`) compares the pick only: a hit against a miss. Shortlist hits are reported only over sets where more than three variants were shown, because with three or fewer the model's top-three shortlist always contains the owner's pick. The two recent windows differ: the model's is its last N predicted rows (abstentions skipped), the agent's its last N rows.
+- **Server and CLI.** The reading page fits only the most recent rows (the last 3,000 lines of each log, read from the last 4 MB) so a large history never blocks it; `prose taste show` and `prose predict` fit every row.
+- **Reading page.** Once the model has fitted pairs, the page chooses each duel by uncertainty: the pair the model is least sure of that has not been asked. Without data, or on any error, it falls back to the least-compared pair.
+- **Limits.** Twelve coarse style features; it cannot know humour, originality or quality. It describes tendencies in the owner's choices relative to the options they were shown. It does not state rules, and the owner is the judge.
 
 ## Choosing between variants
 
@@ -72,7 +86,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
    choice with `prose set pick` (the page records it for you).
 
 Directions are measured proxies for style, not for quality. The owner's pick is the judgement;
-sealed predictions and `prose taste stats` show how well the agent has learned it.
+sealed predictions (the agent's and the taste model's) and `prose taste stats` show how well each has learned it.
 
 ## Reading page
 
@@ -112,8 +126,7 @@ the registered projects, so the link the owner was given works again after the n
 append-only `events.jsonl`, `reveal.json`). The per-user `server.json` in `~/.agent-prose` holds the access token and
 the registered projects (`AGENT_PROSE_HOME` moves it).
 
-**Not included.** No cloud text-to-speech (the browser's voice only; cloud audio belongs to the planned render command),
-and pairs are chosen by least-compared, not by a learned taste model yet.
+**Not included.** No cloud text-to-speech (the browser's voice only; cloud audio belongs to the planned render command).
 
 `prose init` writes `.agent-prose/.gitignore` so sets and taste data stay out of version control;
 voice bibles stay trackable. Per-user taste logs live under `~/.agent-prose/taste` (override with
@@ -294,8 +307,7 @@ and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Roadmap
 
-Shipped: the LAN reading page with duels and read-aloud. Planned next: a learned taste model that chooses the pairs,
-then PDF and reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
+Shipped: the LAN reading page with duels and read-aloud, and the taste model (summary, sealed model prediction, uncertainty-chosen duels). Planned next: PDF and reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
 
 ## Acknowledgements
 

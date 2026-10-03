@@ -247,9 +247,10 @@ Shipped in 0.1.0:
 
 Shipped after 0.2.0: M3b, the LAN reading page with duels, refine rounds and read-aloud (see the reading page design).
 
+Shipped: M3c, the Bradley-Terry taste model, its sealed predictions and uncertainty-chosen duels (see the taste model design).
+
 Remaining:
 
-- M3c: the Bradley-Terry taste model, ranking and the model's own predictions.
 - M4 render: PDF, reading copy, dialog export and OpenAI TTS.
 
 ## M3a implementation notes
@@ -287,4 +288,4 @@ stay out of version control.
 
 M3b notes: a server process must not call the synchronous lock/write functions from request handlers (they block the event loop); shell out to the CLI or add async variants; heartbeat between steps.
 
-Remaining: M3c, the Bradley-Terry taste model, ranking and the model's own predictions.
+M3c, the Bradley-Terry taste model and the model's own sealed predictions, is built (see the taste model design). Remaining: M4 render.

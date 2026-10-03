@@ -2,13 +2,14 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
-import { loadVoices, voiceFor } from '../voice.ts';
+import { loadVoices, voiceFor, type Voice } from '../voice.ts';
 import { checkSet } from './check.ts';
 import { FEATURE_SET_ID, centered, featureVector } from './features.ts';
 import { withSetLock, writeFileAtomic, type LockContext, type LockOptions } from './fsutil.ts';
 import { globalTasteDir, projectTasteDir, setDir } from './paths.ts';
 import { readPrediction, sealValid, variantHash, type Prediction } from './prediction.ts';
 import { readSet, variantPath, writeSet, type PromptSet } from './sets.ts';
+import { modelReveal, type ModelScore } from '../taste/reveal.ts';
 import { VERDICT_SCHEMA, appendLedgerOnce, appendVerdictsOnce, type Verdict } from './verdicts.ts';
 
 /** Weight of one loser in an unexplained pick: one choice always totals about one duel (two shown = a duel, weight 1). */
@@ -21,6 +22,8 @@ export type VoidReason = 'edited' | 'variant-changed';
 
 export interface Reveal {
   agent: { pick: number; shortlist: number[]; why: string; hit: boolean; shortlistHit: boolean; sealValid: boolean; voided?: VoidReason };
+  /** The model's sealed guess, scored. Absent when the set was predicted before models existed. Only ever produced after the pick is recorded. */
+  model?: ModelScore;
 }
 
 export interface PickResult {
@@ -65,14 +68,19 @@ export function shownContext(project: string, set: PromptSet, shown: number[]) {
   return { side, ...docsContext(project, docs) };
 }
 
+/** The voice bible ids (distinct) that claim the speakers of some loaded documents; none when the bibles cannot be read. */
+export function voiceIds(project: string, docs: ReturnType<typeof loadDocument>[]): string[] {
+  try { return voiceIdsIn(loadVoices(project), docs); } catch { return []; }
+}
+
+/** The bible ids that claim the speakers of `docs`; shared by the sync and async resolvers. */
+export function voiceIdsIn(bibles: Voice[], docs: ReturnType<typeof loadDocument>[]): string[] {
+  return [...new Set(docs.flatMap(d => d.blocks.map(b => b.speaker).filter((s): s is string => !!s)).map(s => voiceFor(bibles, s)?.id).filter((v): v is string => !!v))];
+}
+
 /** The voices (by bible id) and the register of some loaded variants. */
 export function docsContext(project: string, docs: ReturnType<typeof loadDocument>[]) {
-  let voices: string[] = [];
-  try {
-    const bibles = loadVoices(project);
-    voices = [...new Set(docs.flatMap(d => d.blocks.map(b => b.speaker).filter((s): s is string => !!s)).map(s => voiceFor(bibles, s)?.id).filter((v): v is string => !!v))];
-  } catch { voices = []; }
-  return { voices, register: docs[0].register ?? null };
+  return { voices: voiceIds(project, docs), register: docs[0].register ?? null };
 }
 
 const pendingFile = (project: string, id: string) => join(setDir(project, id), 'pick.pending.json');
@@ -152,16 +160,20 @@ function recordPickLocked(project: string, set: PromptSet, pick: number, opts: P
         sealValid: sealValid(prediction),
       },
     };
+    const model = modelReveal(project, set.id, prediction, pick); // derived from the sealed files each time, so a retry scores the same
+    if (model) reveal.model = model;
     ctx.heartbeat();
-    appendLedgerOnce(join(globalTasteDir(), 'predictions.jsonl'), { schema: LEDGER_SCHEMA, at: now.toISOString(), project, set: set.id, setUid: set.uid, form: set.form, picked: pick, ...reveal });
+    appendLedgerOnce(join(globalTasteDir(), 'predictions.jsonl'), { schema: LEDGER_SCHEMA, at: now.toISOString(), project, set: set.id, setUid: set.uid, form: set.form, picked: pick, shownCount: prediction.shown.length, ...reveal });
     writeFileAtomic(join(setDir(project, set.id), 'reveal.json'), JSON.stringify({ schema: 'prose/reveal@1', picked: pick, at: now.toISOString(), ...reveal }, null, 2) + '\n');
   }
   if (discarded) {
     const d = discarded.prediction;
+    const model = modelReveal(project, set.id, d, pick, discarded.reason); // a voided agent prediction voids a model that had predicted
     ctx.heartbeat();
     appendLedgerOnce(join(globalTasteDir(), 'predictions.jsonl'), {
-      schema: LEDGER_SCHEMA, at: now.toISOString(), project, set: set.id, setUid: set.uid, form: set.form, picked: pick,
+      schema: LEDGER_SCHEMA, at: now.toISOString(), project, set: set.id, setUid: set.uid, form: set.form, picked: pick, shownCount: d.shown.length,
       agent: { pick: d.pick, shortlist: d.shortlist, why: d.why, hit: false, shortlistHit: false, sealValid: false, voided: discarded.reason },
+      ...(model ? { model } : {}),
     });
   }
 

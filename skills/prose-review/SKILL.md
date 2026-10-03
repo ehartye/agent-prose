@@ -16,7 +16,11 @@ taste is yours. This skill puts the choice with the owner and makes the options 
 
 1. **Make the base.** Write or find the draft (in the format its skill describes) inside a prose
    project (`prose init` once). Lint it and fix errors.
-2. **Open a set.** Name the directions, one per variant:
+2. **Read the taste, then open a set.** Before drafting variants run `prose taste show`. Read it as
+   tendencies in the owner's past choices, never as rules and never as quality. Use it to decide
+   which directions to offer, not to bend your own guess toward a ranking. If it says there is not
+   enough data, say so plainly to the owner: the model has nothing to say yet.
+   Name the directions, one per variant:
    `prose set new <draft> --directions punchier,drier,warmer --count 4`
    Directions: punchier, shorter, longer, warmer, drier, more-formal, less-formal, plainer,
    livelier, weirder. They are measured proxies for style (sentence length, contractions, "you",
@@ -38,14 +42,19 @@ taste is yours. This skill puts the choice with the owner and makes the options 
    fails with `E_CONFLICT` ("changed after the prediction was sealed").
 6. **Seal your guess before the owner sees anything:**
    `prose predict --set <id> --pick <n> --shortlist <a,b> --why "..."`. A real guess, with a
-   reason, not a hedge.
+   reason, not a hedge, and your own judgement. The same command seals a separate model guess
+   (or an abstention) in `model-prediction.json`. Never read that file before the owner picks. The tool
+   never prints the model's pick before then and seals it so an edit is detected, but the file is
+   readable on disk, deleting it hides the model's result for that set, and a forged file with a
+   recomputed hash is not detectable (there is no key), so independence is your discipline. If a crash
+   leaves your prediction without the model's, run `prose predict --set <id> --model-only` before the pick.
 7. **Present** only the kept variants, on the reading page (next section) unless the owner wants
    them in chat. In chat: `prose set show <id>` returns every variant with its `status` and a
    `next` line naming the kept ones. Show them numbered, each with its angle in a few words. No
    ranking, no recommendation: your guess is already sealed. Ask which they prefer and, if they
    say, why.
 8. **Record the choice** (the reading page does this itself when the owner ships): `prose set pick <id> --pick <n> --tags drier,shorter`. The output
-   reveals whether your guess hit; tell the owner, briefly. A pick needs at least two surviving
+   reveals whether your guess hit and whether the model's did; tell the owner, briefly. A pick needs at least two surviving
    variants and an untampered prediction. If the set was never predicted, or the prediction was
    refused as tampered or stale, record it with `--no-predict` rather than editing anything. A pick whose
    sealed prediction was discarded is recorded as a miss (voided), so never use `--no-predict` to dodge a miss.
@@ -88,8 +97,9 @@ the link working for next time.
 
 Each pick is stored with its measured style, per project and per user. A pick among N shown
 variants counts as one duel in total: each variant it beat gets weight 1/(N-1). `prose taste stats`
-(for the current project; add `--all-projects` for every project) shows how often your sealed
-guess matched the owner's pick. If the hit rate is low you are guessing from your own taste, not
+(for the current project; add `--all-projects` for every project) shows each predictor's hit rate,
+the model's abstentions, and how often the model beat, matched or lost to your sealed guess (on the pick only; shortlist hits mean something only for sets of four or more variants). The
+reveal at the pick compares both. If your hit rate is low you are guessing from your own taste, not
 theirs: offer more contrast, not more variants.
 
 ## Keep it honest

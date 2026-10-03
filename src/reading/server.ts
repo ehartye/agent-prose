@@ -23,8 +23,9 @@ import { readPrediction, textHash } from '../owner/prediction.ts';
 import { readSet, variantPath, type PromptSet } from '../owner/sets.ts';
 import {
   CLIENT_EVENTS, EventSchema, appendEventAsync, checkTransition, foldSession, nextPair, readEvents, readReveal, readSession, variantOf, writeRevealAsync,
-  type Session, type SessionCandidate, type SessionEvent, type SessionState, type StoredEvent,
+  type PairChooser, type Session, type SessionCandidate, type SessionEvent, type SessionState, type StoredEvent,
 } from './session.ts';
+import { TasteDuels, type DuelCandidateSource } from './taste.ts';
 import { layoutOf, type Layout, type UnitLayout } from './units.ts';
 
 export const DEFAULT_PORT = 47311;
@@ -73,10 +74,10 @@ function openLog(file: string, token: string): void {
 }
 
 /** One JSON error line on stderr and, when a log file is open, appended to it with a time. The token never appears in either. */
-function logError(message: string): void {
+function logError(message: string, code = 'E_SERVER'): void {
   const token = logSink?.token;
   const text = token ? message.split(token).join('<token>') : message;
-  const line = JSON.stringify({ error: { code: 'E_SERVER', message: text } });
+  const line = JSON.stringify({ error: { code, message: text } });
   console.error(line);
   if (!logSink) return;
   try { appendFileSync(logSink.file, JSON.stringify({ at: new Date().toISOString(), ...JSON.parse(line) }) + '\n'); } catch { /* best effort */ }
@@ -470,6 +471,10 @@ export class ReadingServer {
   private rowCache = new Map<string, { key: string; row: SessionRow | null }>();
   /** How many variant files were read and hashed (a poll that finds nothing changed adds none); for tests. */
   readonly reads = { variants: 0 };
+  /** The taste model and candidate vectors behind the duel the page asks (cached; loaded with async fs). */
+  private taste = new TasteDuels(() => logError('taste model unavailable; using the default pairing', 'E_TASTE'));
+  /** Taste loads so far (models fitted, candidate vectors computed); for tests. */
+  get loads() { return this.taste.loads; }
   private projectsMemo: { from: ServerInfo | null; result: string[] } | null = null;
   private scrubMemo: { roots: string; re: RegExp } | null = null;
 
@@ -478,7 +483,7 @@ export class ReadingServer {
     this.projects = (opts.projects ?? []).map(p => resolve(p));
     this.routes = [
       { method: 'GET', re: /^\/api\/sessions$/, handler: c => this.json(c.res, 200, { sessions: this.listSessions() }) },
-      { method: 'GET', re: /^\/api\/session\/([a-z0-9-]+)$/, handler: c => this.json(c.res, 200, this.payload(c.match[1])) },
+      { method: 'GET', re: /^\/api\/session\/([a-z0-9-]+)$/, handler: async c => this.json(c.res, 200, await this.payloadAsync(c.match[1])) },
       { method: 'GET', re: /^\/api\/session\/([a-z0-9-]+)\/reveal$/, handler: c => this.json(c.res, 200, this.reveal(c.match[1])) },
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/event$/, handler: c => this.postEvent(c) },
     ];
@@ -575,7 +580,33 @@ export class ReadingServer {
     } catch { return none; }
   }
 
-  private payload(id: string): SessionPayload {
+  /**
+   * The page payload with the duel chosen by the taste model when it is usable. The model and the shortlisted candidates'
+   * vectors are awaited here (async fs, cached), then the synchronous payload is built; any failure leaves the old rule.
+   */
+  private async payloadAsync(id: string): Promise<SessionPayload> {
+    let choose: PairChooser | null = null;
+    try {
+      const root = this.findSession(id);
+      const session = readSession(root, id);
+      const events = readEvents(root, id);
+      const state = foldSession(session, events);
+      if (state.stage === 'duel' && state.shortlist.length >= 2) {
+        const maps = roundMaps(session, events);
+        const sources: DuelCandidateSource[] = [];
+        for (const index of state.shortlist) {
+          const c = state.candidates.find(x => x.index === index)!;
+          const set = this.setOf(root, maps.roundSet.get(c.round) ?? session.setId, false);
+          const v = set?.variants.find(x => x.index === variantOf(c));
+          if (set && v) sources.push({ index, file: variantPath(root, set, v), form: set.form, hash: frozenHash(root, session, maps, c) });
+        }
+        if (sources.length === state.shortlist.length) choose = await this.taste.chooser(root, this.setOf(root, session.setId, false), sources);
+      }
+    } catch { /* the payload below reports a missing session; anything else leaves the old rule */ }
+    return this.payload(id, choose ?? undefined);
+  }
+
+  private payload(id: string, choose?: PairChooser): SessionPayload {
     const root = this.findSession(id);
     const session = readSession(root, id);
     const events = readEvents(root, id);
@@ -603,7 +634,7 @@ export class ReadingServer {
       state: publicState,
       candidates: shown.map(make),
       order: plan.order,
-      pair: nextPair(state),
+      pair: nextPair(state, choose),
       directions: KNOWN_DIRECTIONS,
       reveal: { shipped: state.shipped !== null },
     };
@@ -657,7 +688,7 @@ export class ReadingServer {
     const session = readSession(root, id);
     const events = readEvents(root, id);
     const eventId = (event as { eventId?: string }).eventId;
-    if (eventId !== undefined && events.some(e => e.type === event.type && (e as { eventId?: string }).eventId === eventId)) return { ok: true, duplicate: true, state: this.payload(id) };
+    if (eventId !== undefined && events.some(e => e.type === event.type && (e as { eventId?: string }).eventId === eventId)) return { ok: true, duplicate: true, state: await this.payloadAsync(id) };
     const state = foldSession(session, events);
     if (ENGAGEMENT.has(event.type) && events.length >= MAX_EVENTS_PER_SESSION) throw withStatus(new ProseError('E_SERVER', 'session is full', { hint: 'Ship, refine or open a new session' }), 429);
     if (event.type === 'note' && state.notes.filter(n => n.index === event.index).length >= MAX_NOTES_PER_VARIANT) {
@@ -693,7 +724,7 @@ export class ReadingServer {
       default: break;
     }
     await appendEventAsync(root, id, checked);
-    return { ok: true, state: this.payload(id) };
+    return { ok: true, state: await this.payloadAsync(id) };
   }
 
   /** The reveal the page gets after the ship: the CLI's own reveal for the champion's set, or the plain statement that there was none. */

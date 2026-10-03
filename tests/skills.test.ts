@@ -33,6 +33,13 @@ describe('prose-review reading page', () => {
       expect(text, needle).toContain(needle);
     }
   });
+  it('adds the taste step: read it before drafting, as tendencies, keep the guess independent', () => {
+    const flat = text.replace(/\s+/g, ' ');
+    for (const needle of ['prose taste show', 'never as rules', 'not to bend your own guess', 'not enough data', 'model-prediction.json', 'Never read that file before the owner picks', 'your discipline', 'beat, matched or lost', "whether the model's did"]) {
+      expect(flat, needle).toContain(needle);
+    }
+    expect(text.indexOf('prose taste show')).toBeLessThan(text.indexOf('prose set new <draft>'));
+  });
   it('keeps the description a trigger, not a workflow', () => {
     const fm = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
     expect(fm.match(/^description: (.*)$/m)?.[1]).not.toMatch(/prose (set|predict|reading)/);

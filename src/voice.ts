@@ -1,5 +1,6 @@
 // Voice bibles (prose/voice@1): who a voice covers, samples, banned words and measured target ranges.
 import { readdirSync, readFileSync } from 'node:fs';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
@@ -42,10 +43,23 @@ export function loadVoices(projectDir: string): Voice[] {
   const dir = voicesDir(projectDir);
   let files: string[];
   try { files = readdirSync(dir).filter(f => /\.ya?ml$/i.test(f)).sort(); } catch { return []; }
+  return checkVoices(dir, files, files.map(f => { try { return readFileSync(join(dir, f), 'utf8'); } catch (e) { return e as Error; } }));
+}
+
+/** `loadVoices` with async fs (the reading server's request path); the same checks, shared with the sync loader. */
+export async function loadVoicesAsync(projectDir: string): Promise<Voice[]> {
+  const dir = voicesDir(projectDir);
+  let files: string[];
+  try { files = (await readdir(dir)).filter(f => /\.ya?ml$/i.test(f)).sort(); } catch { return []; }
+  return checkVoices(dir, files, await Promise.all(files.map(async f => { try { return await readFile(join(dir, f), 'utf8'); } catch (e) { return e as Error; } })));
+}
+
+/** The shared half of both loaders: `texts[k]` is file `files[k]`'s text, or the error that reading it raised. */
+function checkVoices(dir: string, files: string[], texts: (string | Error)[]): Voice[] {
   const ids = new Map<string, string>();
   const claimed = new Map<string, string>();
-  return files.map(f => {
-    const voice = readVoice(dir, f);
+  return files.map((f, k) => {
+    const voice = readVoice(dir, f, texts[k]);
     const fail = (message: string, pointer: string, hint: string) =>
       new ProseError('E_SCHEMA', `${f}: ${message}`, { pointer, details: { file: join(dir, f) }, hint });
     if (voice.id !== f.replace(/\.ya?ml$/i, '')) {
@@ -62,10 +76,11 @@ export function loadVoices(projectDir: string): Voice[] {
   });
 }
 
-function readVoice(dir: string, f: string): Voice {
+function readVoice(dir: string, f: string, text: string | Error): Voice {
   let data: unknown;
   try {
-    data = parseYaml(readFileSync(join(dir, f), 'utf8'));
+    if (text instanceof Error) throw text;
+    data = parseYaml(text);
   } catch (e) {
     throw new ProseError('E_SCHEMA', `${f}: ${(e as Error).message}`, { details: { file: join(dir, f) }, hint: 'Fix the YAML syntax in the voice bible' });
   }

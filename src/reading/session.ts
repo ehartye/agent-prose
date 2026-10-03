@@ -180,11 +180,22 @@ export function foldSession(session: Session, events: StoredEvent[]): SessionSta
 /**
  * The next head-to-head: among the shortlist, the pair not yet asked whose members have been compared least (sum of
  * their comparison counts), the earliest in shortlist order on a tie. Deterministic given the state; never a repeat;
- * null outside the duel stage or when every pair has been asked. (M3c replaces this with uncertainty sampling.)
+ * null outside the duel stage or when every pair has been asked.
+ * `choose` (the taste model's uncertainty sampling) may name the pair instead: it gets the shortlist and the asked pairs, and
+ * its answer is used only when it is a pair of two different shortlist members not yet asked. Absent, null, throwing or
+ * invalid, the rule above runs unchanged. The fold calls this without one: it only needs to know whether a pair remains.
  */
-export function nextPair(state: SessionState): [number, number] | null {
+export type PairChooser = (shortlist: number[], asked: Array<{ a: number; b: number }>) => [number, number] | null;
+
+export function nextPair(state: SessionState, choose?: PairChooser): [number, number] | null {
   if (state.stage !== 'duel') return null;
   const asked = new Set(state.duels.map(d => pairKey(d.a, d.b)));
+  if (choose) {
+    try {
+      const pair = choose([...state.shortlist], state.duels.map(({ a, b }) => ({ a, b })));
+      if (Array.isArray(pair) && pair.length === 2 && pair[0] !== pair[1] && pair.every(i => state.shortlist.includes(i)) && !asked.has(pairKey(pair[0], pair[1]))) return [pair[0], pair[1]];
+    } catch { /* a chooser that fails never changes the pairing */ }
+  }
   const seen = new Map<number, number>();
   for (const d of state.duels) for (const i of [d.a, d.b]) seen.set(i, (seen.get(i) ?? 0) + 1);
   let best: [number, number] | null = null;
