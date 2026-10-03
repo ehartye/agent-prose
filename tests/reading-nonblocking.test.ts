@@ -41,10 +41,11 @@ describe('the event loop stays free while a write waits for a set lock', () => {
     const pending = post(info, 'read-1', { type: 'duel', a: 1, b: 2, outcome: 'a', position: 'ab', eventId: 'locked' });
     let settled = false;
     void pending.then(() => { settled = true; });
-    // The CLI waits for the lock (5 s) before it gives up; probe the server the whole time.
+    // The CLI waits for the lock (5 s) before it gives up, plus a child process start that can take many seconds on a loaded machine;
+    // probe the server the whole time. The settle window is generous on purpose: what matters is that /api/health stays fast.
     const slowest: number[] = [];
     await new Promise(r => setTimeout(r, 300)); // let the request start its CLI child
-    while (!settled && Date.now() - t0 < 12_000) {
+    while (!settled && Date.now() - t0 < 30_000) {
       const t = Date.now();
       const health = await http(info, '/api/health');
       slowest.push(Date.now() - t);

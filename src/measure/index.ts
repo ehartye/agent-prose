@@ -4,6 +4,15 @@ import { AI_TELLS, FILLER, matchLexicon, type LexiconHit } from './lexicon.ts';
 import { PROSE_KINDS } from '../kinds.ts';
 import { resolveSettings } from '../settings.ts';
 import { round2 } from '../text.ts';
+
+const ARTIFACT_LEXICON = { ...AI_TELLS, entries: AI_TELLS.entries.filter(e => e.tier === 'artifact') };
+const OTHER_LEXICON = { ...AI_TELLS, entries: AI_TELLS.entries.filter(e => e.tier !== 'artifact') };
+
+/** AI-tell hits; artifact patterns read each Markdown block's artifact view (code removed, link targets added). */
+const aiTellHits = (prose: Block[]): LexiconHit[] => [
+  ...matchLexicon(OTHER_LEXICON, prose),
+  ...matchLexicon(ARTIFACT_LEXICON, prose.map(b => (typeof b.meta?.artifactText === 'string' ? { ...b, text: b.meta.artifactText } : b))),
+];
 import { measureStyle, type StyleStats } from './style.ts';
 import { measureSegments, measureSpoken, type Segment, type SpokenStats } from './spoken.ts';
 import { measureScript, type ScriptStats } from './script.ts';
@@ -118,7 +127,7 @@ export function measure(doc: Doc): Measurement {
     form: form.id,
     register: doc.register ?? null,
     style,
-    lexicon: { aiTells: matchLexicon(AI_TELLS, prose), filler: matchLexicon(FILLER, prose) },
+    lexicon: { aiTells: aiTellHits(prose), filler: matchLexicon(FILLER, prose) },
     spoken,
     script,
     dialog: doc.graph ? measureDialog(doc, form) : null,

@@ -1,7 +1,7 @@
 import { parse as parseYaml } from 'yaml';
 import type { Block } from '../ir.ts';
 import { ProseError } from '../errors.ts';
-import { plain } from '../text.ts';
+import { artifactView, plain } from '../text.ts';
 
 export interface ParsedMarkdown { meta: Record<string, unknown>; blocks: Block[] }
 
@@ -17,7 +17,11 @@ function frontmatter(lines: string[]): { meta: Record<string, unknown>; bodyStar
   return { meta: data as Record<string, unknown>, bodyStart: end + 1 };
 }
 
-export function parseMarkdown(source: string): ParsedMarkdown {
+/**
+ * `rawOut`, when given, receives for each block (same index) the source text of a paragraph, list item, step or heading
+ * before inline markup is stripped (list markers and heading hashes excluded); other blocks get an empty string.
+ */
+export function parseMarkdown(source: string, rawOut?: string[]): ParsedMarkdown {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   const { meta, bodyStart } = frontmatter(lines);
   const blocks: Block[] = [];
@@ -30,11 +34,20 @@ export function parseMarkdown(source: string): ParsedMarkdown {
     // Lines stay separate so per-line cues (VISUAL:, VO:) survive; text helpers treat \n as whitespace.
     // plain() runs over the whole paragraph so markup that wraps a line (a long link, bold) is stripped too.
     const text = plain(para.parts.join('\n'));
-    if (/^\[[^\]]*\]$/.test(text)) blocks.push({ kind: 'note', text: text.slice(1, -1).trim(), line: para.line, meta: { onscreen: true } });
-    else blocks.push({ kind: 'paragraph', text, line: para.line });
+    if (/^\[[^\]]*\]$/.test(text)) { blocks.push({ kind: 'note', text: text.slice(1, -1).trim(), line: para.line, meta: { onscreen: true } }); rawOut?.push(''); }
+    else {
+      const view = artifactView(para.parts.join('\n'));
+      blocks.push({ kind: 'paragraph', text, line: para.line, ...(view === null ? {} : { meta: { artifactText: view } }) });
+      rawOut?.push(para.parts.join('\n'));
+    }
     para = null;
   };
-  const add = (b: Block): Block => { flush(); blocks.push(b); return b; };
+  const add = (b: Block, raw = ''): Block => {
+    flush();
+    const view = raw ? artifactView(raw) : null;
+    if (view !== null) b.meta = { ...b.meta, artifactText: view };
+    blocks.push(b); rawOut?.push(raw); return b;
+  };
 
   for (let i = bodyStart; i < lines.length; i++) {
     const raw = lines[i];
@@ -44,16 +57,16 @@ export function parseMarkdown(source: string): ParsedMarkdown {
     if (/^(```|~~~)/.test(t)) { flush(); open = null; fenced = !fenced; continue; }
     if (fenced) continue;
     if (t === '' || /^(?:-{3,}|\*{3,}|_{3,})$/.test(t) || t.startsWith('|')) { flush(); open = null; continue; }
-    if ((m = t.match(/^(#{1,6})\s+(.*)$/))) { add({ kind: 'heading', text: plain(m[2]), line, meta: { level: m[1].length } }); open = null; continue; }
+    if ((m = t.match(/^(#{1,6})\s+(.*)$/))) { add({ kind: 'heading', text: plain(m[2]), line, meta: { level: m[1].length } }, m[2]); open = null; continue; }
     if ((m = t.match(/^<!--(.*)-->$/))) { add({ kind: 'note', text: m[1].trim(), line }); open = null; continue; }
-    if ((m = raw.match(/^ {0,3}(\d+)[.)]\s+(.*)$/))) { open = { block: add({ kind: 'step', text: plain(m[2]), line, meta: { n: Number(m[1]) } }), kind: 'item' }; continue; }
-    if ((m = raw.match(/^ {0,3}[-*+]\s+(.*)$/))) { open = { block: add({ kind: 'list-item', text: plain(m[1]), line }), kind: 'item' }; continue; }
+    if ((m = raw.match(/^ {0,3}(\d+)[.)]\s+(.*)$/))) { open = { block: add({ kind: 'step', text: plain(m[2]), line, meta: { n: Number(m[1]) } }, m[2]), kind: 'item' }; continue; }
+    if ((m = raw.match(/^ {0,3}[-*+]\s+(.*)$/))) { open = { block: add({ kind: 'list-item', text: plain(m[1]), line }, m[1]), kind: 'item' }; continue; }
     if ((m = t.match(/^>\s?(.*)$/))) {
       if (open?.kind === 'quote') open.block.text += ' ' + plain(m[1]);
       else open = { block: add({ kind: 'quote', text: plain(m[1]), line }), kind: 'quote' };
       continue;
     }
-    if (open?.kind === 'item' && /^\s{2,}\S/.test(raw)) { open.block.text += ' ' + plain(t); continue; }
+    if (open?.kind === 'item' && /^\s{2,}\S/.test(raw)) { open.block.text += ' ' + plain(t); if (rawOut) rawOut[rawOut.length - 1] += ' ' + t; continue; }
     open = null;
     if (!para) para = { line, parts: [] };
     para.parts.push(t);

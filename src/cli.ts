@@ -3,6 +3,7 @@ import { Command, CommanderError } from 'commander';
 import { ProseError } from './errors.ts';
 import type { Io } from './io.ts';
 import { VERSION } from './version.ts';
+import { registerAuditCommand } from './commands/audit.ts';
 import { registerCapabilities } from './commands/capabilities.ts';
 import { registerDocumentCommands } from './commands/document.ts';
 import { registerProjectCommands } from './commands/project.ts';
@@ -20,6 +21,7 @@ export function buildProgram(io: Io): Command {
     .exitOverride()
     .configureOutput({ writeErr: () => {}, writeOut: s => process.stdout.write(s) });
   registerCapabilities(program, io);
+  registerAuditCommand(program, io);
   registerDocumentCommands(program, io);
   registerProjectCommands(program, io);
   registerReadingCommands(program, io);

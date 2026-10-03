@@ -55,3 +55,12 @@ describe('lexicon matching across hard wraps', () => {
     expect(copula.examples).toEqual(['serves as']);
   });
 });
+
+describe('lexicon review date', () => {
+  it('carries a valid review date on the era-tagged list', () => {
+    expect(AI_TELLS.reviewed).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+  it('treats the date as optional for the other lists', () => {
+    for (const l of [HEDGES, FILLER]) if (l.reviewed !== undefined) expect(l.reviewed).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});

@@ -35,6 +35,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose-voice` | Voice bibles for characters, brands and speakers, fitted from samples and checked on every draft |
 | `prose-poetry` | Poems and verse forms (free verse, sonnet, haiku, limerick, ballad, villanelle, sestina) and words to a given meter, checked for syllables, rhyme and form |
 | `prose-songwriting` | Song lyrics (verse-chorus, AABA, lullaby, hymn text, words to a melody): labelled sections, matched line lengths, refrains, syllables per beat |
+| `prose-audit` | Audit a draft for generic or formulaic prose (stock openers, hollow significance, formula sentence shapes, chat residue, model-era vocabulary) and revise it by span toward specifics; never judges who wrote it |
 
 ## Commands
 
@@ -44,6 +45,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose parse <file>` | the block IR with source line numbers |
 | `prose measure <file>` | style, lexicon, spoken, script, dialog and per-speaker features |
 | `prose lint <file>` | errors, warnings, info and the judgement rules for the draft's form |
+| `prose audit <file> [--form <id>] [--text]` | hard artifacts (leaked chat markup, chat residue), clustered default-model habits by family with a reason and a revision direction, and measured context (em dashes, sentence variation, lists of three); findings only, never a verdict on who wrote it; verse forms are skipped |
 | `prose scan <file> [--form <id>] [--text] [--words]` | syllables, stress, rhyme scheme and meter of a verse draft (US English pronunciations; JSON, or `--text` for a table) |
 | `prose pronounce <word...>` | the dictionary pronunciation, syllables, stress and rhyme key of each word, with its source (dict, affix or guessed) |
 | `prose rules [--form <id>]` | the cited rules, optionally for one form |

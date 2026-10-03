@@ -1,0 +1,35 @@
+{
+  "path": "tests/fixtures/audit/human-plain.md",
+  "form": "professional",
+  "words": 129,
+  "tiers": {
+    "hard": [],
+    "soft": []
+  },
+  "measured": {
+    "emDashesPer1000": 0,
+    "sentenceLengthVariation": 0.38,
+    "tripletListsPer1000": 7.75,
+    "isAreShare": 1,
+    "notes": [
+      "Em dash rates run from 0.0 to 9.1 per 1,000 words across models, so a rate says little by itself.",
+      "Reported for context only; none of these values is flagged.",
+      "The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies."
+    ]
+  },
+  "cluster": {
+    "met": false,
+    "families": [],
+    "softPerThousand": 0,
+    "threshold": {
+      "minFamilies": 3,
+      "minPerThousand": 4,
+      "minWords": 100
+    }
+  },
+  "summary": "No cluster of default-model habits found. This does not show a person wrote it.",
+  "limits": "Style alone cannot show authorship: this audit does not say who wrote a text. A clean result proves nothing, because removing these habits is easy. Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them. Thresholds and word lists are conventions that date, which is why the lexicon review date is printed.",
+  "lexicon": {
+    "reviewed": "2026-10-03"
+  }
+}

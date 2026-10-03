@@ -46,7 +46,7 @@ describe('parseMarkdown', () => {
 describe('inline markup across line breaks', () => {
   it('strips a link whose text wraps, keeping the text and dropping the URL', () => {
     const { blocks } = parseMarkdown('[the long\nlink text](http://x.y) end');
-    expect(blocks).toEqual([{ kind: 'paragraph', text: 'the long\nlink text end', line: 1 }]);
+    expect(blocks).toEqual([{ kind: 'paragraph', text: 'the long\nlink text end', line: 1, meta: { artifactText: 'the long\nlink text end http://x.y' } }]);
   });
   it('strips bold that wraps', () => {
     const { blocks } = parseMarkdown('**bold that\nwraps** here');
