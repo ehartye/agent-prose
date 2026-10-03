@@ -130,6 +130,7 @@
       }
     ]
   },
+  "verse": null,
   "speakers": {
     "GUARD": {
       "blocks": 8,

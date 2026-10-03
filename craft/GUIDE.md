@@ -51,7 +51,9 @@ figures are second-hand, and NN/g's range is advice.
 `readability.grade.report` reports a reading grade but never targets one: a randomised trial
 found no comprehension difference between grade-8 and grade-14 versions, and rewriting to lower
 a score does not help readers. `style.passive.report` counts passive voice without banning it —
-a controlled study found active rewrites changed neither length nor comprehension.
+a controlled study found active rewrites changed neither length nor comprehension. Both are
+sentence-based prose metrics, so they stay silent for poems and lyrics, whose line breaks are not
+sentence boundaries.
 `plain.there-is` flags empty "There is / There are" openers (Army writing standard) and declares
 a conflict with `ai.copula-avoidance`: the fix is to delete the empty opener, not to swap in
 "serves as", which is a documented tell of generated text. `style.echo` flags a three-word phrase
@@ -118,6 +120,69 @@ test, a judgement rule: no line could move to another character unnoticed.
 standard). `formal.supported-claims` keeps claims inside the evidence: generalizations past the
 data and invented significance are documented failures of generated prose, and a missing value
 is a placeholder, never a guess.
+
+## Verse forms
+
+Nine verse forms (`free-verse`, `haiku`, `limerick`, `ballad`, `sonnet-shakespearean`,
+`sonnet-petrarchan`, `villanelle`, `sestina`, `song`) carry a `verse` definition in
+`craft/forms.json`; their structures follow the poets.org glossary pages named in each `basis`.
+`scheme` is one end-rhyme letter per line, and `schemes` lists alternatives (ballad, the
+Petrarchan sestet). Uppercase scheme letters mark refrain lines: the villanelle's `refrains`
+names the two refrains A1 and A2 and gives their 1-based lines (A1 at 1, 6, 12, 18; A2 at 3, 9,
+15, 19), each repeated verbatim. The sestina's `endWordRotation` has one row per stanza, giving
+the end word (A=0 to F=5) that closes each line, and a three-line envoi holds all six. Haiku
+counts are soft: poets.org notes contemporary practice often breaks 5/7/5, and the syllables
+finding says so. The ballad's three or four stresses per line and the Petrarchan volta after line 8
+are definitions only (in each form's `basis`); no check enforces them. `song` rests on weak
+sources (course descriptions and a practitioner article). Meter is advisory: `common` meter is
+read as iambic lines alternating four and three feet, starting with four.
+
+Verse rules follow the form's definition, and each says how far to trust it. `verse.form.line-count`
+warns when the count differs (sonnet 14, villanelle 19, sestina 39, limerick 5, haiku 3, ballad
+stanzas of 4). `verse.form.rhyme-scheme` compares each rhyme group with its first line rather than
+comparing scheme strings, because one missed rhyme (Sonnet 18's temperate/date) shifts every later
+letter; only a certain non-rhyme warns, and slant, eye and guessed-word pairs are info.
+`verse.form.syllables` is the soft haiku 5/7/5 (info). `verse.form.refrain` and
+`verse.form.end-words` check the villanelle's repeated lines and the sestina's rotation and
+envoi, and stay silent when the line count is wrong because `verse.form.line-count` already spoke.
+`verse.meter.deviation` is advisory: scansion is contested, so only a polysyllable's dictionary
+stress against its slot counts, and lines with guessed words are skipped. `verse.pronunciation.guessed`
+and `verse.pronunciation.ambiguous` list the words the dictionary lacks or reads two ways, since
+verdicts on those lines are weaker. `verse.rhyme.every-line` notes free verse where every line rhymes
+(a sameness signal from one study, never an authorship verdict). `verse.format.markup` catches a
+verse line the Markdown parser swallowed as a list item, step or quote. For songs,
+`lyric.refrain.consistent` expects a repeated chorus to match its first occurrence and
+`lyric.sections.line-match` flags like sections more than 2 syllables apart on a line; both rest on
+weak sources (a practitioner article and course descriptions) and are conventions. Two judgement
+rules are never evaluated: `verse.line-break.purpose` (why this line ends here) and
+`lyric.stress-on-beat` (stressed syllables on strong beats; the tool cannot hear the melody).
+
+### Writing and checking a verse draft
+
+The draft is Markdown. Write one verse line per source line and put a blank line between stanzas.
+A heading labels the stanzas after it (a song's `## Verse 1`, `## Chorus`). Lyrics may also set
+`tempo` (beats per minute) and `beatsPerLine` (default 4) in the frontmatter, which adds syllables
+per beat to the measurements. Do not start a verse line with `- `, `1. ` or `> `: the parser reads it
+as a list item, step or quote (`verse.format.markup` says so, and the line is still counted). A line
+starting with `#` becomes a heading and is not counted as verse.
+
+What each family of rules checks:
+
+- **Form** (`verse.form.*`): line count, stanza sizes, end-rhyme scheme, the haiku's soft syllable
+  pattern, the villanelle's refrains and the sestina's end-word rotation.
+- **Meter** (`verse.meter.deviation`): where a polysyllabic word's stress falls against the form's
+  foot. Advisory. The limerick checks three feet on lines 1, 2 and 5 and two on lines 3 and 4, and
+  an anapestic line may drop its opening weak syllable.
+- **Pronunciation** (`verse.pronunciation.*`): words the dictionary lacks (guessed) or reads two
+  ways, so you know which verdicts are weaker. All pronunciations are US English.
+- **Rhyme** (`verse.rhyme.every-line`): free verse in which every line rhymes, a sameness signal.
+- **Lyrics** (`lyric.*`): a repeated chorus matching its first occurrence, and like sections
+  staying within a couple of syllables per line.
+
+What the engine cannot judge: whether the poem is good, whether its imagery is fresh or its line
+breaks earn their place, and how a lyric sounds against its melody (`verse.line-break.purpose`
+and `lyric.stress-on-beat` are judgement rules the writer weighs). It counts and compares
+syllables, stress and rhyme from a dictionary; it does not hear anything.
 
 ## Variant sets and picks
 

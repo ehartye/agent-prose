@@ -37,6 +37,15 @@ describe('the plugin stands alone', () => {
       expect(text, f).not.toMatch(/[A-Za-z]:\\Users\\|\/c\/Users\/|AppData/);
     }
   });
+  it('craft and docs never mention the private wiki', () => {
+    const dirs = ['craft', 'docs'].flatMap(p => readdirSync(join(root, p), { recursive: true }).map(f => join(root, p, String(f))).filter(f => /\.(md|json)$/.test(f)));
+    expect(dirs.length).toBeGreaterThan(0);
+    for (const f of dirs) {
+      // "wikilink" and Wikipedia are about other things; "the wiki", "wiki ADR" and wiki-master point at private notes
+      const text = readFileSync(f, 'utf8').replace(/https?:\/\/\S+/g, '');
+      expect(text, f).not.toMatch(/\bwiki\b/i);
+    }
+  });
   const files = ['skills', 'craft', 'src', 'README.md', 'REFERENCES.md'].flatMap(p => {
     const full = join(root, p);
     try {

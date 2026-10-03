@@ -69,3 +69,15 @@ describe('placeholder noise', () => {
     expect(measure(loadDocument(f)).placeholders.map(p => p.text)).toEqual(['TBD']);
   });
 });
+
+describe('verse section labels are not placeholders', () => {
+  it('ignores bracketed section labels in a verse form', () => {
+    const body = '[Verse 1]\nThe road was long\n\n[Pre-Chorus]\nhold on\n\n[Chorus (x2)]\nTake me home\n\n[bridge b]\nsing';
+    expect(measure(doc(body, 'song')).placeholders).toEqual([]);
+    expect(lint(doc(body, 'song')).info.map(i => i.rule)).not.toContain('draft.placeholders');
+  });
+  it('still reports a real placeholder in a verse form, and labels in a prose form', () => {
+    expect(measure(doc('[Verse 1]\nroses [colour] red', 'song')).placeholders).toEqual([{ text: 'colour', line: 6 }]);
+    expect(measure(doc('See [Chorus] here.')).placeholders).toEqual([{ text: 'Chorus', line: 5 }]);
+  });
+});

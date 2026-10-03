@@ -1,0 +1,493 @@
+{
+  "path": "tests/fixtures/verse/sonnet18.md",
+  "format": "markdown",
+  "form": "sonnet-shakespearean",
+  "register": null,
+  "style": {
+    "words": 114,
+    "sentences": 5,
+    "sentenceLength": {
+      "mean": 22.8,
+      "sd": 8.42,
+      "max": 32
+    },
+    "longest": {
+      "line": 16,
+      "words": 32
+    },
+    "passive": {
+      "count": 0,
+      "rate": 0
+    },
+    "nominalizations": {
+      "count": 1,
+      "per100": 0.88
+    },
+    "hedges": {
+      "count": 0,
+      "per1000": 0
+    },
+    "contractions": {
+      "count": 2,
+      "per1000": 17.54
+    },
+    "thereIs": {
+      "count": 0,
+      "lines": []
+    },
+    "echo": [],
+    "readingGrade": 8.3
+  },
+  "lexicon": {
+    "aiTells": [],
+    "filler": []
+  },
+  "spoken": null,
+  "script": null,
+  "dialog": null,
+  "verse": {
+    "kind": "poem",
+    "lines": [
+      {
+        "line": 6,
+        "stanza": 0,
+        "section": "Sonnet 18",
+        "text": "Shall I compare thee to a summer's day?",
+        "syllables": 10,
+        "stress": "??01???10?",
+        "endWord": "day",
+        "ending": "stop",
+        "rhyme": "a",
+        "guessed": [],
+        "ambiguous": []
+      },
+      {
+        "line": 7,
+        "stanza": 0,
+        "section": "Sonnet 18",
+        "text": "Thou art more lovely and more temperate:",
+        "syllables": 9,
+        "syllablesAlt": 10,
+        "stress": "???10??10",
+        "endWord": "temperate",
+        "ending": "stop",
+        "rhyme": "b",
+        "guessed": [],
+        "ambiguous": [
+          "temperate"
+        ]
+      },
+      {
+        "line": 8,
+        "stanza": 0,
+        "section": "Sonnet 18",
+        "text": "Rough winds do shake the darling buds of May,",
+        "syllables": 10,
+        "stress": "?????10???",
+        "endWord": "may",
+        "ending": "weak",
+        "rhyme": "a",
+        "guessed": [],
+        "ambiguous": []
+      },
+      {
+        "line": 9,
+        "stanza": 0,
+        "section": "Sonnet 18",
+        "text": "And summer's lease hath all too short a date;",
+        "syllables": 10,
+        "stress": "?10???????",
+        "endWord": "date",
+        "ending": "stop",
+        "rhyme": "c",
+        "guessed": [],
+        "ambiguous": []
+      },
+      {
+        "line": 11,
+        "stanza": 1,
+        "section": "Sonnet 18",
+        "text": "Sometime too hot the eye of heaven shines,",
+        "syllables": 10,
+        "stress": "12?????10?",
+        "endWord": "shines",
+        "ending": "weak",
+        "rhyme": "d",
+        "guessed": [],
+        "ambiguous": []
+      },
+      {
+        "line": 12,
+        "stanza": 1,
+        "section": "Sonnet 18",
+        "text": "And often is his gold complexion dimm'd;",
+        "syllables": 10,
+        "stress": "?10???010?",
+        "endWord": "dimm'd",
+        "ending": "stop",
+        "rhyme": "e",
+        "guessed": [
+          "dimm'd"
+        ],
+        "ambiguous": []
+      },
+      {
+        "line": 13,
+        "stanza": 1,
+        "section": "Sonnet 18",
+        "text": "And every fair from fair sometime declines,",
+        "syllables": 11,
+        "syllablesAlt": 10,
+        "stress": "?100???1201",
+        "endWord": "declines",
+        "ending": "weak",
+        "rhyme": "d",
+        "guessed": [],
+        "ambiguous": [
+          "every"
+        ]
+      },
+      {
+        "line": 14,
+        "stanza": 1,
+        "section": "Sonnet 18",
+        "text": "By chance or nature's changing course untrimm'd;",
+        "syllables": 10,
+        "stress": "???1010???",
+        "endWord": "untrimm'd",
+        "ending": "stop",
+        "rhyme": "e",
+        "guessed": [
+          "untrimm'd"
+        ],
+        "ambiguous": []
+      },
+      {
+        "line": 16,
+        "stanza": 2,
+        "section": "Sonnet 18",
+        "text": "But thy eternal summer shall not fade,",
+        "syllables": 10,
+        "stress": "??01010???",
+        "endWord": "fade",
+        "ending": "weak",
+        "rhyme": "f",
+        "guessed": [],
+        "ambiguous": []
+      },
+      {
+        "line": 17,
+        "stanza": 2,
+        "section": "Sonnet 18",
+        "text": "Nor lose possession of that fair thou ow'st;",
+        "syllables": 10,
+        "stress": "??010?????",
+        "endWord": "ow'st",
+        "ending": "stop",
+        "rhyme": "g",
+        "guessed": [
+          "ow'st"
+        ],
+        "ambiguous": []
+      },
+      {
+        "line": 18,
+        "stanza": 2,
+        "section": "Sonnet 18",
+        "text": "Nor shall death brag thou wander'st in his shade,",
+        "syllables": 10,
+        "stress": "??????????",
+        "endWord": "shade",
+        "ending": "weak",
+        "rhyme": "f",
+        "guessed": [
+          "wander'st"
+        ],
+        "ambiguous": []
+      },
+      {
+        "line": 19,
+        "stanza": 2,
+        "section": "Sonnet 18",
+        "text": "When in eternal lines to time thou grow'st:",
+        "syllables": 10,
+        "stress": "??010?????",
+        "endWord": "grow'st",
+        "ending": "stop",
+        "rhyme": "g",
+        "guessed": [
+          "grow'st"
+        ],
+        "ambiguous": []
+      },
+      {
+        "line": 21,
+        "stanza": 3,
+        "section": "Sonnet 18",
+        "text": "So long as men can breathe or eyes can see,",
+        "syllables": 10,
+        "stress": "??????????",
+        "endWord": "see",
+        "ending": "weak",
+        "rhyme": "h",
+        "guessed": [],
+        "ambiguous": []
+      },
+      {
+        "line": 22,
+        "stanza": 3,
+        "section": "Sonnet 18",
+        "text": "So long lives this, and this gives life to thee.",
+        "syllables": 10,
+        "stress": "??????????",
+        "endWord": "thee",
+        "ending": "stop",
+        "rhyme": "h",
+        "guessed": [],
+        "ambiguous": []
+      }
+    ],
+    "stanzas": [
+      {
+        "section": "Sonnet 18",
+        "start": 0,
+        "count": 4
+      },
+      {
+        "section": "Sonnet 18",
+        "start": 4,
+        "count": 4
+      },
+      {
+        "section": "Sonnet 18",
+        "start": 8,
+        "count": 4
+      },
+      {
+        "section": "Sonnet 18",
+        "start": 12,
+        "count": 2
+      }
+    ],
+    "count": {
+      "lines": 14,
+      "stanzas": 4
+    },
+    "syllables": {
+      "mean": 10,
+      "sd": 0.38,
+      "min": 9,
+      "max": 11
+    },
+    "scheme": "abacdedefgfghh",
+    "nearScheme": "abaacdcdaeaeff",
+    "pairs": [
+      {
+        "a": 0,
+        "b": 2,
+        "class": "perfect",
+        "uncertain": false
+      },
+      {
+        "a": 0,
+        "b": 3,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 0,
+        "b": 8,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 0,
+        "b": 10,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 1,
+        "b": 3,
+        "class": "eye",
+        "uncertain": false
+      },
+      {
+        "a": 2,
+        "b": 3,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 2,
+        "b": 8,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 2,
+        "b": 10,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 3,
+        "b": 8,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 3,
+        "b": 10,
+        "class": "assonance",
+        "uncertain": false
+      },
+      {
+        "a": 4,
+        "b": 6,
+        "class": "perfect",
+        "uncertain": false
+      },
+      {
+        "a": 5,
+        "b": 7,
+        "class": "perfect",
+        "uncertain": true
+      },
+      {
+        "a": 8,
+        "b": 10,
+        "class": "perfect",
+        "uncertain": false
+      },
+      {
+        "a": 9,
+        "b": 11,
+        "class": "perfect",
+        "uncertain": true
+      },
+      {
+        "a": 12,
+        "b": 13,
+        "class": "perfect",
+        "uncertain": false
+      }
+    ],
+    "repeats": [],
+    "meter": [
+      {
+        "line": 0,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": []
+      },
+      {
+        "line": 1,
+        "syllables": 9,
+        "expected": 10,
+        "deviations": [
+          9
+        ]
+      },
+      {
+        "line": 2,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": []
+      },
+      {
+        "line": 3,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": []
+      },
+      {
+        "line": 4,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": [
+          0
+        ]
+      },
+      {
+        "line": 5,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": [],
+        "skipped": "guessed"
+      },
+      {
+        "line": 6,
+        "syllables": 11,
+        "expected": 10,
+        "deviations": [
+          3,
+          9
+        ]
+      },
+      {
+        "line": 7,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": [],
+        "skipped": "guessed"
+      },
+      {
+        "line": 8,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": []
+      },
+      {
+        "line": 9,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": [],
+        "skipped": "guessed"
+      },
+      {
+        "line": 10,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": [],
+        "skipped": "guessed"
+      },
+      {
+        "line": 11,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": [],
+        "skipped": "guessed"
+      },
+      {
+        "line": 12,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": []
+      },
+      {
+        "line": 13,
+        "syllables": 10,
+        "expected": 10,
+        "deviations": []
+      }
+    ],
+    "trust": {
+      "dict": 109,
+      "affix": 0,
+      "guessed": 5,
+      "words": 114
+    },
+    "markup": [],
+    "lyric": null,
+    "dialect": "US English"
+  },
+  "speakers": {},
+  "voices": {
+    "matches": {},
+    "bibles": []
+  },
+  "segments": [],
+  "target": null,
+  "placeholders": []
+}

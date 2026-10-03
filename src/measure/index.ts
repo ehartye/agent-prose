@@ -9,6 +9,8 @@ import { measureSegments, measureSpoken, type Segment, type SpokenStats } from '
 import { measureScript, type ScriptStats } from './script.ts';
 import { measureDialog, type DialogStats } from './dialog.ts';
 import { measureSpeakers, type SpeakerStats } from './speakers.ts';
+import { measureVerse, type VerseStats } from './verse.ts';
+import { looksLikeSectionLabel } from '../verse/lines.ts';
 import { dirname, resolve } from 'node:path';
 import { findProject } from '../project.ts';
 import { loadVoices, voiceFor, type Voice } from '../voice.ts';
@@ -39,12 +41,14 @@ const LIST_ITEM = /^\s*(?:[-*+]|\d+[.)])\s*$/;
 /** What follows `[id]` on a Markdown link definition line: `: destination` (URL- or path-like) and an optional title. */
 const LINK_DEF_REST = /^:\s*(?:<[^>]*>|\S*[/#:]\S*|\S*\.[\p{L}\p{N}]\S*)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/u;
 
-function placeholdersIn(b: Block): Array<{ text: string; line: number }> {
+function placeholdersIn(b: Block, verse: boolean): Array<{ text: string; line: number }> {
   const t = b.text;
   return [...t.matchAll(PLACEHOLDER)]
     .filter(p => {
       const content = p[1];
       if (NOT_PLACEHOLDER.test(content)) return false;
+      // in a poem or lyric, [Verse 1] and [Chorus] label a section
+      if (verse && looksLikeSectionLabel(content)) return false;
       const lineStart = t.lastIndexOf('\n', p.index - 1) + 1;
       const lineEnd = t.indexOf('\n', p.index) === -1 ? t.length : t.indexOf('\n', p.index);
       const before = t.slice(lineStart, p.index);
@@ -69,6 +73,8 @@ export interface Measurement {
   spoken: SpokenStats | null;
   script: ScriptStats | null;
   dialog: DialogStats | null;
+  /** Poems and lyrics: null for a form without a `verse` definition. The pronouncing dictionary loads only when this is set. */
+  verse: VerseStats | null;
   speakers: Record<string, SpeakerStats>;
   /**
    * The project found from the draft's directory upward, its voice bibles, and the bible id each speaker resolves to.
@@ -116,6 +122,7 @@ export function measure(doc: Doc): Measurement {
     spoken,
     script,
     dialog: doc.graph ? measureDialog(doc, form) : null,
+    verse: measureVerse(doc, form),
     speakers,
     voices: {
       project, matches: Object.fromEntries(Object.keys(speakers).map(sp => [sp, voiceFor(bibles, sp)?.id ?? null])),
@@ -123,6 +130,6 @@ export function measure(doc: Doc): Measurement {
     },
     segments: doc.format === 'markdown' ? measureSegments(doc) : [],
     target,
-    placeholders: prose.flatMap(placeholdersIn),
+    placeholders: prose.flatMap(b => placeholdersIn(b, form.verse !== undefined)),
   };
 }

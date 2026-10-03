@@ -6,9 +6,11 @@ import { wordOverlap, type DialogIssueKind } from '../measure/dialog.ts';
 import type { Echo } from '../measure/style.ts';
 import { NOT_SCRIPT_TEXT, PROSE_KINDS, SPOKEN_KINDS } from '../kinds.ts';
 import { sentences, words } from '../text.ts';
+import { VERSE_EVALUATORS } from './verse-evaluators.ts';
 import { TARGET_KEYS, VOICE_MIN_WORDS, type TargetKey, type Voice } from '../voice.ts';
 
-export interface Hit { message: string; line?: number | null; speaker?: string; measured?: unknown; fix?: string }
+/** `severity` can only lower the rule's severity (a finding resting on a weak measurement); lint() never raises it. */
+export interface Hit { message: string; line?: number | null; speaker?: string; measured?: unknown; fix?: string; severity?: Rule['severity'] }
 export interface EvalContext { doc: Doc; m: Measurement; rule: Rule }
 export type Evaluator = (ctx: EvalContext) => Hit[];
 
@@ -91,6 +93,8 @@ function leadWord(text: string): string {
 }
 
 export const EVALUATORS: Record<string, Evaluator> = {
+  ...VERSE_EVALUATORS,
+
   'youtube.segment.pace': ({ m, rule }) => m.segments.flatMap(s => {
     if (s.seconds <= 0) return [{ message: `Segment ${s.start}–${s.end} has no duration`, line: s.line, measured: s, fix: 'Make the end timestamp later than the start.' }];
     if (rule.value === null || s.wpm <= rule.value) return [];
@@ -113,11 +117,12 @@ export const EVALUATORS: Record<string, Evaluator> = {
   'style.sentence.max': sentenceMax(() => [...PROSE_KINDS]),
   'spoken.sentence.max': sentenceMax(doc => SPOKEN_KINDS[doc.format]),
 
-  'readability.grade.report': ({ m }) => m.style.readingGrade === null ? [] : [{
+  // Sentence-based prose metrics say nothing about a poem or lyric (line breaks are not sentences), so verse forms skip them.
+  'readability.grade.report': ({ m }) => m.verse || m.style.readingGrade === null ? [] : [{
     message: `Reading grade about ${m.style.readingGrade} (reported only; not a target)`, line: null, measured: m.style.readingGrade,
   }],
 
-  'style.passive.report': ({ m }) => m.style.passive.count === 0 ? [] : [{
+  'style.passive.report': ({ m }) => m.verse || m.style.passive.count === 0 ? [] : [{
     message: `${m.style.passive.count} passive sentence(s), rate ${m.style.passive.rate} (reported only)`, line: null, measured: m.style.passive,
   }],
 

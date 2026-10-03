@@ -25,6 +25,8 @@ export interface LintResult {
   judgement: Array<{ rule: string; severity: Rule['severity']; statement: string; sources: string[] }>;
 }
 
+const RANK: Record<Rule['severity'], number> = { info: 0, warn: 1, error: 2 };
+
 /** Lint a document; pass a measurement already taken to avoid measuring twice. */
 export function lint(doc: Doc, m: Measurement = measure(doc)): LintResult {
   const out: LintResult = {
@@ -36,14 +38,16 @@ export function lint(doc: Doc, m: Measurement = measure(doc)): LintResult {
     const evaluate = EVALUATORS[rule.id];
     if (!evaluate) throw new ProseError('E_INTERNAL', `Auto rule ${rule.id} has no evaluator`);
     for (const hit of evaluate({ doc, m, rule })) {
+      // a hit may lower the rule's severity, never raise it
+      const severity = hit.severity && RANK[hit.severity] < RANK[rule.severity] ? hit.severity : rule.severity;
       const finding: Finding = {
-        rule: rule.id, severity: rule.severity, message: hit.message,
+        rule: rule.id, severity, message: hit.message,
         at: { line: hit.line ?? null, ...(hit.speaker ? { speaker: hit.speaker } : {}) },
         ...(hit.measured !== undefined ? { measured: hit.measured } : {}),
         ...(hit.fix ? { fix: hit.fix } : {}),
         ...(rule.conflicts.length ? { tradeoffs: rule.conflicts } : {}),
       };
-      (rule.severity === 'error' ? out.errors : rule.severity === 'warn' ? out.warnings : out.info).push(finding);
+      (severity === 'error' ? out.errors : severity === 'warn' ? out.warnings : out.info).push(finding);
     }
   }
   // by source line, document-level (null) findings first; Array#sort is stable, so rule order breaks ties

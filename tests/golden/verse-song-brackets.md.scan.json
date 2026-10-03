@@ -1,0 +1,268 @@
+{
+  "path": "tests/fixtures/verse/song-brackets.md",
+  "form": "song",
+  "kind": "lyric",
+  "dialect": "US English",
+  "trust": {
+    "dict": 73,
+    "affix": 0,
+    "guessed": 0,
+    "words": 73
+  },
+  "scheme": "aabcdceefcgc",
+  "nearScheme": "aabcdcaabccc",
+  "lines": [
+    {
+      "line": 5,
+      "stanza": 0,
+      "section": "Verse 1",
+      "text": "The road was long and the night came down",
+      "syllables": 9,
+      "stress": "?????????",
+      "endWord": "down",
+      "rhyme": "a",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 6,
+      "stanza": 0,
+      "section": "Verse 1",
+      "text": "I carried my shoes through the sleeping town",
+      "syllables": 10,
+      "stress": "?10????10?",
+      "endWord": "town",
+      "rhyme": "a",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 7,
+      "stanza": 0,
+      "section": "Verse 1",
+      "text": "Nobody knew me and nobody cared",
+      "syllables": 10,
+      "stress": "122???122?",
+      "endWord": "cared",
+      "rhyme": "b",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 10,
+      "stanza": 1,
+      "section": "Chorus",
+      "text": "Take me home, take me home",
+      "syllables": 6,
+      "stress": "??????",
+      "endWord": "home",
+      "rhyme": "c",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 11,
+      "stanza": 1,
+      "section": "Chorus",
+      "text": "Where the porch light burns",
+      "syllables": 5,
+      "stress": "?????",
+      "endWord": "burns",
+      "rhyme": "d",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 12,
+      "stanza": 1,
+      "section": "Chorus",
+      "text": "Take me home",
+      "syllables": 3,
+      "stress": "???",
+      "endWord": "home",
+      "rhyme": "c",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 15,
+      "stanza": 2,
+      "section": "Verse 2",
+      "text": "The river was wide and the bridge was gone",
+      "syllables": 10,
+      "stress": "?10???????",
+      "endWord": "gone",
+      "rhyme": "e",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 16,
+      "stanza": 2,
+      "section": "Verse 2",
+      "text": "I sang to myself until the dawn",
+      "syllables": 9,
+      "stress": "???2101??",
+      "endWord": "dawn",
+      "rhyme": "e",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 17,
+      "stanza": 2,
+      "section": "Verse 2",
+      "text": "Somebody called and I was there",
+      "syllables": 8,
+      "stress": "120?????",
+      "endWord": "there",
+      "rhyme": "f",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 20,
+      "stanza": 3,
+      "section": "Chorus",
+      "text": "Take me home, take me home",
+      "syllables": 6,
+      "stress": "??????",
+      "endWord": "home",
+      "rhyme": "c",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 21,
+      "stanza": 3,
+      "section": "Chorus",
+      "text": "Where the porch light glows",
+      "syllables": 5,
+      "stress": "?????",
+      "endWord": "glows",
+      "rhyme": "g",
+      "ending": "run-on",
+      "flags": []
+    },
+    {
+      "line": 22,
+      "stanza": 3,
+      "section": "Chorus",
+      "text": "Take me home",
+      "syllables": 3,
+      "stress": "???",
+      "endWord": "home",
+      "rhyme": "c",
+      "ending": "run-on",
+      "flags": []
+    }
+  ],
+  "pairs": [
+    {
+      "a": 0,
+      "b": 1,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 0,
+      "b": 6,
+      "class": "consonance",
+      "uncertain": false
+    },
+    {
+      "a": 0,
+      "b": 7,
+      "class": "consonance",
+      "uncertain": false
+    },
+    {
+      "a": 1,
+      "b": 6,
+      "class": "consonance",
+      "uncertain": false
+    },
+    {
+      "a": 1,
+      "b": 7,
+      "class": "consonance",
+      "uncertain": false
+    },
+    {
+      "a": 2,
+      "b": 8,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 3,
+      "b": 5,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 3,
+      "b": 9,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 3,
+      "b": 10,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 3,
+      "b": 11,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 5,
+      "b": 9,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 5,
+      "b": 10,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 5,
+      "b": 11,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 6,
+      "b": 7,
+      "class": "perfect",
+      "uncertain": false
+    },
+    {
+      "a": 9,
+      "b": 10,
+      "class": "assonance",
+      "uncertain": false
+    },
+    {
+      "a": 9,
+      "b": 11,
+      "class": "identity",
+      "uncertain": false
+    },
+    {
+      "a": 10,
+      "b": 11,
+      "class": "assonance",
+      "uncertain": false
+    }
+  ],
+  "meter": null,
+  "notes": [
+    "Pronunciations come from CMUdict (US English); guessed words are estimated from spelling."
+  ]
+}

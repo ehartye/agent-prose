@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describeSource, installRuntime, resolveRuntime } from '../scripts/managed-runtime.js';
 
 const root = join(import.meta.dirname, '..');
@@ -48,6 +50,94 @@ describe('managed runtime', () => {
       expect(error.code).toBe('E_USAGE');
       expect(error.message).toMatch(/^Usage: node scripts\/setup\.js/);
       expect(error.hint).toMatch(/prose-setup/);
+    }
+  });
+
+  describe('the bundled dictionary (binary)', () => {
+    const DICT = 'craft/data/cmudict.dict.gz';
+    const sha = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
+    // Bytes that are not valid UTF-8 and hold CRLF pairs: text normalisation would corrupt or drop them.
+    const BINARY = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0x0d, 0x0a, 0xff, 0xfe, 0x80, 0x0d, 0x0a, 0x00]);
+    const made: string[] = [];
+    const temp = (prefix: string) => { const d = mkdtempSync(join(tmpdir(), prefix)); made.push(d); return d; };
+    afterAll(() => { for (const d of made) rmSync(d, { recursive: true, force: true }); });
+
+    /** A minimal runtime source: the real package files plus a stand-in dictionary. */
+    function miniSource(bytes: Buffer) {
+      const dir = temp('prose-src-');
+      for (const f of ['package.json', 'package-lock.json']) cpSync(join(root, f), join(dir, f));
+      mkdirSync(join(dir, 'src'), { recursive: true });
+      writeFileSync(join(dir, 'src', 'cli.ts'), 'export {};');
+      mkdirSync(join(dir, 'craft', 'data'), { recursive: true });
+      writeFileSync(join(dir, DICT), bytes);
+      return dir;
+    }
+
+    it('is part of the runtime files and the fingerprint covers it', () => {
+      expect(describeSource(root).files).toContain(DICT);
+      const a = describeSource(miniSource(BINARY));
+      const changed = Buffer.from(BINARY);
+      changed[8] = 0x81;
+      expect(describeSource(miniSource(changed)).fingerprint).not.toBe(a.fingerprint);
+      // CRLF in a binary is content, not a line ending: dropping the CR must change the fingerprint too.
+      const lf = Buffer.concat([BINARY.subarray(0, 4), BINARY.subarray(5)]);
+      expect(describeSource(miniSource(lf)).fingerprint).not.toBe(a.fingerprint);
+      expect(describeSource(miniSource(BINARY)).fingerprint).toBe(a.fingerprint);
+    });
+
+    it('installs the dictionary byte for byte', () => {
+      for (const [source, label] of [[miniSource(BINARY), 'binary stand-in'], [root, 'real dictionary']] as const) {
+        const home = temp('prose-home-');
+        const globalRoot = temp('prose-global-');
+        // npm is stubbed: no install, and "link" points the global package at the release like the real one would.
+        const npm = (args: string[], { cwd }: { cwd?: string; progress?: boolean } = {}) => {
+          if (args[0] === 'link') symlinkSync(cwd!, join(globalRoot, 'agent-prose'), 'junction');
+          return args[0] === 'root' ? globalRoot : '';
+        };
+        const rt = installRuntime(source, { home, npm, checkDependencies: () => {} });
+        const installed = join(rt.root, DICT);
+        expect(existsSync(installed), label).toBe(true);
+        expect(sha(installed), label).toBe(sha(join(source, DICT)));
+        expect(resolveRuntime(source, { home }).fingerprint, label).toBe(rt.fingerprint);
+      }
+    });
+
+    it('refuses a release whose installed dictionary was altered', () => {
+      const source = miniSource(BINARY);
+      const home = temp('prose-home-');
+      const globalRoot = temp('prose-global-');
+      const npm = (args: string[], { cwd }: { cwd?: string; progress?: boolean } = {}) => {
+        if (args[0] === 'link') symlinkSync(cwd!, join(globalRoot, 'agent-prose'), 'junction');
+        return args[0] === 'root' ? globalRoot : '';
+      };
+      const rt = installRuntime(source, { home, npm, checkDependencies: () => {} });
+      writeFileSync(join(rt.root, DICT), Buffer.concat([BINARY, Buffer.from([1])]));
+      expect(() => resolveRuntime(source, { home })).toThrow(/modified/);
+    });
+  });
+
+  it('measures a prose draft from the installed release without loading the dictionary', () => {
+    const home = mkdtempSync(join(tmpdir(), 'prose-home-'));
+    const globalRoot = mkdtempSync(join(tmpdir(), 'prose-global-'));
+    try {
+      const npm = (args: string[], { cwd }: { cwd?: string; progress?: boolean } = {}) => {
+        if (args[0] === 'link') symlinkSync(cwd!, join(globalRoot, 'agent-prose'), 'junction');
+        return args[0] === 'root' ? globalRoot : '';
+      };
+      const rt = installRuntime(root, { home, npm, checkDependencies: () => {} });
+      // The stubbed npm installed nothing, so lend the release this checkout's dependencies.
+      symlinkSync(join(root, 'node_modules'), join(rt.root, 'node_modules'), 'junction');
+      const src = pathToFileURL(join(rt.root, 'src')).href;
+      const code = `
+        import { loadDocument } from '${src}/document.ts';
+        import { measure } from '${src}/measure/index.ts';
+        import * as dict from '${src}/verse/cmudict.ts';
+        measure(loadDocument(${JSON.stringify(join(root, 'tests', 'fixtures', 'keynote.md'))}, { form: 'professional' }));
+        console.log(dict.cmudictLoads);`;
+      expect(execFileSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8' }).trim()).toBe('0');
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(globalRoot, { recursive: true, force: true });
     }
   });
 });
