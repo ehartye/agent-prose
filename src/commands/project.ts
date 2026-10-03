@@ -7,7 +7,7 @@ import { ProseError } from '../errors.ts';
 import { loadDocument } from '../document.ts';
 import { measure } from '../measure/index.ts';
 import { PROSE_KINDS } from '../kinds.ts';
-import { findProject, initProject } from '../project.ts';
+import { initProject, needProject } from '../project.ts';
 import { loadVoices, voiceFor, TARGET_KEYS, VOICE_MIN_WORDS, voicesDir, VoiceSchema, type TargetKey, type Voice } from '../voice.ts';
 import { round1 } from '../text.ts';
 
@@ -29,12 +29,6 @@ function toYaml(bible: Voice): string {
   for (const k of TARGET_KEYS) { const range = doc.getIn(['targets', k], true); if (isSeq(range)) range.flow = true; }
   return doc.toString({ lineWidth: 0 });
 }
-
-const needProject = (from: string): string => {
-  const project = findProject(from);
-  if (!project) throw new ProseError('E_PROJECT', `No prose project at or above ${resolve(from)}`, { hint: 'Run prose init in the project root' });
-  return project;
-};
 
 export function registerProjectCommands(program: Command, io: Io): void {
   program.command('init')

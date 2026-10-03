@@ -118,3 +118,31 @@ test, a judgement rule: no line could move to another character unnoticed.
 standard). `formal.supported-claims` keeps claims inside the evidence: generalizations past the
 data and invented significance are documented failures of generated prose, and a missing value
 is a placeholder, never a guess.
+
+## Variant sets and picks
+
+Why sets exist. Left alone, a model converges: stock jokes recur in language-model output, and
+people who rewrite with a model lose stylistic variety (Padmakumar and He, 2024; see
+REFERENCES.md). Asking for five options often returns one idea five ways. A set forces the
+options to differ, and puts the choice with the owner.
+
+What the check proves, and what it does not. `prose set check` measures each variant as a
+12-number style vector and compares it with the base. It proves three things: the text moved in
+the measured style the direction names, it is not a near-duplicate of the base or of another
+variant, and it adds no new lint errors. It cannot judge angle or quality. Labels are the agent's
+claim, so two variants with one label are flagged rather than trusted.
+
+Thresholds are this plugin's choice, not findings: a duplicate at 0.85 n-gram overlap, similar at
+0.6, barely changed from the base at 0.95, moved at 0.1 scale units, with each feature scaled by
+a fixed typical spread. Tune them with evidence, not taste.
+
+Why predictions are sealed. The agent states its guess of the owner's pick before the owner sees
+anything, with a SHA-256 over the guess, what will be shown and each variant file. A guess that
+could be revised after the reveal teaches nothing; the hash makes an edit detectable, and a
+variant edited after sealing blocks the pick. The hit rate in `prose taste stats` then measures
+how well the agent has learned the owner, which is what taste data is for.
+
+Why an unexplained pick weighs one third of a duel when four variants are shown. A pick records
+that the winner beat every other shown variant, but the owner compared them loosely. Each loser
+therefore counts 1/(shown-1) of a duel, so one choice carries about one duel of evidence however
+many variants were shown (two shown: weight 1; four shown: one third each).

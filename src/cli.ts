@@ -7,6 +7,8 @@ import { registerCapabilities } from './commands/capabilities.ts';
 import { registerDocumentCommands } from './commands/document.ts';
 import { registerProjectCommands } from './commands/project.ts';
 import { registerRuleCommands } from './commands/rules.ts';
+import { registerSetCommands } from './commands/set.ts';
+import { registerTasteCommands } from './commands/taste.ts';
 
 export function buildProgram(io: Io): Command {
   const program = new Command('prose')
@@ -19,6 +21,8 @@ export function buildProgram(io: Io): Command {
   registerDocumentCommands(program, io);
   registerProjectCommands(program, io);
   registerRuleCommands(program, io);
+  registerSetCommands(program, io);
+  registerTasteCommands(program, io);
   return program;
 }
 

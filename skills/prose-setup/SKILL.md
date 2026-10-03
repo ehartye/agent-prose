@@ -38,4 +38,5 @@ Done when the JSON reports `"ok": true` and `cliVersion` equals `pluginVersion`.
 | `npm link points elsewhere` | Rerun step 2; another checkout's link was active. |
 | `pathHint` in the report | Optional: add the directory to PATH for a bare `prose`. Skills do not need it. |
 
-Never edit files inside a managed release; reinstall instead.
+Never edit files inside a managed release; reinstall instead. `AGENT_PROSE_HOME` moves both the managed
+runtime and the taste logs; to reinstall, remove `releases/<key>`, not the directory: it also holds the taste history.

@@ -31,6 +31,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose-script` | Sitcom (multi- and single-cam), TV drama, stage play in Fountain; YouTube scripts in Markdown |
 | `prose-speech` | Toasts, eulogies, keynotes, talks and remarks, timed to a target length |
 | `prose-comedy` | Jokes, alternate lines and punch-up passes with distinct comic mechanisms |
+| `prose-review` | Variant sets for choosing between rewrites: checked for sameness, a sealed guess of the owner's pick, the pick recorded |
 | `prose-voice` | Voice bibles for characters, brands and speakers, fitted from samples and checked on every draft |
 
 ## Commands
@@ -42,9 +43,52 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose measure <file>` | style, lexicon, spoken, script, dialog and per-speaker features |
 | `prose lint <file>` | errors, warnings, info and the judgement rules for the draft's form |
 | `prose rules [--form <id>]` | the cited rules, optionally for one form |
-| `prose init [--dir <dir>]` | create `.agent-prose/` (project.json and voices/); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
+| `prose init [--dir <dir>]` | create `.agent-prose/` (project.json, voices/ and a `.gitignore` for sets and taste data); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
 | `prose voice list [--dir <dir>]` | the voice bibles of the project found from a directory upward |
 | `prose voice fit <file> --speaker <name> --id <id> [--name <name>]` | measure one speaker and write `.agent-prose/voices/<id>.yaml` with ranges around the measurements |
+| `prose set new <draft> --directions <list> [--count <n>] [--id <id>]` | start a variant set: base copy plus one file per variant to rewrite |
+| `prose set list`, `prose set show <id>`, `prose set annotate <id> <n>` (each takes `--dir <project>`) | list sets; show every variant's text, status and the kept ones; record a variant's angle label or note |
+| `prose set check <id> [--dir <project>]` | reject unchanged, near-duplicate and lint-failing variants; verify each moved in its direction |
+| `prose predict --set <id> --pick <n> [--shortlist <list>] --why <text> [--dir <project>]` | seal a guess of the owner's pick (kept variants only; freezes what is shown and a hash of each variant file) |
+| `prose set pick <id> --pick <n> [--tags <list>] [--no-predict] [--dir <project>]` | record the owner's choice as taste verdicts and reveal whether the guess hit |
+| `prose taste stats [--all-projects] [--dir <project>]` | how often sealed predictions matched the owner's pick, and how many verdict rows the logs hold |
+
+## Choosing between variants
+
+1. Write the draft, then `prose set new` with a direction per variant (punchier, drier, warmer...).
+2. Rewrite each variant file in place with a different angle; `prose set check` rejects sameness.
+3. Finish checking, then seal a guess with `prose predict`; never edit variant files afterwards.
+4. Show the kept variants, then record the owner's choice with `prose set pick`.
+
+Directions are measured proxies for style, not for quality. The owner's pick is the judgement;
+sealed predictions and `prose taste stats` show how well the agent has learned it.
+
+`prose init` writes `.agent-prose/.gitignore` so sets and taste data stay out of version control;
+voice bibles stay trackable. Per-user taste logs live under `~/.agent-prose/taste` (override with
+`AGENT_PROSE_HOME`). `AGENT_PROSE_HOME` moves both the managed runtime and the taste logs; to reinstall,
+remove `releases/<key>`, not the directory: it also holds your taste history.
+
+## Where things are stored
+
+- `.agent-prose/` in the project: `project.json`, `voices/`, `.gitignore`.
+- `.agent-prose/sets/<id>/`: `set.json`, `base.*`, `v1.*`..., `prediction.json`, `reveal.json`, `pick.pending.json` (only while a pick is interrupted), `.lock` (only while a command runs).
+- `.agent-prose/taste/verdicts.jsonl` per project; `~/.agent-prose/taste/verdicts.jsonl` and `predictions.jsonl` per user.
+
+Trimmed output of the set commands (paths and long fields shortened):
+
+```jsonc
+// prose set show demo
+{ "set": "demo", "form": "speech-small", "picked": null, "prediction": false, "keep": [1, 2, 3],
+  "variants": [{ "index": 1, "direction": "shorter", "file": "v1.md", "status": "ok", "reasons": [], "text": "..." }] }
+// prose predict --set demo --pick 2 --shortlist 1 --why "warm, second person"
+{ "set": "demo", "pick": 2, "shortlist": [1], "shown": [1, 2, 3], "why": "...", "seal": "4231..." }
+// prose set pick demo --pick 2 --tags warmer
+{ "set": "demo", "picked": 2, "file": "v2.md", "verdicts": 2, "appended": 2, "skipped": 0,
+  "reveal": { "agent": { "pick": 2, "hit": true, "shortlistHit": true, "sealValid": true } } }
+// prose taste stats
+{ "sessions": 1, "agent": { "predicted": 1, "hits": 1, "shortlistHits": 1, "voided": 0, "rate": 1 },
+  "recent": { "window": 10, "agentRate": 1 }, "verdicts": { "project": { "rows": 2 }, "global": { "rows": 2 } } }
+```
 
 ## Draft formats
 
@@ -112,7 +156,7 @@ and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Roadmap
 
-Planned next: a LAN reading page with read-aloud and a learned taste model, then PDF and
+Planned next: the LAN reading page with duels and read-aloud, and a learned taste model, then PDF and
 reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
 
 ## License

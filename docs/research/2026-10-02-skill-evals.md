@@ -56,3 +56,14 @@ measured numbers below favour the skill.
 
 - Toast length without the CLI still undershoots; in real use `prose lint` reports the gap.
 - Re-run with Bash granted on Linux or WSL2 to exercise the full measure-and-fix loop.
+
+## prose-review (M3a)
+
+Trigger case `review-options` (4 runs per arm, with-without ablation; a first run at 2 runs per arm was too noisy to
+read): the skill fired in 4 of 4 with-skill runs. Options-differ judge: with skill 3 of 4 runs passed (score 0.75),
+without skill 0 of 4 (score 0.00), delta +0.75. The one failing with-skill run produced a sound plan that the strict
+three-vote judge failed.
+Negatives `neg-docstring` and `neg-microcopy` (1 run, no ablation): prose-review did not fire
+(score 1.00 each, along with the other eight quiet graders).
+Note: this run measured the plan the skill produces, not the command output; the commands
+themselves are covered by the CLI tests and an end-to-end run through the managed runtime.

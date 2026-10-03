@@ -32,8 +32,8 @@ play, YouTube script, speeches to small and large audiences).
   `run-managed.js`; releases under `~/.agent-prose/releases/<version>-<fp>-<platform>-<arch>-<abi>`;
   `AGENT_PROSE_HOME` override; version sync across `package.json`, `plugin.json`,
   `package-lock.json`. Chromium is installed for PDF renders (from M4).
-- **Project state** in `.agent-prose/`: `project.json` (defaults), `voices/`, `sets/`, `verdicts.jsonl`,
-  `exports/`.
+- **Project state** in `.agent-prose/`: `project.json` (defaults), `voices/`, `sets/`,
+  `taste/verdicts.jsonl`, `exports/`; per-user logs in `~/.agent-prose/taste/` (`verdicts.jsonl`, `predictions.jsonl`).
 - **Voice bibles** (`.agent-prose/voices/<id>.yaml`, schema `prose/voice@1`): a character, brand or
   speaker. Fields: `register`, `description`, `samples[]`, `banned[]`, `catchphrases[]`, and
   `targets` (measured stylometric ranges, e.g. mean sentence length, contraction rate). Every
@@ -247,6 +247,44 @@ Shipped in 0.1.0:
 
 Remaining:
 
-- M3 owner loop: variant sets, sealed predictions, the LAN reading page, read-aloud, and the
-  learned taste model.
+- M3b: the LAN reading page with duels, refine rounds and read-aloud.
+- M3c: the Bradley-Terry taste model, ranking and the model's own predictions.
 - M4 render: PDF, reading copy, dialog export and OpenAI TTS.
+
+## M3a implementation notes
+
+Shipped in 0.2.0: variant sets (`prose/set@1`, a base plus one file per variant), ten measured
+directions, `prose set check` (rejections, warnings, movement), sealed predictions that freeze
+what the owner will see and a hash of each variant file, picks recorded as `prose/verdict@2`
+rows in project and per-user logs (each row carries the set's random uid, so a set id reused
+after deletion never collides with the old one), `prose taste stats`, and the ninth skill,
+prose-review.
+
+Data integrity: every change to a set runs under a per-set lock (a `.lock` directory with
+`owner.json` `{ pid, token, at }`). Holders heartbeat between steps; a waiter takes the lock over
+only when its owner process is dead (after about 2 s) or it has not been heartbeated for 2 min, and
+release removes only a lock that is still its own. `set.json`, predictions and reveals are written
+atomically. A pick writes `pick.pending.json` before appending verdicts and `set.json` last, so a
+retry after a crash must repeat the same pick and its appends are deduplicated. Variant hashes
+ignore a BOM and line endings.
+
+Deliberate differences from agent-beeps: no server yet; the agent writes the variants and the
+tool verifies them, rather than generating them; one choice weighs about one duel, so each loser
+in a pick counts 1/(shown-1); `prose init` writes `.agent-prose/.gitignore` so sets and taste data
+stay out of version control.
+
+### Data files and schemas (0.2.0)
+
+- `prose/set@1` (`sets/<id>/set.json`): `id`, `uid` (random, survives id reuse), `createdAt`, `form`, `format`, `source`, `base`, `directions`, `variants[{index,file,direction,label?,note?}]`, and `picked`/`pickedAt` once chosen.
+- `prose/prediction@1` (`prediction.json`): `set`, `pick`, `shortlist`, `why`, `at`, `shown` (the variants the owner will see, frozen), `hashes` (SHA-256 of each shown variant file, BOM and line endings ignored), `seal` (SHA-256 over the rest).
+- `prose/reveal@1` (`reveal.json`): `picked`, `at`, `agent{pick,shortlist,why,hit,shortlistHit,sealValid}`.
+- `prose/verdict@2` (one JSON line per loser, project and per-user logs): `at`, `project`, `set`, `setUid`, `kind`, `form`, `register`, `voices`, `winner{index,x}`, `loser{index,x}`, `weight`, `tags`, `features` (feature-set id), `shown`, `n`. `x` is the scaled feature vector centred on the shown set.
+- `prose/ledger@1` (`~/.agent-prose/taste/predictions.jsonl`): `at`, `project`, `set`, `setUid`, `form`, `picked`, `agent{...}`. A prediction discarded at pick time (edited seal or changed variant) is recorded with `hit: false`, `sealValid: false` and `voided: 'edited' | 'variant-changed'`, and counts as a miss.
+- `prose/pick-pending@1` (`pick.pending.json`): `pick`, `at`; exists only while a pick is interrupted.
+- The 12 features, in vector order (feature set `v1`): length, sentence, rhythm, wordLen, variety, contractions, hedges, passive, exclaim, question, secondPerson, nominal.
+- Weight rule: each loser in a pick among `shown` variants weighs 1/(shown-1), so one choice totals about one duel.
+
+M3b notes: a server process must not call the synchronous lock/write functions from request handlers (they block the event loop); shell out to the CLI or add async variants; heartbeat between steps.
+
+Remaining: M3b, the reading page with duels, refine rounds and read-aloud; M3c, the
+Bradley-Terry taste model, ranking and the model's own predictions.

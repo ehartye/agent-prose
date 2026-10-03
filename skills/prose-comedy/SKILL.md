@@ -51,6 +51,7 @@ Draw each candidate from a different mechanism, and name it:
 For each option give the line, its mechanism, and its register (hard button or thrown away).
 If the jokes live in a script file, run `prose lint <file>` and work through the
 judgement rules it lists (`comedy.premise` on sitcom forms, `comedy.serious-moments` on sitcom, drama and stage forms).
+When the owner will choose between the options, put them in a set (prose-review) so near-duplicates are rejected and the choice is recorded.
 
 ## Keep
 

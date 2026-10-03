@@ -39,5 +39,15 @@ export function initProject(dir: string, { home = homedir() }: HomeOption = {}):
   const parent = dirname(root) === root ? null : findProject(dirname(root), { home });
   mkdirSync(join(root, PROJECT_DIR, 'voices'), { recursive: true });
   if (created) writeFileSync(file, JSON.stringify({ schema: 'prose/project@1' }, null, 2) + '\n');
+  // Sets and taste data are working files; voice bibles and project.json stay trackable.
+  const ignore = join(root, PROJECT_DIR, '.gitignore');
+  if (!existsSync(ignore)) writeFileSync(ignore, 'sets/\ntaste/\n');
   return { dir: root, created, ...(parent ? { shadows: parent } : {}) };
+}
+
+/** The project at or above `from`, or an E_PROJECT error that says how to create one. */
+export function needProject(from: string): string {
+  const project = findProject(from);
+  if (!project) throw new ProseError('E_PROJECT', `No prose project at or above ${resolve(from)}`, { hint: 'Run prose init in the project root' });
+  return project;
 }
