@@ -2,13 +2,15 @@ import type { Doc } from '../ir.ts';
 import { getForm } from '../forms.ts';
 import { AI_TELLS } from '../measure/lexicon.ts';
 import { parseMarkdown } from '../parse/markdown.ts';
-import { detect, measureUnits, unitsOf, type Finding, type Measured } from './detectors.ts';
+import { detect, FAMILIES, measureUnits, unitsOf, type Evidence, type Finding, type Measured } from './detectors.ts';
 
 export interface AuditReport {
   path: string;
   form: string;
   words: number;
   tiers: { hard: Finding[]; soft: Finding[] };
+  /** Evidence tier and sources for each family that has a finding, in report order. */
+  families: Record<string, { evidence: Evidence; sources: string[] }>;
   measured: Measured;
   summary: string;
   limits: string;
@@ -45,6 +47,23 @@ function summaryOf(soft: Finding[], hard: Finding[], words: number): string {
   return parts.join(' ');
 }
 
+/** Each family with a finding, with its evidence tier and sources. */
+function familiesOf(findings: Finding[]): AuditReport['families'] {
+  const out: AuditReport['families'] = {};
+  for (const f of findings) {
+    const def = FAMILIES.find(d => d.id === f.family);
+    if (def && !out[f.family]) out[f.family] = { evidence: def.evidence, sources: def.sources };
+  }
+  return out;
+}
+
+/** The evidence tier in plain words, for the text report. */
+export const EVIDENCE_WORDS: Record<Evidence, string> = {
+  'corpus': 'corpus studies (published word-list studies; abstract-only in our notes)',
+  'field-guide': "field guide (Wikipedia's descriptive, informational writing)",
+  'reader-reported': 'reader-reported (habits readers named; no published source)',
+};
+
 /**
  * Audit a parsed draft. `source` is the draft's text; Markdown needs it, because inline emphasis and links are
  * stripped from block text and the formatting detectors read the raw lines.
@@ -54,7 +73,7 @@ export function buildReport(doc: Doc, source?: string): AuditReport {
   const base = { path: doc.path, form: doc.form };
   if (getForm(doc.form).verse !== undefined) {
     return {
-      ...base, words: 0, tiers: { hard: [], soft: [] },
+      ...base, words: 0, tiers: { hard: [], soft: [] }, families: {},
       measured: { emDashesPer1000: null, sentenceLengthVariation: null, tripletListsPer1000: null, isAreShare: null, notes: [] },
       summary: 'Skipped: verse forms are not audited.', limits: LIMITS, lexicon: { reviewed }, skipped: SKIPPED,
     };
@@ -70,14 +89,15 @@ export function buildReport(doc: Doc, source?: string): AuditReport {
     : counted;
   const hard = findings.filter(f => f.tier === 'hard');
   const soft = findings.filter(f => f.tier === 'soft');
-  return { ...base, words, tiers: { hard, soft }, measured, summary: summaryOf(soft, hard, words), limits: LIMITS, lexicon: { reviewed } };
+  return { ...base, words, tiers: { hard, soft }, families: familiesOf(findings), measured, summary: summaryOf(soft, hard, words), limits: LIMITS, lexicon: { reviewed } };
 }
 
-function group(findings: Finding[]): string[] {
+function group(findings: Finding[], families: AuditReport['families']): string[] {
   const byFamily = new Map<string, Finding[]>();
   for (const f of findings) byFamily.set(f.family, [...(byFamily.get(f.family) ?? []), f]);
   return [...byFamily].flatMap(([family, list]) => [
     `  ${family} (${list.length})`,
+    `    Evidence: ${EVIDENCE_WORDS[families[family].evidence]}`,
     ...list.flatMap(f => [
       `    line ${f.line}: "${f.text}"${f.eras ? ` [${f.eras.join(', ')}]` : ''}`,
       `      Why: ${f.why}`,
@@ -93,8 +113,8 @@ export function renderText(r: AuditReport): string {
   return [
     `Style audit of ${r.path} (${r.form}, ${r.words} words)`,
     ...(r.skipped ? ['', r.skipped] : []),
-    ...(r.tiers.hard.length ? ['', 'Hard artifacts (defects in finished text, whoever wrote it)', ...group(r.tiers.hard)] : []),
-    ...(r.tiers.soft.length ? ['', 'Hallmarks some readers associate with AI-generated text', ...group(r.tiers.soft)] : []),
+    ...(r.tiers.hard.length ? ['', 'Hard artifacts (defects in finished text, whoever wrote it)', ...group(r.tiers.hard, r.families)] : []),
+    ...(r.tiers.soft.length ? ['', 'Hallmarks some readers associate with AI-generated text', ...group(r.tiers.soft, r.families)] : []),
     ...(r.skipped ? [] : [
       '',
       'Measured, not flagged',

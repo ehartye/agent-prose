@@ -6,6 +6,7 @@
     "hard": [],
     "soft": []
   },
+  "families": {},
   "measured": {
     "emDashesPer1000": 0,
     "sentenceLengthVariation": 0.38,

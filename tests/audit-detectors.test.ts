@@ -447,6 +447,36 @@ describe('summary, limits and forbidden wording', () => {
   });
 });
 
+describe('evidence tiers', () => {
+  const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));
+  it('gives every family an evidence tier, and none is reader-reported yet', () => {
+    for (const f of FAMILIES) expect(['corpus', 'field-guide', 'reader-reported'], f.id).toContain(f.evidence);
+    expect(FAMILIES.filter(f => f.evidence === 'reader-reported')).toEqual([]);
+  });
+  it('assigns vocabulary to corpus studies and every other family to the field guide', () => {
+    expect(FAMILIES.filter(f => f.evidence === 'corpus').map(f => f.id)).toEqual(['vocabulary']);
+    expect(FAMILIES.filter(f => f.evidence === 'field-guide')).toHaveLength(FAMILIES.length - 1);
+  });
+  it('lists evidence and sources for each family that has findings in a top-level families map', () => {
+    const r = read('model-like.md');
+    const found = [...new Set([...r.tiers.hard, ...r.tiers.soft].map(f => f.family))];
+    expect(Object.keys(r.families)).toEqual(found);
+    for (const id of found) {
+      const def = FAMILIES.find(f => f.id === id)!;
+      expect(r.families[id]).toEqual({ evidence: def.evidence, sources: def.sources });
+    }
+    expect(r.families.vocabulary.evidence).toBe('corpus');
+    expect(read('human-plain.md').families).toEqual({});
+  });
+  it('states the evidence on one line per family in the text output', () => {
+    const out = renderText(read('model-like.md'));
+    expect(out).toMatch(/Evidence: corpus studies/);
+    expect(out).toMatch(/Evidence: field guide \(Wikipedia's descriptive, informational writing\)/);
+    const families = Object.keys(read('model-like.md').families).length;
+    expect(out.split('\n').filter(l => /^ {4}Evidence: /.test(l))).toHaveLength(families);
+  });
+});
+
 describe('sources', () => {
   it('cites only known references from every family, and the limits and measured notes', () => {
     const ids = new Set(REFERENCES.map(r => r.id));

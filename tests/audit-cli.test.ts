@@ -39,7 +39,7 @@ describe('prose audit', () => {
   it('prints JSON with the documented shape', () => {
     const { status, json: r } = prose('audit', MODEL);
     expect(status).toBe(0);
-    expect(Object.keys(r)).toEqual(['path', 'form', 'words', 'tiers', 'measured', 'summary', 'limits', 'lexicon']);
+    expect(Object.keys(r)).toEqual(['path', 'form', 'words', 'tiers', 'families', 'measured', 'summary', 'limits', 'lexicon']);
     expect(Object.keys(r.tiers)).toEqual(['hard', 'soft']);
     expect(r).not.toHaveProperty('cluster');
     expect(r.lexicon.reviewed).toMatch(/^\d{4}-\d{2}-\d{2}$/);

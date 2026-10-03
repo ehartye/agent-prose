@@ -134,6 +134,68 @@
       }
     ]
   },
+  "families": {
+    "title-case-heading": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai",
+        "freeburg-last-fingerprint"
+      ]
+    },
+    "vocabulary": {
+      "evidence": "corpus",
+      "sources": [
+        "wikipedia-signs-ai",
+        "kobak-excess-vocabulary",
+        "juzek-ward-delve",
+        "liang-mapping-llm-use"
+      ]
+    },
+    "undue-significance": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ]
+    },
+    "trailing-participle": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai",
+        "reinhart-llm-style"
+      ]
+    },
+    "negative-parallelism": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ]
+    },
+    "weasel-attribution": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ]
+    },
+    "despite-challenges": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ]
+    },
+    "inline-header-bullets": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai",
+        "freeburg-last-fingerprint"
+      ]
+    },
+    "closing-opener": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ]
+    }
+  },
   "measured": {
     "emDashesPer1000": 0,
     "sentenceLengthVariation": 0.33,

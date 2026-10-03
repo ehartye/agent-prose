@@ -58,12 +58,21 @@ interface Span {
 type Scope = 'all' | 'prose' | 'markdown';
 type Target = 'body' | 'heading' | 'any';
 
+/**
+ * `corpus`: word lists from published corpus studies (abstract-only in our notes). `field-guide`: Wikipedia's
+ * descriptive field guide to informational writing. `reader-reported`: habits readers and our own baseline audits
+ * named, with no published source.
+ */
+export type Evidence = 'corpus' | 'field-guide' | 'reader-reported';
+
 export interface Family {
   id: string;
   tier: Tier;
   /** `all` runs on every format, `prose` skips Fountain and dialog, `markdown` runs on Markdown only. */
   scope: Scope;
   on: Target;
+  /** How well the pattern is documented: see Evidence. */
+  evidence: Evidence;
   sources: string[];
   why: string;
   direction: string;
@@ -272,79 +281,79 @@ const closing = (u: Unit): Span[] => {
 /** Every family, in report order. `why` and `direction` are fixed sentences per family. */
 export const FAMILIES: Family[] = [
   {
-    id: 'artifact', tier: 'hard', scope: 'all', on: 'any', sources: [WIKI],
+    id: 'artifact', tier: 'hard', scope: 'all', on: 'any', evidence: 'field-guide', sources: [WIKI],
     why: 'Markup or a placeholder left over from a chat tool; it is a defect in finished text whoever wrote it.',
     direction: 'Remove the leaked markup, or fill in the real value.',
     find: u => [...lexiconSpans(ARTIFACTS, u.text), ...(u.targets ? lexiconSpans(ARTIFACTS, u.targets).map(s => ({ ...s, inTargets: true })) : [])],
   },
   {
-    id: 'chat-residue', tier: 'hard', scope: 'markdown', on: 'any', sources: [WIKI],
+    id: 'chat-residue', tier: 'hard', scope: 'markdown', on: 'any', evidence: 'field-guide', sources: [WIKI],
     why: 'A sentence addressed to a chat user rather than to the reader, found at the start or end of a prose paragraph, outside quotation marks.',
     direction: 'Cut the sentence; the document should end where its content does.',
     find: chatResidue,
   },
   {
-    id: 'knowledge-cutoff', tier: 'hard', scope: 'all', on: 'any', sources: [WIKI],
+    id: 'knowledge-cutoff', tier: 'hard', scope: 'all', on: 'any', evidence: 'field-guide', sources: [WIKI],
     why: 'A disclaimer about when a tool’s information stopped, which a reader of the document cannot use.',
     direction: 'State the date the facts were checked and name the source, or cut the disclaimer.',
     find: u => spansOf(CUTOFF, u.text),
   },
   {
-    id: 'vocabulary', tier: 'soft', scope: 'all', on: 'body', sources: [WIKI, 'kobak-excess-vocabulary', 'juzek-ward-delve', 'liang-mapping-llm-use'],
+    id: 'vocabulary', tier: 'soft', scope: 'all', on: 'body', evidence: 'corpus', sources: [WIKI, 'kobak-excess-vocabulary', 'juzek-ward-delve', 'liang-mapping-llm-use'],
     why: 'A word that appears far more often in default model prose than in earlier writing, so it reads generic on its own.',
     direction: 'Say the specific thing the word gestures at, or cut it if it adds no fact.',
     find: u => lexiconSpans(VOCABULARY, u.text),
   },
   {
-    id: 'copula-avoidance', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'copula-avoidance', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A showier verb stands where a plain is or are says the same thing.',
     direction: 'Say what the thing is, with the plain verb.',
     find: u => lexiconSpans(COPULA, u.text),
   },
   {
-    id: 'promotional', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'promotional', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A word that praises where a fact would show the same thing.',
     direction: 'State the fact and let it carry the weight; name the source of any praise.',
     find: u => lexiconSpans(PROMOTIONAL, u.text),
   },
   {
-    id: 'undue-significance', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'undue-significance', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'The sentence says the subject matters instead of saying what happened.',
     direction: 'Say what happened and what changed, with the date or the number.',
     find: u => spansOf(UNDUE, u.text),
   },
   {
-    id: 'trailing-participle', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI, 'reinhart-llm-style'],
+    id: 'trailing-participle', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI, 'reinhart-llm-style'],
     why: 'A trailing clause that comments on the sentence instead of adding a fact.',
     direction: 'Add the specific fact the clause points at, or cut the clause.',
     find: u => spansOf(PARTICIPLE, u.text),
   },
   {
-    id: 'negative-parallelism', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'negative-parallelism', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'The sentence sets up a claim only to deny it, so the real point arrives second.',
     direction: 'State the point directly, once.',
     find: u => [...spansOf(NEGATIVE, u.text), ...lexiconSpans(NOT_ONLY, u.text)],
   },
   {
-    id: 'weasel-attribution', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'weasel-attribution', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'The claim is credited to unnamed experts or studies that the reader cannot check.',
     direction: 'Name the source with a citation, or cut the attribution.',
     find: weasel,
   },
   {
-    id: 'despite-challenges', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'despite-challenges', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A formula that grants a strength, then names unspecified challenges without a single example.',
     direction: 'Name the actual problem and when it happened, or cut the formula.',
     find: u => spansOf(DESPITE, u.text),
   },
   {
-    id: 'closing-opener', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'closing-opener', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A paragraph that opens by announcing that it is a summary, then repeats earlier points.',
     direction: 'End on the last new fact, or say something the body has not.',
     find: closing,
   },
   {
-    id: 'inline-header-bullets', tier: 'soft', scope: 'markdown', on: 'body', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'inline-header-bullets', tier: 'soft', scope: 'markdown', on: 'body', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'Each bullet opens with a bolded label and a colon, a chat-style layout that breaks the prose into fragments.',
     direction: 'Write the items as sentences, or as a plain list whose labels earn their place.',
     find: (u, _ctx, units) => {
@@ -352,19 +361,19 @@ export const FAMILIES: Family[] = [
     },
   },
   {
-    id: 'emoji-lead', tier: 'soft', scope: 'markdown', on: 'any', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'emoji-lead', tier: 'soft', scope: 'markdown', on: 'any', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'An emoji opens the heading or bullet, a chat-style decoration the content does not need.',
     direction: 'Cut the emoji and let the words carry the point.',
     find: u => (u.kind === 'heading' || isListItem(u)) && EMOJI_LEAD.test(u.text) ? [{ start: 0, end: u.text.length }] : [],
   },
   {
-    id: 'title-case-heading', tier: 'soft', scope: 'markdown', on: 'heading', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'title-case-heading', tier: 'soft', scope: 'markdown', on: 'heading', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'Every major word of the heading is capitalised, a headline habit where sentence case is the norm.',
     direction: 'Write the heading in sentence case, unless your style guide says otherwise.',
     find: u => titleCase(u) ? [{ start: 0, end: u.text.length }] : [],
   },
   {
-    id: 'mechanical-bold', tier: 'soft', scope: 'markdown', on: 'body', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'mechanical-bold', tier: 'soft', scope: 'markdown', on: 'body', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'Several phrases in one paragraph are bold, so none of them stands out.',
     direction: 'Keep bold for the one term a reader must not miss, and cut the rest.',
     find: u => {
