@@ -4,10 +4,12 @@
 // seeded shuffle, and prints per-family flag rates, soft-finding density and a paired comparison, with Wilson intervals.
 //
 //   node scripts/audit-measure.mjs <dataDir> [--seed N] [--json]
+//   node scripts/audit-measure.mjs --data arxiv=<dir> --data wikiintro=<dir> --write-rates craft/audit-rates.json [--date YYYY-MM-DD]
 //
-// <dataDir> holds human/<id>.txt, model-plain/<id>.txt and model-clean/<id>.txt. The data is never copied into the
+// The second form writes per-family human rates (and the same figures for the model samples) as aggregates only:
+// no text and no ids reach the file. Each <dir> holds human/ and model-plain/. <dataDir> holds human/<id>.txt, model-plain/<id>.txt and model-clean/<id>.txt. The data is never copied into the
 // repository. Deterministic: no network, no clock, no randomness beyond the seeded shuffle.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseDocument } from '../src/document.ts';
@@ -21,16 +23,27 @@ const MIN_WORDS = 100;
 const SOFT = FAMILIES.filter(f => f.tier === 'soft').map(f => f.id);
 const HARD = FAMILIES.filter(f => f.tier === 'hard').map(f => f.id);
 
+const LABELS = { arxiv: 'arXiv abstracts, 2018 to 2021', wikiintro: 'Wikipedia introductions, before 2023' };
+
 function parseArgs(argv) {
-  const o = { dir: undefined, seed: DEFAULT_SEED, json: false };
+  const o = { dir: undefined, seed: DEFAULT_SEED, json: false, data: [], writeRates: undefined, date: undefined };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--json') o.json = true;
     else if (a === '--seed') o.seed = Number(argv[++i]);
+    else if (a === '--data') {
+      const m = /^([a-z][a-z0-9-]*)=(.+)$/.exec(argv[++i] ?? '');
+      if (!m) throw new Error('--data needs name=<dir>');
+      o.data.push({ name: m[1], dir: m[2] });
+    } else if (a === '--write-rates') o.writeRates = argv[++i];
+    else if (a === '--date') o.date = argv[++i];
     else if (!a.startsWith('--') && o.dir === undefined) o.dir = a;
     else throw new Error(`Unknown argument: ${a}`);
   }
-  if (!o.dir) throw new Error('Usage: node scripts/audit-measure.mjs <dataDir> [--seed N] [--json]');
+  if (o.writeRates !== undefined || o.data.length) {
+    if (!o.writeRates || !o.data.length || o.dir) throw new Error('Usage: node scripts/audit-measure.mjs --data name=<dir> [--data name=<dir>] --write-rates <outFile> [--date YYYY-MM-DD]');
+    if (o.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(o.date)) throw new Error('--date needs YYYY-MM-DD');
+  } else if (!o.dir) throw new Error('Usage: node scripts/audit-measure.mjs <dataDir> [--seed N] [--json]');
   if (!Number.isInteger(o.seed)) throw new Error('--seed needs an integer');
   return o;
 }
@@ -80,7 +93,7 @@ const mean = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null
 function analyze(text) {
   const doc = parseDocument('abstract.md', text, { form: 'academic' });
   const r = buildReport(doc, text);
-  return { words: r.words, findings: [...r.tiers.hard, ...r.tiers.soft] };
+  return { words: r.words, findings: [...r.tiers.hard, ...r.tiers.soft], measured: r.measured };
 }
 
 function load(dir) {
@@ -184,6 +197,43 @@ function render(result) {
   return out.join('\n');
 }
 
+const round = (v, d) => (v === null ? null : Number(v.toFixed(d)));
+
+/** Aggregates for one group of texts: per-family share with a Wilson interval, triplet p95 (100 words or more), medians. */
+function sideRates(recs) {
+  const families = {};
+  for (const f of FAMILIES) {
+    const count = recs.filter(r => r.findings.some(x => x.family === f.id)).length;
+    const w = wilson(count, recs.length);
+    families[f.id] = { count, n: recs.length, rate: round(w.rate ?? 0, 4), ci: [round(w.lo ?? 0, 4), round(w.hi ?? 0, 4)] };
+  }
+  const med = key => {
+    const xs = recs.map(r => r.measured[key]).filter(v => v !== null).sort((a, b) => a - b);
+    return round(percentile(xs, 0.5), 3);
+  };
+  const triplets = recs.filter(r => r.words >= MIN_WORDS).map(r => r.measured.tripletListsPer1000).filter(v => v !== null).sort((a, b) => a - b);
+  return {
+    families,
+    tripletP95: round(percentile(triplets, 0.95) ?? 0, 3),
+    medians: { emDashesPer1000: med('emDashesPer1000'), sentenceLengthVariation: med('sentenceLengthVariation'), tripletListsPer1000: med('tripletListsPer1000'), isAreShare: med('isAreShare') },
+  };
+}
+
+/** The `prose/audit-rates@1` object for named data directories. */
+export function buildRates(sets, date) {
+  const datasets = {};
+  for (const { name, dir } of sets) {
+    const g = load(dir);
+    datasets[name] = {
+      label: LABELS[name] ?? name,
+      n: g.human.size,
+      human: sideRates([...g.human.values()]),
+      model: sideRates([...g['model-plain'].values()]),
+    };
+  }
+  return { schema: 'prose/audit-rates@1', generated: date, datasets };
+}
+
 export function run(opts) {
   const groups = load(opts.dir);
   const { calibration, heldout } = splitIds([...groups.human.keys()], opts.seed);
@@ -216,6 +266,12 @@ export function run(opts) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const opts = parseArgs(process.argv.slice(2));
-  const result = run(opts);
-  console.log(opts.json ? JSON.stringify(result, null, 2) : render(result));
+  if (opts.writeRates) {
+    const rates = buildRates(opts.data, opts.date ?? new Date().toISOString().slice(0, 10));
+    writeFileSync(opts.writeRates, JSON.stringify(rates, null, 2) + '\n');
+    console.error(`wrote ${opts.writeRates}`);
+  } else {
+    const result = run(opts);
+    console.log(opts.json ? JSON.stringify(result, null, 2) : render(result));
+  }
 }
