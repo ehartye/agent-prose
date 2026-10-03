@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { Command } from 'commander';
@@ -5,10 +6,11 @@ import type { Io } from '../io.ts';
 import { ProseError } from '../errors.ts';
 import { needProject } from '../project.ts';
 import { recordPick } from '../owner/pick.ts';
+import { DUEL_OUTCOMES, duelKind, recordDuel, type DuelOutcome } from '../owner/duel.ts';
 import { writePrediction } from '../owner/prediction.ts';
 import { checkSet } from '../owner/check.ts';
 import { assertDirections } from '../owner/directions.ts';
-import { setDir } from '../owner/paths.ts';
+import { EVENT_ID_RE, setDir } from '../owner/paths.ts';
 import { withSetLock } from '../owner/fsutil.ts';
 import { createSet, listSetsDetailed, readSet, variantPath, writeSet } from '../owner/sets.ts';
 
@@ -129,6 +131,44 @@ export function registerSetCommands(program: Command, io: Io): void {
     .action((id: string, opts: { pick: string; tags?: string; predict: boolean; dir?: string }) => {
       const project = needProject(opts.dir ?? process.cwd());
       io.emit(recordPick(project, readSet(project, id), whole(opts.pick, '--pick'), { tags: csv(opts.tags), noPredict: opts.predict === false }));
+    });
+
+  set.command('duel')
+    .description('Record a head-to-head between two variants (from the reading page): one taste verdict; never ships the set')
+    .argument('<id>', 'set id')
+    .requiredOption('--a <n>', 'the first variant')
+    .requiredOption('--b <n>', 'the second variant')
+    .option('--a-set <id>', 'the set variant a is in (default: <id>); a refine round duels the pinned champion of an earlier set')
+    .option('--b-set <id>', 'the set variant b is in (default: <id>); the duel is recorded in <id>, which must hold one of the two')
+    .requiredOption('--outcome <outcome>', DUEL_OUTCOMES.join(' | '))
+    .option('--position <order>', 'which side variant a was shown on: ab or ba (presentation only)')
+    .option('--event-id <id>', 'names this judgement: a retry with the same id is skipped (default: random, so a repeat is a new judgement)')
+    .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
+    .action((id: string, opts: { a: string; b: string; aSet?: string; bSet?: string; outcome: string; position?: string; eventId?: string; dir?: string }) => {
+      const project = needProject(opts.dir ?? process.cwd());
+      const a = whole(opts.a, '--a');
+      const b = whole(opts.b, '--b');
+      const aSet = opts.aSet ?? id;
+      const bSet = opts.bSet ?? id;
+      if (a === b && aSet === bSet) throw new ProseError('E_USAGE', '--a and --b must be different variants', { hint: `Got ${a} twice` });
+      for (const other of new Set([aSet, bSet])) {
+        if (other === id) continue;
+        try { readSet(project, other); } catch (e) {
+          if (e instanceof ProseError && e.code === 'E_NOT_FOUND') throw new ProseError('E_USAGE', `Set ${other} does not exist`, { hint: 'prose set list shows the sets' });
+          throw e;
+        }
+      }
+      if (!(DUEL_OUTCOMES as readonly string[]).includes(opts.outcome)) throw new ProseError('E_USAGE', `--outcome "${opts.outcome}" is not an outcome`, { hint: `Allowed: ${DUEL_OUTCOMES.join(', ')}` });
+      if (opts.position !== undefined && opts.position !== 'ab' && opts.position !== 'ba') throw new ProseError('E_USAGE', '--position must be ab or ba', { hint: `Got "${opts.position}"` });
+      if (opts.eventId !== undefined && !EVENT_ID_RE.test(opts.eventId)) throw new ProseError('E_USAGE', '--event-id must be 1-100 letters, digits, dot, underscore, colon or hyphen', { hint: 'Omit it for a random id' });
+      const eventId = opts.eventId ?? randomBytes(6).toString('hex');
+      const outcome = opts.outcome as DuelOutcome;
+      const r = recordDuel(project, id, { a: { set: aSet, index: a }, b: { set: bSet, index: b }, outcome, eventId, ...(opts.position ? { position: opts.position as 'ab' | 'ba' } : {}) });
+      io.emit({
+        set: id, eventId, appended: r.appended, skipped: r.skipped,
+        rows: [{ kind: duelKind(outcome), winner: outcome === 'b' ? b : a, loser: outcome === 'b' ? a : b, weight: 1 }],
+        ...(!r.appended ? { note: 'This judgement (same event id) was already logged; nothing was appended' } : {}),
+      });
     });
 
   program.command('predict')

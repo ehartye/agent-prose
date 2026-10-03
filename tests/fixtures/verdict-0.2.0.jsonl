@@ -1,0 +1,1 @@
+{"schema":"prose/verdict@2","features":"v1","at":"2026-09-20T10:00:00.000Z","project":"/old/project","set":"demo","setUid":"0123456789abcdef","kind":"pick","form":"speech-small","register":null,"voices":[],"winner":{"index":2,"x":[0.1,-0.2]},"loser":{"index":1,"x":[-0.1,0.2]},"weight":0.5,"tags":["warm"],"shown":[1,2,3],"n":3}

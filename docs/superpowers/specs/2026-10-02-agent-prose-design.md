@@ -245,9 +245,10 @@ Shipped in 0.1.0:
 - Eight skills (setup, dialog, instruct, formal, script, speech, comedy, voice) with tier-3
   references, and paired with-skill and without-skill evals.
 
+Shipped after 0.2.0: M3b, the LAN reading page with duels, refine rounds and read-aloud (see the reading page design).
+
 Remaining:
 
-- M3b: the LAN reading page with duels, refine rounds and read-aloud.
 - M3c: the Bradley-Terry taste model, ranking and the model's own predictions.
 - M4 render: PDF, reading copy, dialog export and OpenAI TTS.
 
@@ -268,7 +269,7 @@ atomically. A pick writes `pick.pending.json` before appending verdicts and `set
 retry after a crash must repeat the same pick and its appends are deduplicated. Variant hashes
 ignore a BOM and line endings.
 
-Deliberate differences from agent-beeps: no server yet; the agent writes the variants and the
+Deliberate differences from agent-beeps: no server in 0.2.0 (the reading page added one afterwards); the agent writes the variants and the
 tool verifies them, rather than generating them; one choice weighs about one duel, so each loser
 in a pick counts 1/(shown-1); `prose init` writes `.agent-prose/.gitignore` so sets and taste data
 stay out of version control.
@@ -286,5 +287,4 @@ stay out of version control.
 
 M3b notes: a server process must not call the synchronous lock/write functions from request handlers (they block the event loop); shell out to the CLI or add async variants; heartbeat between steps.
 
-Remaining: M3b, the reading page with duels, refine rounds and read-aloud; M3c, the
-Bradley-Terry taste model, ranking and the model's own predictions.
+Remaining: M3c, the Bradley-Terry taste model, ranking and the model's own predictions.

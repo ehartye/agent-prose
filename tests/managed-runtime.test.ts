@@ -116,6 +116,50 @@ describe('managed runtime', () => {
     });
   });
 
+  describe('the reading page files (runtime/)', () => {
+    const made: string[] = [];
+    afterAll(() => { for (const d of made) rmSync(d, { recursive: true, force: true }); });
+    const PAGE = ['runtime/reading/index.html', 'runtime/reading/app.js', 'runtime/reading/style.css'];
+    const LF = String.fromCharCode(10);
+    const CRLF = String.fromCharCode(13, 10);
+    const lines = (eol: string, last: string) => ['console.log(1);', `console.log(${last});`, ''].join(eol);
+
+    /** A minimal runtime source: the real package files plus a stand-in page script. */
+    function miniSource(app: string) {
+      const dir = mkdtempSync(join(tmpdir(), 'prose-src-'));
+      made.push(dir);
+      for (const f of ['package.json', 'package-lock.json']) cpSync(join(root, f), join(dir, f));
+      mkdirSync(join(dir, 'src'), { recursive: true });
+      writeFileSync(join(dir, 'src', 'cli.ts'), 'export {};');
+      mkdirSync(join(dir, 'runtime', 'reading'), { recursive: true });
+      writeFileSync(join(dir, 'runtime', 'reading', 'app.js'), app);
+      return dir;
+    }
+
+    it('are part of the runtime files', () => {
+      for (const f of PAGE) expect(describeSource(root).files).toContain(f);
+    });
+
+    it('change the fingerprint when app.js changes, and not when only its line endings do', () => {
+      const a = describeSource(miniSource(lines(LF, '2'))).fingerprint;
+      expect(describeSource(miniSource(lines(LF, '3'))).fingerprint).not.toBe(a);
+      expect(describeSource(miniSource(lines(CRLF, '2'))).fingerprint).toBe(a);
+    });
+
+    it('install with the release, next to src, where the server looks for them', () => {
+      const home = mkdtempSync(join(tmpdir(), 'prose-home-'));
+      const globalRoot = mkdtempSync(join(tmpdir(), 'prose-global-'));
+      made.push(home, globalRoot);
+      const npm = (args: string[], { cwd }: { cwd?: string; progress?: boolean } = {}) => {
+        if (args[0] === 'link') symlinkSync(cwd!, join(globalRoot, 'agent-prose'), 'junction');
+        return args[0] === 'root' ? globalRoot : '';
+      };
+      const rt = installRuntime(root, { home, npm, checkDependencies: () => {} });
+      const text = (f: string) => readFileSync(f, 'utf8').replaceAll(CRLF, LF);
+      for (const f of PAGE) expect(text(join(rt.root, f))).toBe(text(join(root, f)));
+    });
+  });
+
   it('measures a prose draft from the installed release without loading the dictionary', () => {
     const home = mkdtempSync(join(tmpdir(), 'prose-home-'));
     const globalRoot = mkdtempSync(join(tmpdir(), 'prose-global-'));

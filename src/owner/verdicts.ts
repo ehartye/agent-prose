@@ -4,7 +4,14 @@ import { dirname } from 'node:path';
 import { z } from 'zod';
 import { projectKey } from './paths.ts';
 
-const Side = z.strictObject({ index: z.number().int().min(1), x: z.array(z.number()) });
+/**
+ * One side of a judgement. `set` and `setUid` are present ONLY when the side comes from a different set than the row's
+ * own `set` (a refine round's pinned champion dueled against a variant of a later set); a same-set side is unchanged.
+ */
+const Side = z.strictObject({
+  index: z.number().int().min(1), x: z.array(z.number()),
+  set: z.string().optional(), setUid: z.string().min(8).optional(),
+});
 
 export const VERDICT_SCHEMA = 'prose/verdict@2';
 
@@ -18,7 +25,13 @@ export const VerdictSchema = z.strictObject({
   set: z.string(),
   /** The set's random uid: a set id can be reused after deletion, the uid cannot. */
   setUid: z.string().min(8),
-  kind: z.enum(['pick']),
+  /**
+   * pick: an unexplained choice among several (one row per loser). duel: a decisive head-to-head from the reading page.
+   * tie and bothBad are symmetric (winner/loser are just the shown order a, b); see src/owner/duel.ts.
+   */
+  kind: z.enum(['pick', 'duel', 'tie', 'bothBad']),
+  /** Identifies one duel judgement, so a retry is skipped and a repeat is not. Absent on picks and on rows written by 0.2.0. */
+  eventId: z.string().min(1).max(100).optional(),
   form: z.string(),
   register: z.string().nullable(),
   voices: z.array(z.string()),
@@ -34,8 +47,15 @@ export const VerdictSchema = z.strictObject({
 export type Verdict = z.infer<typeof VerdictSchema>;
 
 /** What makes two verdict rows the same judgement (a retry after a crash). */
-const verdictKey = (r: { project: string; set: string; setUid: string; winner: { index: number }; loser: { index: number } }) =>
-  JSON.stringify([projectKey(r.project), r.set, r.setUid, r.winner.index, r.loser.index]);
+type KeySide = { index: number; set?: string; setUid?: string };
+export const verdictKey = (r: { project: string; set: string; setUid: string; winner: KeySide; loser: KeySide; kind?: string; eventId?: string }) => {
+  const key: unknown[] = [projectKey(r.project), r.set, r.setUid, r.winner.index, r.loser.index, r.kind ?? 'pick', r.eventId ?? null];
+  // A cross-set row also names where each side lives, so two different cross-set pairs never collide. A same-set row adds nothing: its key is what it always was.
+  if (r.winner.set !== undefined || r.loser.set !== undefined) {
+    key.push([r.winner, r.loser].map(s => [s.set ?? r.set, s.setUid ?? r.setUid, s.index]));
+  }
+  return JSON.stringify(key);
+};
 const ledgerKey = (r: { project: string; set: string; setUid: string }) => JSON.stringify([projectKey(r.project), r.set, r.setUid]);
 
 /** Call `fn` with each line of a file and its 1-based number, reading in chunks (no whole-file string). */
@@ -73,8 +93,8 @@ function keysFor(path: string, set: string, key: (r: any) => string): Set<string
 }
 
 /**
- * Append the rows the log does not already hold (same project key, set, set uid, winner and loser: a retry after a
- * crash), in one write. Returns, per row, whether it was appended.
+ * Append the rows the log does not already hold (same project key, set, set uid, winner, loser, kind and event id: a retry
+ * after a crash), in one write. Returns, per row, whether it was appended.
  */
 export function appendVerdictsOnce(path: string, rows: Verdict[]): boolean[] {
   if (!rows.length) return [];

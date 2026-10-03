@@ -26,6 +26,20 @@ describe('skills', () => {
   }
 });
 
+describe('prose-review reading page', () => {
+  const text = readFileSync(join(skillsDir, 'prose-review', 'SKILL.md'), 'utf8').replaceAll('\r\n', '\n');
+  it('documents the whole hand-off and what not to do', () => {
+    for (const needle of ['prose reading open --set <id> --local', 'prose reading open --set', 'BOTH links', 'prose reading wait --id', 'prose reading round --id', 'prose reading status --id', 'anyone on the home network', 'device voice', 'Do not:']) {
+      expect(text, needle).toContain(needle);
+    }
+  });
+  it('keeps the description a trigger, not a workflow', () => {
+    const fm = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+    expect(fm.match(/^description: (.*)$/m)?.[1]).not.toMatch(/prose (set|predict|reading)/);
+    expect(fm.match(/^when_to_use: (.*)$/m)?.[1]).toMatch(/phone or laptop/);
+  });
+});
+
 describe('the plugin stands alone', () => {
   // docs/ may show Fountain note syntax (double brackets), so only the plugin's own files get the wikilink check.
   const docFiles = ['docs'].flatMap(p => readdirSync(join(root, p), { recursive: true }).map(f => join(root, p, String(f))).filter(f => /\.(md|json)$/.test(f)));

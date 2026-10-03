@@ -54,16 +54,64 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose predict --set <id> --pick <n> [--shortlist <list>] --why <text> [--dir <project>]` | seal a guess of the owner's pick (kept variants only; freezes what is shown and a hash of each variant file) |
 | `prose set pick <id> --pick <n> [--tags <list>] [--no-predict] [--dir <project>]` | record the owner's choice as taste verdicts and reveal whether the guess hit |
 | `prose taste stats [--all-projects] [--dir <project>]` | how often sealed predictions matched the owner's pick, and how many verdict rows the logs hold |
+| `prose set duel <id> --a <n> --b <n> --outcome a\|b\|tie\|bothBad` | record a head-to-head from the reading page as one taste verdict (the page calls it; it never ships the set) |
+| `prose serve [--local] [--port <n>] [--foreground] [--stop] [--status]` | start or reuse the LAN reading server and print its link (the link carries the access token) |
+| `prose reading open --set <id> [--no-predict] [--prompt <text>] [--dir <project>]` | put a checked, predicted set on the reading page: freezes what is shown, registers the project, prints the link |
+| `prose reading wait --id <id> [--timeout <s>]` | block until the owner asks to refine, ships or abandons; prints champion, directions, notes with the unit text, and what to do next |
+| `prose reading round --id <id> --set <new-set>` | answer a refine request with a new set; its survivors join the session against the pinned champion |
+| `prose reading status\|list\|close` | the folded session state (and the reveal once shipped), the project's sessions, abandon an open session |
 
 ## Choosing between variants
 
 1. Write the draft, then `prose set new` with a direction per variant (punchier, drier, warmer...).
 2. Rewrite each variant file in place with a different angle; `prose set check` rejects sameness.
 3. Finish checking, then seal a guess with `prose predict`; never edit variant files afterwards.
-4. Show the kept variants, then record the owner's choice with `prose set pick`.
+4. Put the kept variants in front of the owner on the reading page (below), or show them in chat, then record the
+   choice with `prose set pick` (the page records it for you).
 
 Directions are measured proxies for style, not for quality. The owner's pick is the judgement;
 sealed predictions and `prose taste stats` show how well the agent has learned it.
+
+## Reading page
+
+The owner can read, hear and compare the variants on a phone or laptop on the home network instead of in the
+terminal. `prose serve` runs a small web server and the agent hands the owner a link. What the owner sees:
+
+- **Lineup.** Each draft, one per card in a random order, to keep or pass on. Tapping a sentence (a line in verse,
+  scripts and dialog) leaves a note on it. Scripts and dialog show who speaks each line.
+- **Duels.** Head-to-head pairs of the kept drafts, sides randomised; the owner can call a tie or reject both.
+- **Refine.** Pick the champion and up to four directions, and the request goes back to the agent, who answers with
+  a new round shown against the champion. "What changed?" shows a draft's direction only when asked.
+- **Read aloud and timing.** Play reads a draft with the device's own voice (the browser's speech synthesis; no
+  audio leaves the machine) and highlights the current sentence or line, with an estimate against the declared target.
+- **Ship.** The owner chooses the winner; the page then reveals the agent's sealed prediction and whether it matched.
+
+Every judgement lands in the same taste log as `prose set pick`. Nothing the page shows lets the owner edit a draft;
+every write goes through the `prose` CLI.
+
+**Exposure.** By default the server listens on the whole network, and anyone on it who has the link can read the drafts
+in the projects registered with the server (traffic is plain HTTP; the link carries a random token). Tell the owner
+before opening a session, and use `prose serve --local` to keep the server on this machine (the page then works only
+on this computer). Windows Firewall may block the first connection from a phone; the command prints the port to allow.
+
+The agent's sequence:
+
+1. `prose set check <id>`, then `prose predict --set <id> --pick <n> --shortlist ... --why ...`.
+2. `prose reading open --set <id>`; give the owner the link (a machine-name link and an IP link, since phones
+   often cannot resolve the name) and say who else can see it.
+3. `prose reading wait --id <id>`; on a refine request write a new set from the champion toward the directions and
+   notes (`prose set new <champion draft> --directions ...`), then `prose reading round --id <id> --set <new-set>` and wait again.
+4. On a ship, `prose reading status --id <id>` shows the reveal; apply the winner to the draft if the owner wants it.
+
+`prose serve --status` shows whether the server answers. `prose serve --stop` ends the server but keeps its token and
+the registered projects, so the link the owner was given works again after the next `prose serve`. (The page removes `?t=` from the address bar once it has loaded, so a bookmark made from the address bar afterwards has no token; keep the original link.) `prose serve` replaces a running server of the other bind (`--local` or not), and `reading open` reuses whatever is running.
+
+**Where state lives.** Each session is a folder in the project, `.agent-prose/sessions/<id>/` (`session.json`, an
+append-only `events.jsonl`, `reveal.json`). The per-user `server.json` in `~/.agent-prose` holds the access token and
+the registered projects (`AGENT_PROSE_HOME` moves it).
+
+**Not included.** No cloud text-to-speech (the browser's voice only; cloud audio belongs to the planned render command),
+and pairs are chosen by least-compared, not by a learned taste model yet.
 
 `prose init` writes `.agent-prose/.gitignore` so sets and taste data stay out of version control;
 voice bibles stay trackable. Per-user taste logs live under `~/.agent-prose/taste` (override with
@@ -190,8 +238,8 @@ and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Roadmap
 
-Planned next: the LAN reading page with duels and read-aloud, and a learned taste model, then PDF and
-reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
+Shipped: the LAN reading page with duels and read-aloud. Planned next: a learned taste model that chooses the pairs,
+then PDF and reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
 
 ## Acknowledgements
 

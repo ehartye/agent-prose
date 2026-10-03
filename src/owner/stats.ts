@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { globalTasteDir, projectKey } from './paths.ts';
+import { readVerdicts } from './verdicts.ts';
 
 export interface PredictionStats {
   sessions: number;
@@ -9,6 +10,15 @@ export interface PredictionStats {
 }
 
 const rate = (hits: number, n: number) => (n ? Math.round((hits / n) * 1000) / 1000 : null);
+
+/**
+ * Duel verdicts in one log, by outcome. Only a pick is a prediction test (the predictions ledger is written by recordPick alone),
+ * so the hit rate below never sees these.
+ */
+export const duelCounts = (path: string) => {
+  const { rows } = readVerdicts(path);
+  return { decisive: rows.filter(r => r.kind === 'duel').length, ties: rows.filter(r => r.kind === 'tie').length, bothBad: rows.filter(r => r.kind === 'bothBad').length };
+};
 
 /** How often the agent's sealed pick matched the owner's, across all projects or one. A voided row (a discarded prediction) counts as a miss. */
 export function predictionStats(opts: { project?: string; window?: number }): PredictionStats {

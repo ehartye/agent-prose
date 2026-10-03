@@ -10,7 +10,7 @@ import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep 
 import { closeSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 
 const NAME = 'agent-prose';
-const RUNTIME_FILES = ['package.json', 'package-lock.json', 'tsconfig.json', 'scripts', 'src', 'craft', 'skills'];
+const RUNTIME_FILES = ['package.json', 'package-lock.json', 'tsconfig.json', 'scripts', 'src', 'craft', 'skills', 'runtime'];
 const RECEIPT = 'managed-install.json';
 const TEXT = /\.(?:[cm]?[jt]s|json|ya?ml|fountain|html|css|svg|txt|py|md)$/;
 export const managedHome = () => resolve(process.env.AGENT_PROSE_HOME || join(homedir(), '.agent-prose'));
