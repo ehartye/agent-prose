@@ -117,6 +117,32 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
     miss: ['She dove into the pool.', 'The divers dive into the quarry at noon.', 'He dived into the lake.'],
     human: ['The kids jumped into the lake and swam to the raft.'],
   },
+  // group 2: phrasing patterns
+  'whether-youre': {
+    hit: ['Whether you’re a seasoned pro or a complete beginner, this guide helps.', 'Whether you are building a startup or running a large team, tools matter.', 'We help everyone. Whether you’re new to the city or a lifelong resident, we welcome you.'],
+    miss: ['Whether you’re coming or not, we start at nine.', 'I wonder whether you’re a member or a guest.', 'Whether we win or lose, the picnic is on Saturday.'],
+    human: ['Please tell me whether you are free on Friday or Saturday.'],
+  },
+  'from-to-range': {
+    hit: ['We serve clients from startups to enterprises.', 'From small startups to global enterprises, teams rely on it.', 'The course suits learners from beginners to experts.'],
+    miss: ['Prices rose from 5 to 10 percent.', 'The train runs from Paris to Lyon.', 'Look from the left to the right.', 'Samples were moved from vials to plates.'],
+    human: ['Transfer the cookies from trays to racks and let them cool.'],
+  },
+  'worth-noting': {
+    hit: ['It’s worth noting that the rule changed.', 'It is also worth mentioning the delay.', 'It’s important to remember that costs vary.', 'It is important to understand that results differ.'],
+    miss: ['It is important to read the label before use.', 'It is worth the trip.', 'The notes are worth reading.'],
+    human: ['Note that the valve must stay closed while the tank fills.'],
+  },
+  'marketing-verbs': {
+    hit: ['We leverage our data to grow.', 'The tool streamlines onboarding.', 'A seamless checkout is the goal.', 'Unlock the full potential of your team.', 'It will elevate your brand.', 'We empower teams.', 'This is a game-changer.', 'They harness the power of wind.', 'Navigating the complexities of tax law is hard.', 'A cutting-edge lab opened.', 'We offer best-in-class support.'],
+    miss: ['The lever gave us leverage over the bolt.', 'Unlock the door and enter.', 'Elevate the patient’s legs on a pillow.', 'The board is empowered to sign.', 'A leveraged buyout closed.', 'Seamless steel pipe was used.', 'The cutting edge of the saw is sharp.'],
+    human: ['Unlock the door with the brass key and leave the lights off.'],
+  },
+  'restating-closer': {
+    hit: ['First point.\n\nIn summary, the plan works.', 'First point.\n\nUltimately, the garden is a success.', 'Point one.\n\nAt the end of the day, it comes down to trust.', 'Point one.\n\nTo sum up, we agree.', 'Point one.\n\nIn short, it works.', 'Point one.\n\nIn essence, the town agreed.'],
+    miss: ['In summary, we agree.\n\nThe next point follows.', 'First point.\n\nThe result was, in short, a draw.', 'First point.\n\nIn conclusion, the plan works.', 'In summary, the plan works.'],
+    human: ['Thanks again for the lamp.\n\nSee you on Sunday.'],
+  },
 };
 
 describe('detectors', () => {
@@ -231,6 +257,22 @@ describe('dive-in does not double-report the vocabulary word', () => {
   });
 });
 
+describe('group 2 interactions', () => {
+  it('does not report restating-closer where closing-opener already reports the paragraph', () => {
+    for (const t of ['First point.\n\nIn conclusion, the plan works.', 'First point.\n\nOverall, the plan works.'])
+      expect(all(report(t)).map(f => f.family), t).toEqual(['closing-opener']);
+  });
+  it('never reports a marketing verb on a span that vocabulary or promotional already reports', () => {
+    const text = 'We leverage a seamless, groundbreaking and vibrant platform. It will streamline and elevate your brand, and harness the pivotal power.';
+    const found = all(report(text));
+    const m = found.filter(f => f.family === 'marketing-verbs').map(f => f.text);
+    const others = found.filter(f => ['vocabulary', 'promotional'].includes(f.family)).map(f => f.text);
+    expect(m.length).toBeGreaterThan(1);
+    expect(others.length).toBeGreaterThan(1);
+    for (const x of m) for (const o of others) expect(x.includes(o) || o.includes(x), `${x} / ${o}`).toBe(false);
+  });
+});
+
 describe('inline-header bullets, narrowed', () => {
   const list = (...labels: string[]) => labels.map(l => `- **${l}:** text`).join('\n');
   const hits = (text: string) => famOf(text, 'inline-header-bullets').length;
@@ -285,6 +327,27 @@ const SPANS: Array<[family: string, text: string, spans: string[]]> = [
   ['emoji-lead', '- ✅ Tests pass', ['✅ Tests pass']],
   ['title-case-heading', '## Understanding the Role of Technology in Modern Education', ['Understanding the Role of Technology in Modern Education']],
   ['mechanical-bold', 'Use **a**, then **b**, then **c**, then **d**. We met on Tuesday and walked home together.', ['**a**, then **b**, then **c**, then **d**']],
+  ['whether-youre', 'Whether you’re a seasoned pro or a complete beginner, this guide helps.', ['Whether you’re a seasoned pro or a complete beginner']],
+  ['whether-youre', 'Whether you are building a startup or running a large team, tools matter.', ['Whether you are building a startup or running a large team']],
+  ['from-to-range', 'We serve clients from startups to enterprises.', ['from startups to enterprises']],
+  ['from-to-range', 'From small startups to global enterprises, teams rely on it.', ['From small startups to global enterprises']],
+  ['from-to-range', 'The course suits learners from beginners to experts.', ['from beginners to experts']],
+  ['worth-noting', 'It’s worth noting that the rule changed.', ['It’s worth noting that']],
+  ['worth-noting', 'It is also worth mentioning the delay.', ['It is also worth mentioning']],
+  ['worth-noting', 'It’s important to remember that costs vary.', ['It’s important to remember that']],
+  ['marketing-verbs', 'We leverage our data to grow.', ['leverage']],
+  ['marketing-verbs', 'The tool streamlines onboarding.', ['streamlines']],
+  ['marketing-verbs', 'A seamless checkout is the goal.', ['seamless']],
+  ['marketing-verbs', 'Unlock the full potential of your team.', ['Unlock the full']],
+  ['marketing-verbs', 'It will elevate your brand.', ['elevate your brand']],
+  ['marketing-verbs', 'We empower teams.', ['empower']],
+  ['marketing-verbs', 'This is a game-changer.', ['game-changer']],
+  ['marketing-verbs', 'They harness the power of wind.', ['harness the']],
+  ['marketing-verbs', 'Navigating the complexities of tax law is hard.', ['Navigating the complexities']],
+  ['marketing-verbs', 'A cutting-edge lab opened.', ['cutting-edge']],
+  ['marketing-verbs', 'We offer best-in-class support.', ['best-in-class']],
+  ['restating-closer', 'First point.\n\nIn summary, the plan works.', ['In summary, the plan works.']],
+  ['restating-closer', 'First point.\n\nAt the end of the day, it comes down to trust. We met on Tuesday.', ['At the end of the day, it comes down to trust.']],
   ['stock-opener', 'Every team makes hundreds of decisions each quarter.', ['Every team']],
   ['stock-opener', 'Imagine a kitchen where nothing is labelled.', ['Imagine']],
   ['stock-opener', 'In an era of cheap storage, nobody deletes anything.', ['In an era of']],
@@ -495,7 +558,7 @@ describe('summary, limits and forbidden wording', () => {
 });
 
 /** The v2 families that rest on readers and our baseline audits, not on a published source. Grows by group. */
-const READER_REPORTED = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in'];
+const READER_REPORTED = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in', 'whether-youre', 'from-to-range', 'worth-noting', 'marketing-verbs'];
 
 describe('evidence tiers', () => {
   const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));

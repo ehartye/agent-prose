@@ -193,6 +193,77 @@ const DIVE_IN = new RegExp([
   String.raw`\b(?:dive|dives|diving)\s+(?:deep(?:ly)?\s+)?into\b${PHYSICAL_DIVE}`,
 ].join('|'), 'giu');
 
+/**
+ * Group 2: phrasing patterns. Reader-reported except restating-closer (an extension of the field guide's closing summary).
+ */
+const startsSentence = (text: string, at: number) => sentenceRanges(text).some(([a]) => a === at);
+
+/** "Whether you're a ... or ...": the first clause must be a noun or activity ("a pro", "building"), so "Whether you're coming or not" is left alone. */
+const WHETHER = /\bWhether\s+you(?:['’]re|\s+are)\s+(?:a|an|the|new|just|looking|trying|building|planning|starting|running|managing|working)\b[^.!?,;]{1,80}?\s+or\s+[^.!?,;]{1,50}/gu;
+const whetherYoure = (u: Unit): Span[] => spansOf(WHETHER, u.text).filter(s => startsSentence(u.text, s.start));
+
+/**
+ * "from X to Y" as a range of examples: each side one or two lowercase words ending in a plural or abstract noun, no
+ * determiner, no number, no capitalised name; a verb of motion just before ("moved from vials to plates") is a real transfer.
+ */
+const FROM_TO = /\b[Ff]rom\s+(\p{Ll}[\p{Ll}-]*(?:\s+\p{Ll}[\p{Ll}-]*)?)\s+to\s+(\p{Ll}[\p{Ll}-]*(?:\s+\p{Ll}[\p{Ll}-]*)?)(?![\p{L}-])/gu;
+const DETERMINER = /^(?:the|a|an|this|that|these|those|my|our|your|its|their|his|her|one|each|every|some|any)$/;
+const NOUNISH = /(?:[^sui]s|ies|ity|ness|ment|tion|sion)$/;
+const MOTION = /\b(?:mov\w*|transferr?\w*|copi\w*|copy|pour\w*|ship\w*|carr\w+|convert\w*|translat\w*|switch\w*|go|goes|went|gone|chang\w*|pass\w*|flow\w*|migrat\w*|import\w*|export\w*|sent|send|draw\w*|drain\w*|shift\w*)\s+(?:\S+\s+){0,2}$/iu;
+function fromTo(u: Unit): Span[] {
+  const out: Span[] = [];
+  for (const m of u.text.matchAll(FROM_TO)) {
+    const x = m[1].split(/\s+/);
+    const yAll = m[2].split(/\s+/);
+    // Try the longer right side first, then the single word before it ("from startups to enterprises are ...").
+    const y = yAll.length === 2 && NOUNISH.test(yAll[1]) && !DETERMINER.test(yAll[0]) ? yAll : yAll.slice(0, 1);
+    if (!NOUNISH.test(x[x.length - 1]) || !NOUNISH.test(y[y.length - 1])) continue;
+    if (DETERMINER.test(x[0]) || DETERMINER.test(y[0])) continue;
+    if (MOTION.test(u.text.slice(Math.max(0, m.index - 40), m.index))) continue;
+    const rightStart = m.index + m[0].length - m[2].length;
+    out.push({ start: m.index, end: rightStart + y.join(' ').length });
+  }
+  return out;
+}
+
+const WORTH_NOTING = /\bit(?:['’]s|\s+is)(?:\s+also)?\s+(?:worth\s+(?:noting|mentioning|remembering)(?:\s+that)?|important\s+to\s+(?:note|remember|understand|recogni[sz]e|keep\s+in\s+mind)\s+that)\b/giu;
+
+/**
+ * Marketing verbs, exact words. "Elevate" counts only with a figurative object (your brand, the game), "unlock" only before
+ * power, potential or full, "empowered to" is a legal grant, and "leverage" the verb needs an auxiliary or pronoun before it.
+ */
+const MARKETING = new RegExp([
+  String.raw`\bleverag(?:es|ing)\b`,
+  String.raw`\bleveraged\b(?!\s+(?:buyouts?|loans?|etfs?|funds?|positions?|finance)\b)`,
+  String.raw`(?<=\b(?:to|will|can|could|would|should|must|we|you|they|I|and|or|that|which|who|helps?|lets?)\s)leverage\b`,
+  String.raw`\bstreamlin(?:e|es|ed|ing)\b`,
+  String.raw`\bseamless(?:ly)?\b(?!\s+(?:steel|tubes?|pipes?|garments?|stockings?|tights?)\b)`,
+  String.raw`\bunlock(?:s|ed|ing)?\s+the\s+(?:power|potential|full)\b`,
+  String.raw`\belevat(?:e|es|ed|ing)\s+(?:your|their|our|its|the|his|her)\s+(?:\p{L}+\s+)?(?:brands?|business(?:es)?|game|experience|work|workflow|presence|strategy|content|style|cooking|skills|performance|marketing|teams?|results|dish(?:es)?|craft|writing|approach|standards)\b`,
+  String.raw`\bempower(?:s|ing)?\b`,
+  String.raw`\bempowered\b(?!\s+to\b)`,
+  String.raw`\bharness(?:es|ed|ing)?\s+the\b`,
+  String.raw`\bnavigat(?:e|es|ed|ing)\s+the\s+complexit(?:y|ies)\b`,
+  String.raw`\bgame[- ]changers?\b`,
+  String.raw`\bcutting-edge\b|\bcutting\s+edge(?=\s+(?:technolog|research|solution|tool|platform|design|software|approach))`,
+  String.raw`\bbest-in-class\b`,
+].join('|'), 'giu');
+/** A word the vocabulary or promotional lists already report is theirs; the same span is not reported twice. */
+const marketingVerbs = (u: Unit): Span[] => {
+  const taken = lexiconSpans([...VOCABULARY, ...PROMOTIONAL], u.text);
+  return spansOf(MARKETING, u.text).filter(s => !taken.some(t => s.start < t.end && t.start < s.end));
+};
+
+const RESTATING = /^(?:In\s+summary|In\s+short|In\s+essence|To\s+sum\s+up|Ultimately|At\s+the\s+end\s+of\s+the\s+day),\s/u;
+/** The last paragraph, when another paragraph came before it. "In conclusion," and "Overall," belong to closing-opener. */
+function restatingCloser(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
+  if (u.kind !== 'paragraph' || !RESTATING.test(u.text)) return [];
+  const paragraphs = units.map((x, n) => (x.kind === 'paragraph' ? n : -1)).filter(n => n >= 0);
+  if (paragraphs.length < 2 || paragraphs[paragraphs.length - 1] !== i) return [];
+  const first = sentenceRanges(u.text)[0];
+  return [{ start: 0, end: first ? first[1] : u.text.length }];
+}
+
 const INLINE_HEADER = /^\*\*([^*\n]{1,60}?)(?::\*\*|\*\*:)\s+\S/u;
 const EMOJI_LEAD = /^(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}️)/u;
 const BOLD = /\*\*[^*\n][^*]*?\*\*|(?<![\p{L}\p{N}_])__[^_\n][^_]*?__(?![\p{L}\p{N}_])/gu;
@@ -450,6 +521,36 @@ export const FAMILIES: Family[] = [
     why: 'A stock invitation to start, where the text could simply start.',
     direction: 'Cut the invitation and begin with the first concrete point.',
     find: u => spansOf(DIVE_IN, u.text),
+  },
+  {
+    id: 'whether-youre', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence addresses every possible reader at once, so it says nothing about the actual one.',
+    direction: 'Name the reader this is for, or start with what they get.',
+    find: whetherYoure,
+  },
+  {
+    id: 'from-to-range', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'A "from X to Y" pair stands for a whole range of cases instead of naming one.',
+    direction: 'Name the one or two cases that matter, with a detail for each.',
+    find: fromTo,
+  },
+  {
+    id: 'worth-noting', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence announces that a point matters instead of making the point.',
+    direction: 'State the point itself, and say why it matters only if that is not obvious.',
+    find: u => spansOf(WORTH_NOTING, u.text),
+  },
+  {
+    id: 'marketing-verbs', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'A verb or label from promotional copy stands where a plain verb and a measurable result would do.',
+    direction: 'Say what the thing does, to what, with what result.',
+    find: marketingVerbs,
+  },
+  {
+    id: 'restating-closer', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
+    why: 'The last paragraph opens by announcing a wrap-up, then repeats earlier points.',
+    direction: 'End on the last new fact, or on the next step for the reader.',
+    find: restatingCloser,
   },
 ];
 
