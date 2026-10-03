@@ -47,7 +47,7 @@ export function recordPick(project: string, set: PromptSet, pick: number, opts: 
 }
 
 /** Why a sealed prediction can no longer be trusted (edited after sealing, or a shown variant changed), or null. */
-function predictionProblem(project: string, set: PromptSet, p: Prediction): { reason: VoidReason; message: string } | null {
+export function predictionProblem(project: string, set: PromptSet, p: Prediction): { reason: VoidReason; message: string } | null {
   if (!sealValid(p)) return { reason: 'edited', message: `The sealed prediction for ${set.id} was edited after sealing` };
   for (const i of p.shown) {
     let now: string | null = null;
@@ -55,6 +55,24 @@ function predictionProblem(project: string, set: PromptSet, p: Prediction): { re
     if (now !== p.hashes[String(i)]) return { reason: 'variant-changed', message: `variant ${i} changed after the prediction was sealed` };
   }
   return null;
+}
+
+/** The frozen vectors (centred on the shown variants), the voices and the register of a judgement over `shown`. */
+export function shownContext(project: string, set: PromptSet, shown: number[]) {
+  const docs = shown.map(i => loadDocument(variantPath(project, set, set.variants.find(v => v.index === i)!), { form: set.form }));
+  const xs = centered(docs.map(featureVector));
+  const side = (i: number) => ({ index: i, x: xs[shown.indexOf(i)] });
+  return { side, ...docsContext(project, docs) };
+}
+
+/** The voices (by bible id) and the register of some loaded variants. */
+export function docsContext(project: string, docs: ReturnType<typeof loadDocument>[]) {
+  let voices: string[] = [];
+  try {
+    const bibles = loadVoices(project);
+    voices = [...new Set(docs.flatMap(d => d.blocks.map(b => b.speaker).filter((s): s is string => !!s)).map(s => voiceFor(bibles, s)?.id).filter((v): v is string => !!v))];
+  } catch { voices = []; }
+  return { voices, register: docs[0].register ?? null };
 }
 
 const pendingFile = (project: string, id: string) => join(setDir(project, id), 'pick.pending.json');
@@ -108,15 +126,7 @@ function recordPickLocked(project: string, set: PromptSet, pick: number, opts: P
     }
     shown = check.keep;
   }
-  const docs = shown.map(i => loadDocument(variantPath(project, set, set.variants.find(v => v.index === i)!), { form: set.form }));
-  const xs = centered(docs.map(featureVector));
-  const side = (i: number) => ({ index: i, x: xs[shown.indexOf(i)] });
-  let voices: string[] = [];
-  try {
-    const bibles = loadVoices(project);
-    voices = [...new Set(docs.flatMap(d => d.blocks.map(b => b.speaker).filter((s): s is string => !!s)).map(s => voiceFor(bibles, s)?.id).filter((v): v is string => !!v))];
-  } catch { voices = []; }
-  const register = docs[0].register ?? null;
+  const { side, voices, register } = shownContext(project, set, shown);
 
   const rows: Verdict[] = shown.filter(i => i !== pick).map(loser => ({
     schema: VERDICT_SCHEMA, at: now.toISOString(), project, set: set.id, setUid: set.uid, kind: 'pick' as const, form: set.form, register, voices,

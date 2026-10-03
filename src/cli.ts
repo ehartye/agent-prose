@@ -6,6 +6,7 @@ import { VERSION } from './version.ts';
 import { registerCapabilities } from './commands/capabilities.ts';
 import { registerDocumentCommands } from './commands/document.ts';
 import { registerProjectCommands } from './commands/project.ts';
+import { registerReadingCommands } from './commands/reading.ts';
 import { registerRuleCommands } from './commands/rules.ts';
 import { registerSetCommands } from './commands/set.ts';
 import { registerTasteCommands } from './commands/taste.ts';
@@ -21,6 +22,7 @@ export function buildProgram(io: Io): Command {
   registerCapabilities(program, io);
   registerDocumentCommands(program, io);
   registerProjectCommands(program, io);
+  registerReadingCommands(program, io);
   registerRuleCommands(program, io);
   registerSetCommands(program, io);
   registerTasteCommands(program, io);

@@ -33,11 +33,13 @@ const file = (project: string, id: string) => join(setDir(project, id), 'predict
 
 /** SHA-256 of a variant's text with a UTF-8 BOM removed and CRLF/CR line endings made LF, so an editor that only
  * changes line endings does not count as an edit. */
+export const textHash = (text: string): string =>
+  createHash('sha256').update(text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), 'utf8').digest('hex');
+
 export const variantHash = (project: string, set: PromptSet, index: number): string => {
   const v = set.variants.find(x => x.index === index);
   if (!v) throw new ProseError('E_USAGE', `Set ${set.id} has no variant ${index}`);
-  const text = readFileSync(variantPath(project, set, v), 'utf8').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
-  return createHash('sha256').update(text, 'utf8').digest('hex');
+  return textHash(readFileSync(variantPath(project, set, v), 'utf8'));
 };
 
 export interface PredictionInput { pick: number; shortlist: number[]; why: string; now?: Date; lock?: LockOptions }

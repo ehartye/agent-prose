@@ -5,6 +5,8 @@ import { PROJECT_DIR } from '../project.ts';
 import { managedHome } from '../../scripts/managed-runtime.js';
 
 export const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+/** An event id (the page's idempotency key, the CLI's --event-id): plain characters only, so it is safe in a log, a file and a command line. */
+export const EVENT_ID_RE = /^[A-Za-z0-9._:-]{1,100}$/;
 const MAX_ID = 64;
 const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/;
 
@@ -30,6 +32,8 @@ export const projectKey = (path: string): string => {
 
 export const setsDir = (project: string) => join(project, PROJECT_DIR, 'sets');
 export const setDir = (project: string, id: string) => join(setsDir(project), validId(id, 'Set id'));
+export const sessionsDir = (project: string) => join(project, PROJECT_DIR, 'sessions');
+export const sessionDir = (project: string, id: string) => join(sessionsDir(project), validId(id, 'Session id'));
 export const projectTasteDir = (project: string) => join(project, PROJECT_DIR, 'taste');
 
 /** The per-user directory. It is also the managed runtime's home, so tests must override AGENT_PROSE_HOME. */

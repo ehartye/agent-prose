@@ -45,6 +45,7 @@ describe('capabilities error codes', () => {
   it('lists only codes the CLI emits today and reserves the rest', async () => {
     const caps = await run('capabilities');
     expect(caps.errorCodes).not.toContain('E_TTS');
-    expect(caps.reservedErrorCodes).toEqual(['E_RENDER', 'E_BROWSER_MISSING', 'E_SERVER', 'E_TTS']);
+    expect(caps.errorCodes).toContain('E_SERVER');
+    expect(caps.reservedErrorCodes).toEqual(['E_RENDER', 'E_BROWSER_MISSING', 'E_TTS']);
   });
 });
