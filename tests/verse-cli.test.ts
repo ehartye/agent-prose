@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fixture } from './helpers.ts';
@@ -73,6 +73,51 @@ describe('prose scan', () => {
 
   it('--form overrides the draft form', () => {
     expect(prose('scan', sonnet, '--form', 'haiku').json.form).toBe('haiku');
+  });
+});
+
+describe('prose scan: syllables per beat and legend', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prose-verse-spb-'));
+  const draft = (front: string) => { const f = join(dir, `d${Math.random().toString(36).slice(2)}.md`); writeFileSync(f, `---
+${front}
+---
+[Verse 1]
+The road was long and the night came down
+I carried my shoes
+Nobody knew me and nobody cared
+Take me home
+`); return f; };
+
+  it('JSON syllablesPerBeat is null when no tempo is declared, with a legend', () => {
+    const { json: s } = prose('scan', sonnet);
+    expect(s.syllablesPerBeat).toBeNull();
+    expect(s.legend[0]).toMatch(/^Stress: 1 stressed, 2 secondary, 0 unstressed, \? flexible/);
+    expect(s.legend[1]).toBe('Scheme counts perfect and identity rhymes; near also counts assonance and consonance (slant rhymes).');
+    expect(s.legend).toHaveLength(2);
+  });
+
+  it('JSON syllablesPerBeat carries tempo, beats, per-line values and mean', () => {
+    const { json: s } = prose('scan', draft('form: song\ntempo: 90'));
+    expect(s.syllablesPerBeat).toMatchObject({ tempo: 90, beatsPerLine: 4 });
+    expect(s.syllablesPerBeat.perLine).toHaveLength(s.lines.length);
+    expect(s.syllablesPerBeat.perLine).toEqual(s.lines.map((l: any) => Math.round(l.syllables / 4 * 100) / 100));
+  });
+
+  it('--text adds an spb column and one note line only when tempo is declared', () => {
+    const plain = prose('scan', sonnet, '--text').stdout;
+    expect(plain).not.toMatch(/\bspb\b/);
+    expect(plain).not.toContain('Syllables per beat');
+    expect(plain).toContain('Stress: 1 stressed, 2 secondary');
+    const t = prose('scan', draft('form: song\ntempo: 90\nbeatsPerLine: 8'), '--text').stdout;
+    expect(t).toMatch(/\bspb\b/);
+    expect(t).toMatch(/^Syllables per beat: tempo 90, 8 beats per line, mean \d\.\d\d \(range \d\.\d\d to \d\.\d\d\)\.$/m);
+  });
+
+  it('adds the declared-pattern legend only when a pattern or scheme is declared', () => {
+    expect(prose('scan', sonnet, '--text').stdout).not.toContain('Declared pattern:');
+    const t = prose('scan', draft('form: free-verse\nsyllables: 8.6.8.6\nscheme: xaxa'), '--text').stdout;
+    expect(t).toContain('Declared pattern: lines marked +n/-n are n syllables over/under it');
+    expect(t).toContain('checked by prose lint');
   });
 });
 

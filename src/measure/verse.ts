@@ -1,7 +1,8 @@
 import type { Doc } from '../ir.ts';
 import type { Form } from '../forms.ts';
+import { readDeclared, type Declared } from '../declared.ts';
 import { round2 } from '../text.ts';
-import { extractVerse, normalise, type VerseMarkup } from '../verse/lines.ts';
+import { extractVerse, normalise, type Direction, type VerseMarkup } from '../verse/lines.ts';
 import { checkMeter, type MeterLine } from '../verse/meter.ts';
 import { analyseLine, type LineAnalysis } from '../verse/prosody.ts';
 import { scheme, type RhymePair } from '../verse/rhyme.ts';
@@ -66,6 +67,10 @@ export interface VerseStats {
   /** Word counts by pronunciation source across the whole text. */
   trust: { dict: number; affix: number; guessed: number; words: number };
   markup: VerseMarkup[];
+  /** Lyrics only: performance notes ((hum softly), "Folk, about 90 bpm, 4/4") kept out of the lines; always empty for a poem. */
+  directions: Direction[];
+  /** Author-declared syllable pattern and rhyme scheme from the frontmatter, as normalised; null when neither is declared. */
+  declared: Declared | null;
   lyric: LyricStats | null;
   dialect: 'US English';
 }
@@ -80,6 +85,51 @@ export function baseLabel(label: string): string {
     .trim()
     .replace(/\s+(?:\d+[a-z]?|[a-z])$/, '')
     .replace(/\s+/g, ' ');
+}
+
+/** What a declared pattern asks of one stanza: syllable counts per line and a scheme, each null when none covers it. */
+export interface StanzaPattern { syllables: number[] | null; scheme: string | null }
+
+function pick<T>(declared: T | Record<string, T> | null, section: string | null): T | null {
+  if (declared === null) return null;
+  if (typeof declared !== 'object' || Array.isArray(declared)) return declared as T;
+  if (section === null) return null;
+  const base = baseLabel(section);
+  const hit = Object.entries(declared as Record<string, T>).find(([key]) => baseLabel(key) === base);
+  return hit ? hit[1] : null;
+}
+
+/** The declared pattern for each stanza: one pattern for all stanzas, or by the stanza's section base label. */
+export function stanzaPatterns(v: Pick<VerseStats, 'stanzas' | 'declared'>): StanzaPattern[] {
+  const d = v.declared;
+  return v.stanzas.map(st => ({ syllables: pick(d?.syllables ?? null, st.section), scheme: pick(d?.scheme ?? null, st.section) }));
+}
+
+/** The lowest and highest syllable count a line can be read as (a word such as "every" counts two or three). */
+export const syllableRange = (l: Pick<LineStat, 'syllables' | 'syllablesAlt'>): [number, number] =>
+  [Math.min(l.syllables, l.syllablesAlt ?? l.syllables), Math.max(l.syllables, l.syllablesAlt ?? l.syllables)];
+
+/**
+ * A line against a syllable target, in ONE place for scan and lint: ok when the target is inside the line's range,
+ * `over` when even the lowest reading has more syllables (diff is positive), `under` when even the highest has fewer
+ * (diff is negative).
+ */
+export function syllableFit(l: Pick<LineStat, 'syllables' | 'syllablesAlt'>, want: number): { fit: 'ok' | 'over' | 'under'; diff?: number } {
+  const [lo, hi] = syllableRange(l);
+  if (want < lo) return { fit: 'over', diff: lo - want };
+  if (want > hi) return { fit: 'under', diff: hi - want };
+  return { fit: 'ok' };
+}
+
+/** The declared syllable target for each line (null where no pattern covers it or its stanza has the wrong number of lines). */
+export function lineTargets(v: Pick<VerseStats, 'stanzas' | 'declared' | 'lines'>): Array<number | null> {
+  const out: Array<number | null> = v.lines.map(() => null);
+  stanzaPatterns(v).forEach((p, i) => {
+    const st = v.stanzas[i]!;
+    if (!p.syllables || p.syllables.length !== st.count) return;
+    p.syllables.forEach((want, k) => { out[st.start + k] = want; });
+  });
+  return out;
 }
 
 function syllableStats(counts: number[]): VerseStats['syllables'] {
@@ -171,7 +221,8 @@ function feetPerLine(def: NonNullable<Form['verse']>, spans: VerseStats['stanzas
 export function measureVerse(doc: Doc, form: Form): VerseStats | null {
   const def = form.verse;
   if (!def) return null;
-  const { stanzas, markup } = extractVerse(doc);
+  const declared = readDeclared(doc.meta);
+  const { stanzas, markup, directions } = extractVerse(doc);
   const analyses: LineAnalysis[] = [];
   const meta: Array<{ line: number; stanza: number; section: string | null }> = [];
   const spans: VerseStats['stanzas'] = [];
@@ -210,6 +261,8 @@ export function measureVerse(doc: Doc, form: Form): VerseStats | null {
     meter: def.meter ? checkMeter(analyses, def.meter, feetPerLine(def, spans, analyses.length)) : null,
     trust: { dict: count('dict'), affix: count('affix'), guessed: count('guessed'), words: sources.length },
     markup,
+    directions,
+    declared,
     lyric: def.kind === 'lyric' ? lyricOf(doc, lines, spans) : null,
     dialect: 'US English',
   };

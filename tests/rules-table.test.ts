@@ -137,6 +137,7 @@ const ROWS: Row[] = [
   { rule: 'verse.rhyme.every-line', passing: fx('free-verse.md'), note: 'six or more lines, every end word rhymes with another',
     failing: plain(verse('free-verse', 'The cat sat down all day\nand watched the rain go away\nthe bells rang out at night\nand filled the room with light\nwe walked down to the sea\nand left the rest to me')) },
   { rule: 'verse.format.markup', passing: fx('free-verse.md'), failing: plain(verse('free-verse', 'The kettle ticks as it cools\n\n- and the window holds\na small grey rain')) },
+  { rule: 'verse.format.direction', passing: fx('song.md'), failing: plain(textOf('song.md').replace('## Chorus\n', '## Chorus\n\n(hum softly)\n')) },
   { rule: 'lyric.refrain.consistent', passing: plain(textOf('song.md').replace('glows', 'burns')), failing: fx('song.md') },
   { rule: 'lyric.sections.line-match', passing: fx('song.md'),
     failing: plain(textOf('song.md').replace('Somebody called and I was there', 'Somebody called out my name across the water and I was there')) },

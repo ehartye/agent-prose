@@ -262,7 +262,14 @@
     }
   ],
   "meter": null,
+  "directions": [],
+  "declared": null,
   "notes": [
     "Pronunciations come from CMUdict (US English); guessed words are estimated from spelling."
+  ],
+  "syllablesPerBeat": null,
+  "legend": [
+    "Stress: 1 stressed, 2 secondary, 0 unstressed, ? flexible (one-syllable words) or unknown (guessed words); only multi-syllable words show real stress.",
+    "Scheme counts perfect and identity rhymes; near also counts assonance and consonance (slant rhymes)."
   ]
 }

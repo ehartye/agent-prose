@@ -3,7 +3,8 @@ import type { Io } from '../io.ts';
 import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
 import { FORMS, getForm } from '../forms.ts';
-import { measureVerse, type LineStat, type VerseStats } from '../measure/verse.ts';
+import { describeScheme, describeSyllables } from '../declared.ts';
+import { lineTargets, measureVerse, syllableFit, type LineStat, type VerseStats } from '../measure/verse.ts';
 import { analyseLine } from '../verse/prosody.ts';
 import { pronounce } from '../verse/pronounce.ts';
 
@@ -15,6 +16,8 @@ export const verseFormIds = (): string[] => FORMS.filter(f => f.verse).map(f => 
 interface ScanLine {
   line: number; stanza: number; section: string | null; text: string; syllables: number; syllablesAlt?: number;
   stress: string; endWord: string | null; rhyme: string; ending: string; flags: string[];
+  /** Present when a declared syllable pattern covers the line: `over` has more syllables than asked, `under` fewer. */
+  declared?: { want: number; fit: 'ok' | 'over' | 'under'; diff?: number };
   words?: Array<{ word: string; source: string; syllables: number; stress: string; variants: number; rhymeKey: string }>;
 }
 
@@ -37,21 +40,57 @@ function notesOf(stats: VerseStats): string[] {
   ];
 }
 
+type Spb = NonNullable<NonNullable<VerseStats['lyric']>['syllablesPerBeat']>;
+
+/** Legend lines: what the stress and scheme columns mean, plus how declared values show up (only when the draft declares some). */
+function legendOf(stats: VerseStats, wantShown: boolean): string[] {
+  const d = stats.declared;
+  const parts = [
+    ...(wantShown ? ['lines marked +n/-n are n syllables over/under it'] : []),
+    ...(d?.scheme ? ['the rhyme letters you declared are checked by prose lint, not shown here (the Scheme line is inferred from sound and may differ)'] : []),
+  ];
+  return [
+    'Stress: 1 stressed, 2 secondary, 0 unstressed, ? flexible (one-syllable words) or unknown (guessed words); only multi-syllable words show real stress.',
+    'Scheme counts perfect and identity rhymes; near also counts assonance and consonance (slant rhymes).',
+    ...(parts.length ? [`Declared pattern: ${parts.join('; ')}.`] : []),
+  ];
+}
+
+/** The syllables-per-beat note, or nothing when the draft declares no tempo. */
+function spbNote(spb: Spb | null): string[] {
+  if (!spb || !spb.perLine.length) return [];
+  return [`Syllables per beat: tempo ${spb.tempo}, ${spb.beatsPerLine} beats per line, mean ${spb.mean.toFixed(2)} (range ${Math.min(...spb.perLine).toFixed(2)} to ${Math.max(...spb.perLine).toFixed(2)}).`];
+}
+
+/** A line against the syllable count the author declared for it; a range that includes the count is ok. */
+const fitOf = (l: LineStat, want: number): NonNullable<ScanLine['declared']> => ({ want, ...syllableFit(l, want) });
+const fitText = (d: NonNullable<ScanLine['declared']>) => `${d.want} ${d.diff === undefined ? 'ok' : d.diff > 0 ? `+${d.diff}` : String(d.diff)}`;
+
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-function table(s: { lines: ScanLine[]; trust: VerseStats['trust']; scheme: string; nearScheme: string; notes: string[] }): string {
-  const rows = s.lines.map(l => [
+function table(s: { lines: ScanLine[]; trust: VerseStats['trust']; scheme: string; nearScheme: string; declared: VerseStats['declared']; notes: string[]; legend: string[]; syllablesPerBeat: Spb | null }): string {
+  // a `want` column (the declared count and how the line sits against it) appears only when a pattern covers some line
+  const want = s.lines.some(l => l.declared);
+  const spb = s.syllablesPerBeat;
+  const rows = s.lines.map((l, i) => [
     String(l.line), l.syllablesAlt === undefined ? String(l.syllables) : `${l.syllables}/${l.syllablesAlt}`,
+    ...(want ? [l.declared ? fitText(l.declared) : ''] : []),
     l.stress, l.rhyme, l.endWord ?? '', clip(l.text, TEXT_WIDTH), l.flags.join(' '),
+    ...(spb ? [spb.perLine[i]!.toFixed(2)] : []),
   ]);
-  const head = ['line', 'syl', 'stress', 'rh', 'end word', 'text', 'flags'];
+  const head = ['line', 'syl', ...(want ? ['want'] : []), 'stress', 'rh', 'end word', 'text', 'flags', ...(spb ? ['spb'] : [])];
   const width = head.map((h, i) => Math.max(h.length, ...rows.map(r => r[i]!.length)));
   const fmt = (r: string[]) => r.map((c, i) => (i === 0 || i === 1 ? c.padStart(width[i]!) : c.padEnd(width[i]!))).join('  ').trimEnd();
+  const d = s.declared;
+  const declared = d ? [`Declared: ${[d.syllables && `syllables ${describeSyllables(d.syllables)}`, d.scheme && `scheme ${describeScheme(d.scheme)}`].filter(Boolean).join('; ')}`] : [];
   return [
     fmt(head), ...rows.map(fmt), '',
+    ...declared,
     `Scheme: ${s.scheme}  (near: ${s.nearScheme})`,
     `Words: ${s.trust.words} (dict ${s.trust.dict}, affix ${s.trust.affix}, guessed ${s.trust.guessed})`,
     ...s.notes,
+    ...s.legend,
+    ...spbNote(spb),
   ].join('\n');
 }
 
@@ -67,15 +106,18 @@ export function registerVerseCommands(program: Command, io: Io): void {
       const form = getForm(doc.form);
       const stats = measureVerse(doc, form);
       if (!stats) throw new ProseError('E_USAGE', `Form "${doc.form}" is not a verse form`, { hint: `Scan a poem or lyric: set the draft's form or pass --form with one of ${verseFormIds().join(', ')}` });
+      const targets = lineTargets(stats);
       const lines: ScanLine[] = stats.lines.map((l, i) => ({
         line: l.line, stanza: l.stanza, section: l.section, text: l.text, syllables: l.syllables,
         ...(l.syllablesAlt !== undefined ? { syllablesAlt: l.syllablesAlt } : {}),
         stress: l.stress, endWord: l.endWord, rhyme: l.rhyme, ending: l.ending, flags: flagsOf(l, stats, i),
+        ...(targets[i] != null ? { declared: fitOf(l, targets[i]!) } : {}),
         ...(opts.words ? { words: analyseLine(l.text).words.map(w => ({ word: w.word, source: w.source, syllables: w.syllables, stress: w.stress, variants: w.variants, rhymeKey: w.rhymeKey })) } : {}),
       }));
       const out = {
         path: doc.path, form: doc.form, kind: stats.kind, dialect: DIALECT, trust: stats.trust,
-        scheme: stats.scheme, nearScheme: stats.nearScheme, lines, pairs: stats.pairs, meter: stats.meter, notes: notesOf(stats),
+        scheme: stats.scheme, nearScheme: stats.nearScheme, lines, pairs: stats.pairs, meter: stats.meter, directions: stats.directions, declared: stats.declared, notes: notesOf(stats),
+        syllablesPerBeat: stats.lyric?.syllablesPerBeat ?? null, legend: legendOf(stats, lines.some(l => l.declared)),
       };
       if (opts.text) console.log(table(out));
       else io.emit(out);
