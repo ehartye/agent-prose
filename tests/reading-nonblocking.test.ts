@@ -148,6 +148,35 @@ describe('no synchronous child-process or blocking APIs in the server', () => {
   });
 });
 
+describe('the taste code on the request path has no blocking calls', () => {
+  const codeOf = (...parts: string[]) => readFileSync(join(import.meta.dirname, '..', ...parts), 'utf8').split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  const select = codeOf('src', 'taste', 'select.ts');
+  const duels = codeOf('src', 'reading', 'taste.ts');
+  const server = codeOf('src', 'reading', 'server.ts');
+
+  it('select.ts is pure: no fs, child process or timer', () => {
+    expect(select).not.toMatch(/from 'node:(fs|fs\/promises|child_process)'/);
+    expect(select).not.toMatch(/\b(execFile|spawn|setTimeout|Atomics\.wait)\w*\(/);
+  });
+
+  it('the taste cache reads with async fs only, and takes no lock or child process', () => {
+    expect(duels).toMatch(/from 'node:fs\/promises'/);
+    expect(duels).not.toMatch(/from 'node:fs'/);
+    expect(duels).not.toMatch(/\b\w+Sync\(/);
+    expect(duels).not.toMatch(/child_process|withDirLock|withSetLock|Atomics\.wait|\bloadTaste\(|\breadVerdicts\(|\bloadDocument\(/);
+    expect(duels).toMatch(/\bloadTasteAsync\(/);
+  });
+
+  it('the server never loads the taste logs or models synchronously', () => {
+    expect(server).not.toMatch(/\bloadTaste\(|\breadVerdicts\(|\bparseVerdicts\(|\bloadDocument\(|\bforEachLine\(/);
+  });
+
+  it('resolves the voice with the async variant only: neither the server nor the duel cache calls resolveVoice( or loadVoices(', () => {
+    for (const code of [server, duels]) expect(code).not.toMatch(/\bresolveVoice\(|\bloadVoices\(|\bvoiceIds\(/);
+    expect(duels).toMatch(/\bresolveVoiceAsync\(/);
+  });
+});
+
 describe('the poll path does not redo work that has not changed', () => {
   const touch = (file: string, seconds: number) => { const t = new Date(Date.now() + seconds * 1000); utimesSync(file, t, t); };
 

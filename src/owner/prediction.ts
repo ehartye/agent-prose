@@ -42,7 +42,11 @@ export const variantHash = (project: string, set: PromptSet, index: number): str
   return textHash(readFileSync(variantPath(project, set, v), 'utf8'));
 };
 
-export interface PredictionInput { pick: number; shortlist: number[]; why: string; now?: Date; lock?: LockOptions }
+export interface PredictionInput {
+  pick: number; shortlist: number[]; why: string; now?: Date; lock?: LockOptions;
+  /** Runs under the same set lock right after the prediction is written (the sealed model prediction is written here). It must not throw. */
+  after?: (prediction: Prediction, set: PromptSet, ctx: LockContext) => void;
+}
 
 export function writePrediction(project: string, set: PromptSet, input: PredictionInput): Prediction {
   return withSetLock(project, set.id, ctx => writePredictionLocked(project, readSet(project, set.id), input, ctx), input.lock);
@@ -74,6 +78,7 @@ function writePredictionLocked(project: string, set: PromptSet, input: Predictio
   const prediction = PredictionSchema.parse({ schema: 'prose/prediction@1', ...base, seal: sealOf(base) });
   ctx.heartbeat();
   writeFileAtomic(file(project, set.id), JSON.stringify(prediction, null, 2) + '\n');
+  input.after?.(prediction, set, ctx);
   return prediction;
 }
 

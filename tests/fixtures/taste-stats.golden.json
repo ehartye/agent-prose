@@ -1,0 +1,59 @@
+{
+  "project": "<project>",
+  "sessions": 0,
+  "agent": {
+    "predicted": 0,
+    "hits": 0,
+    "shortlistHits": 0,
+    "shortlistEligible": 0,
+    "voided": 0,
+    "rate": null
+  },
+  "recent": {
+    "window": 10,
+    "agentRate": null
+  },
+  "model": {
+    "predicted": 0,
+    "abstained": 0,
+    "hits": 0,
+    "shortlistHits": 0,
+    "shortlistEligible": 0,
+    "voided": 0,
+    "rate": null,
+    "recent": {
+      "window": 10,
+      "rate": null
+    }
+  },
+  "comparison": {
+    "both": 0,
+    "modelBetter": 0,
+    "same": 0,
+    "agentBetter": 0
+  },
+  "verdicts": {
+    "project": {
+      "rows": 3,
+      "unknownVersion": 0,
+      "malformed": 0
+    },
+    "global": {
+      "rows": 5,
+      "unknownVersion": 0,
+      "malformed": 0
+    }
+  },
+  "duels": {
+    "project": {
+      "decisive": 3,
+      "ties": 0,
+      "bothBad": 0
+    },
+    "global": {
+      "decisive": 5,
+      "ties": 0,
+      "bothBad": 0
+    }
+  }
+}

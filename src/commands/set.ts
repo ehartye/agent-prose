@@ -7,11 +7,11 @@ import { ProseError } from '../errors.ts';
 import { needProject } from '../project.ts';
 import { recordPick } from '../owner/pick.ts';
 import { DUEL_OUTCOMES, duelKind, recordDuel, type DuelOutcome } from '../owner/duel.ts';
-import { writePrediction } from '../owner/prediction.ts';
 import { checkSet } from '../owner/check.ts';
 import { assertDirections } from '../owner/directions.ts';
 import { EVENT_ID_RE, setDir } from '../owner/paths.ts';
 import { withSetLock } from '../owner/fsutil.ts';
+import { predictWithModel, repairModelPrediction } from '../taste/prediction.ts';
 import { createSet, listSetsDetailed, readSet, variantPath, writeSet } from '../owner/sets.ts';
 
 const whole = (text: string, what: string): number => {
@@ -172,16 +172,25 @@ export function registerSetCommands(program: Command, io: Io): void {
     });
 
   program.command('predict')
-    .description("Seal your guess of the owner's pick before they see the set (revealed when the pick is recorded)")
+    .description("Seal your guess of the owner's pick before they see the set (revealed when the pick is recorded). The taste model's own guess is sealed beside it and never printed")
     .requiredOption('--set <id>', 'set id')
-    .requiredOption('--pick <n>', 'the variant you expect the owner to choose')
+    .option('--pick <n>', 'the variant you expect the owner to choose')
     .option('--shortlist <list>', 'other variants you expect them to like, comma-separated')
-    .requiredOption('--why <text>', 'why you expect that')
+    .option('--why <text>', 'why you expect that')
+    .option('--model-only', "repair: seal only the model's guess for an already-sealed prediction (after a crash between the two writes); needs no --pick or --why, refused once the set is picked")
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
-    .action((opts: { set: string; pick: string; shortlist?: string; why: string; dir?: string }) => {
+    .action((opts: { set: string; pick?: string; shortlist?: string; why?: string; modelOnly?: boolean; dir?: string }) => {
       const project = needProject(opts.dir ?? process.cwd());
       const s = readSet(project, opts.set);
-      const p = writePrediction(project, s, { pick: whole(opts.pick, '--pick'), shortlist: csv(opts.shortlist).map(x => whole(x, '--shortlist entries')), why: opts.why });
-      io.emit({ set: s.id, pick: p.pick, shortlist: p.shortlist, shown: p.shown, why: p.why, at: p.at, seal: p.seal, next: `Present the set to the owner, then record their choice: prose set pick ${s.id} --pick <n>` });
+      if (opts.modelOnly) {
+        if (opts.pick !== undefined || opts.shortlist !== undefined || opts.why !== undefined) throw new ProseError('E_USAGE', '--model-only seals only the model guess; drop --pick, --shortlist and --why', { hint: 'The agent prediction is already sealed' });
+        const model = repairModelPrediction(project, s.id);
+        io.emit({ set: s.id, model: model.abstained === null ? 'sealed' : `abstained (${model.abstained})`, next: `Present the set to the owner, then record their choice: prose set pick ${s.id} --pick <n>` });
+        return;
+      }
+      if (opts.pick === undefined) throw new ProseError('E_USAGE', 'required option --pick <n> not specified', { hint: 'Or use --model-only to repair the model guess of an already-sealed prediction' });
+      if (opts.why === undefined) throw new ProseError('E_USAGE', 'required option --why <text> not specified', { hint: "The reason is what lets the guess be checked against the owner's pick" });
+      const { prediction: p, model } = predictWithModel(project, s, { pick: whole(opts.pick, '--pick'), shortlist: csv(opts.shortlist).map(x => whole(x, '--shortlist entries')), why: opts.why });
+      io.emit({ set: s.id, pick: p.pick, shortlist: p.shortlist, shown: p.shown, why: p.why, at: p.at, seal: p.seal, model: model.abstained === null ? 'sealed' : `abstained (${model.abstained})`, next: `Present the set to the owner, then record their choice: prose set pick ${s.id} --pick <n>` });
     });
 }

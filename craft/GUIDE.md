@@ -238,6 +238,16 @@ could be revised after the reveal teaches nothing; the hash makes an edit detect
 variant edited after sealing blocks the pick. The hit rate in `prose taste stats` then measures
 how well the agent has learned the owner, which is what taste data is for.
 
+The taste model's guess is sealed too, by `prose predict` itself, in its own file, and scored beside the
+agent's at the pick; `prose taste stats` shows both hit rates and who did better where both predicted. The model
+abstains when it has no usable pairs, and an abstention is not a miss. Sealing means: the tool never prints the model's pick or ranking before the owner picks, and it seals the guess (a SHA-256 over the guess and a marker file beside it) so an edit is detected at the pick. It is not secret: the file is readable on disk, deleting both files hides the model's result for that set, and a forged file with a recomputed hash cannot be detected (there is no key). The agent's independence therefore rests on the agent not reading it. A crash between writing the agent's prediction and the model's leaves that set unscored for the model; `prose predict --set <id> --model-only` repairs it, before the pick. So the
+agent's independence is a matter of discipline: read `prose taste show` before drafting, never the model's
+guess before the owner picks. The comparison of the two uses the pick only; shortlist hits are meaningful
+only for sets of four or more variants, and the model's recent window is its last N predicted rows while the
+agent's is its last N rows. The model fits twelve coarse style features from picks and duels (global, project
+and voice layers; the 15-pair thresholds are conventions from another plugin, not tuned on prose). It does not
+measure humour or quality, and sparse data is the normal state.
+
 Why an unexplained pick weighs one third of a duel when four variants are shown. A pick records
 that the winner beat every other shown variant, but the owner compared them loosely. Each loser
 therefore counts 1/(shown-1) of a duel, so one choice carries about one duel of evidence however

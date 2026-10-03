@@ -17,9 +17,14 @@ export function detectFormat(path: string): Format {
 export function loadDocument(path: string, options: { form?: string } = {}): Doc {
   if (!existsSync(path)) throw new ProseError('E_NOT_FOUND', `No such file: ${path}`);
   if (!statSync(path).isFile()) throw new ProseError('E_NOT_FOUND', `Not a file: ${path}`);
+  return parseDocument(path, readFileSync(path, 'utf8'), options);
+}
+
+/** `loadDocument` over text already read (for a server, which reads files with async fs); `path` names the format and the document. */
+export function parseDocument(path: string, text: string, options: { form?: string } = {}): Doc {
   const format = detectFormat(path);
   // One line-ending convention for every parser: CRLF and lone CR become LF, so frontmatter and line numbers hold.
-  const source = readFileSync(path, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const source = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   let meta: Record<string, unknown>;
   let blocks: Block[];
   let graph: DialogGraph | undefined;

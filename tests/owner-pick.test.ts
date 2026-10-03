@@ -125,7 +125,7 @@ describe('predictionStats', () => {
     writePrediction(b.project, b.set, { pick: 1, shortlist: [3], why: 'x' });
     recordPick(b.project, b.set, 3, {});
     const all = predictionStats({});
-    expect(all).toMatchObject({ sessions: 2, agent: { predicted: 2, hits: 1, shortlistHits: 2, rate: 0.5 } });
+    expect(all).toMatchObject({ sessions: 2, agent: { predicted: 2, hits: 1, shortlistHits: 0, shortlistEligible: 0, rate: 0.5 } });
     expect(predictionStats({ project: a.project })).toMatchObject({ sessions: 1, agent: { hits: 1, rate: 1 } });
     expect(predictionStats({ project: '/nowhere' })).toMatchObject({ sessions: 0, agent: { predicted: 0, rate: null } });
     expect(home()).toBeTruthy();
