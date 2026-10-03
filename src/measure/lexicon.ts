@@ -14,11 +14,13 @@ const LexiconFile = z.strictObject({
   id: z.string(),
   sources: z.array(z.string()).min(1),
   note: z.string().optional(),
+  /** When the list was last reviewed for dated entries (YYYY-MM-DD); a lexicon of era-tagged words should carry one. */
+  reviewed: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   entries: z.array(Entry).min(1),
 });
 
 export type LexiconEntry = z.infer<typeof Entry>;
-export interface Lexicon { id: string; sources: string[]; entries: Array<LexiconEntry & { re: RegExp }> }
+export interface Lexicon { id: string; sources: string[]; reviewed?: string; entries: Array<LexiconEntry & { re: RegExp }> }
 export interface LexiconHit {
   id: string; tier: LexiconEntry['tier']; eras?: string[]; count: number; lines: number[];
   /** Up to three distinct matched strings, as written, in order of appearance. */
@@ -29,7 +31,7 @@ const DIR = join(import.meta.dirname, '..', '..', 'craft', 'lexicon');
 
 export function loadLexicon(id: string): Lexicon {
   const file = LexiconFile.parse(JSON.parse(readFileSync(join(DIR, `${id}.json`), 'utf8')));
-  return { id: file.id, sources: file.sources, entries: file.entries.map(e => ({ ...e, re: new RegExp(e.pattern, 'giu') })) };
+  return { id: file.id, sources: file.sources, ...(file.reviewed ? { reviewed: file.reviewed } : {}), entries: file.entries.map(e => ({ ...e, re: new RegExp(e.pattern, 'giu') })) };
 }
 
 export const AI_TELLS = loadLexicon('ai-tells');

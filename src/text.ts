@@ -2,7 +2,7 @@ import { ProseError } from './errors.ts';
 
 const WORD = /[\p{L}\p{N}]+(?:['’][\p{L}]+)*/gu;
 // Case-sensitive on purpose: capitalized titles and lowercase Latin forms only, so a sentence-final "no." still splits.
-const ABBREV = /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Inc|Ltd|No|MR|MRS|MS|DR|PROF|SR|JR|ST)\.|\b(?:vs|etc|e\.g|i\.e)\./g;
+const ABBREV = /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Inc|Ltd|No|MR|MRS|MS|DR|PROF|SR|JR|ST)\.|\b(?:vs|etc|e\.g|i\.e|et al|cf|Figs?|Eqs?|approx|ca)\./g;
 const BOUNDARY = /(?<=[.!?…]["'”’)\]]*)\s+(?=["'“‘(\[]?[\p{Lu}\p{N}])/u;
 // Silent endings: -es (not after l, s, x, z, ch, sh), -ed (not after t or d), consonant + e. '#' marks a diaeresis vowel.
 const SILENT_ENDING = /(?:(?<=[^laeiouy#])(?<![sxz]|[cs]h)es|(?<![td])ed|[^laeiouy#]e)$/;
@@ -21,6 +21,20 @@ export function sentences(text: string): string[] {
   return guarded.split(BOUNDARY)
     .map(s => s.replaceAll('\u0000', '.').trim())
     .filter(s => words(s).length > 0);
+}
+
+/** The `[start, end)` character range of each sentence, split as `sentences` splits (abbreviations protected); used where the sentence's place in the text matters. */
+export function sentenceRanges(text: string): Array<[number, number]> {
+  // the guard swaps one character for one, so offsets in `guarded` are offsets in `text`
+  const guarded = text.replace(ABBREV, m => m.replaceAll('.', '\u0000'));
+  const ranges: Array<[number, number]> = [];
+  let start = 0;
+  for (const m of guarded.matchAll(new RegExp(BOUNDARY.source, 'gu'))) {
+    ranges.push([start, m.index]);
+    start = m.index + m[0].length;
+  }
+  ranges.push([start, text.length]);
+  return ranges.filter(([a, b]) => words(text.slice(a, b)).length > 0);
 }
 
 /** Heuristic English syllable count (vowel groups after trimming silent endings). */
@@ -84,4 +98,16 @@ export function splitSpeaker(cue: string): { name: string; extension?: string } 
   }
   const extension = exts.find(e => !/^CONT(?:['’]D|INUED)$/i.test(e));
   return { name, ...(extension ? { extension } : {}) };
+}
+
+/**
+ * The text an artifact check reads for a Markdown block: inline code removed (a literal {{name}} in code is not a leaked
+ * template) and the destinations of inline links appended (a tracking parameter in a link target is still a leak). Null
+ * when the block has neither code nor links, so its plain text is enough.
+ */
+export function artifactView(raw: string): string | null {
+  if (!raw.includes('`') && !raw.includes('](')) return null;
+  const noCode = raw.replace(/`[^`]*`/g, ' ');
+  const targets = [...noCode.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]*)[^)]*\)/g)].map(m => m[1]).filter(Boolean);
+  return [plain(noCode), ...targets].join(' ');
 }
