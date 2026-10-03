@@ -53,6 +53,8 @@ interface Span {
   /** Offsets index `targets`. */
   inTargets?: boolean;
   eras?: string[];
+  /** A reason that names this span's own numbers, in place of the family's fixed sentence. */
+  why?: string;
 }
 
 type Scope = 'all' | 'prose' | 'markdown';
@@ -148,6 +150,48 @@ const TRAILING_MARKER = new RegExp(String.raw`^\s*(?:${MARKER})`, 'u');
 const DESPITE = /\bDespite\s+(?:its|their|this|these|the)\b[^.!?]{0,120}?,\s+[^.!?]{0,80}?\b(?:faces|face|continues\s+to\s+face|continue\s+to\s+face|still\s+faces)\b[^.!?]{0,80}?\b(?:challenges?|obstacles?|hurdles?)\b/giu;
 
 const CLOSING = /^(?:Overall|In conclusion),\s/u;
+
+/**
+ * Group 1: openers and announcements. All reader-reported: readers and our baseline audits named them; no published source.
+ *
+ * Stock opener: only the first sentence of the passage's first paragraph, and only the opening words are the span.
+ * "Every <noun>" skips time words ("Every Monday", "Every year"), which open ordinary letters and diaries.
+ */
+const TIME_WORDS = String.raw`(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|day|morning|afternoon|evening|night|week|weekend|month|year|summer|winter|spring|autumn|fall|time|once|other|now|one)`;
+const STOCK_OPENER = new RegExp([
+  String.raw`^Every\s+(?!${TIME_WORDS}\b)\p{L}+`,
+  String.raw`^In\s+today['’]s`,
+  String.raw`^In\s+an\s+era\s+of`,
+  String.raw`^In\s+a\s+world\s+where`,
+  String.raw`^Imagine\b`,
+  String.raw`^Have\s+you\s+ever\s+wondered`,
+].join('|'), 'iu');
+
+function stockOpener(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
+  if (u.kind !== 'paragraph' || units.findIndex(x => x.kind === 'paragraph') !== i) return [];
+  const first = sentenceRanges(u.text)[0];
+  if (!first) return [];
+  const m = STOCK_OPENER.exec(u.text.slice(first[0], first[1]));
+  return m ? [{ start: first[0], end: first[0] + m[0].length }] : [];
+}
+
+const ANNOUNCEMENT = /\b(?:We['’]re|We\s+are|I['’]m|I\s+am)\s+(?:(?:so|very|truly|really)\s+)?(?:excited|thrilled|delighted|proud|pleased)\s+to\s+(?:share|announce|introduce|unveil)\b/giu;
+
+const ROADMAP_VERBS = String.raw`(?:look\s+at|explore|cover|walk\s+through|dive\s+into|discuss|break\s+down)`;
+const ROADMAP = new RegExp([
+  String.raw`\bIn\s+this\s+(?:post|article|guide|piece|section|chapter),?\s+(?:we(?:['’]ll|\s+will)|I(?:['’]ll|\s+will))\s+${ROADMAP_VERBS}`,
+  String.raw`(?:^|(?<=[.!?]\s))Below\s+(?:is|are)\s+(?:a|an|the)\s+(?:overview|summary|breakdown|look|guide|list|walkthrough|rundown)\b`,
+  String.raw`(?:^|(?<=[.!?]\s))Below,?\s+we\s+(?:will\s+|['’]ll\s+)?(?:look|explore|cover|walk|discuss|break|outline|summari[sz]e|describe)\b`,
+  String.raw`(?:^|(?<=[.!?]\s))Here(?:['’]s|\s+is)\s+what\s+(?:we(?:['’]ll|\s+will)|you(?:['’]ll|\s+will)|I(?:['’]ll|\s+will))\s+(?:cover|learn|find|explore|see|look\s+at)\b`,
+].join('|'), 'giu');
+
+/** "delve into" is not here: `delve` is already a vocabulary finding, and "let's delve" is one dive-in finding that swallows it (RANK). */
+const PHYSICAL_DIVE = String.raw`(?!\s+(?:the\s+)?(?:water|pool|lake|sea|ocean|river|quarry|waves?)\b)`;
+const DIVE_IN = new RegExp([
+  String.raw`\blet['’]s\s+(?:dive\s+in|dive\s+into|unpack|explore|delve)\b`,
+  String.raw`\bdeep[- ]dives?\b`,
+  String.raw`\b(?:dive|dives|diving)\s+(?:deep(?:ly)?\s+)?into\b${PHYSICAL_DIVE}`,
+].join('|'), 'giu');
 
 const INLINE_HEADER = /^\*\*([^*\n]{1,60}?)(?::\*\*|\*\*:)\s+\S/u;
 const EMOJI_LEAD = /^(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}️)/u;
@@ -383,6 +427,30 @@ export const FAMILIES: Family[] = [
       return bold.length >= 3 ? [{ start: bold[0].index, end: bold[bold.length - 1].index + bold[bold.length - 1][0].length, inRaw: true }] : [];
     },
   },
+  {
+    id: 'stock-opener', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The passage opens with a formula that fits almost any topic instead of with its own first fact.',
+    direction: 'Open with the specific fact, example or number the passage is about.',
+    find: stockOpener,
+  },
+  {
+    id: 'announcement-filler', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence announces that the writer is pleased before saying what the news is.',
+    direction: 'Lead with the news itself and cut the feeling that introduces it.',
+    find: u => spansOf(ANNOUNCEMENT, u.text),
+  },
+  {
+    id: 'roadmap-sentence', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence tells the reader what the text will do instead of doing it.',
+    direction: 'Cut the roadmap and begin with the first point.',
+    find: u => spansOf(ROADMAP, u.text),
+  },
+  {
+    id: 'dive-in', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'A stock invitation to start, where the text could simply start.',
+    direction: 'Cut the invitation and begin with the first concrete point.',
+    find: u => spansOf(DIVE_IN, u.text),
+  },
 ];
 
 /** Where each audit claim is sourced, for the references table: every family, the measured context and the standing limits. */
@@ -395,7 +463,7 @@ export const AUDIT_SOURCES: Array<{ id: string; sources: string[] }> = [
 // Higher rank wins where one span sits inside another from a different family (the vocabulary word inside the formula that holds it).
 const RANK: Record<string, number> = {
   'undue-significance': 3, 'trailing-participle': 3, 'negative-parallelism': 3, 'weasel-attribution': 3, 'despite-challenges': 3,
-  promotional: 2, 'copula-avoidance': 2, vocabulary: 1,
+  'dive-in': 3, promotional: 2, 'copula-avoidance': 2, vocabulary: 1,
 };
 
 const squeeze = (s: string) => {
@@ -445,7 +513,7 @@ export function detect(units: Unit[], ctx: Ctx): Finding[] {
           family, unit: i, span,
           finding: {
             tier: family.tier, family: family.id, line: lineAt(u, i, source, span), text: squeeze(source.slice(span.start, span.end)),
-            ...(span.eras ? { eras: span.eras } : {}), why: family.why, direction: family.direction,
+            ...(span.eras ? { eras: span.eras } : {}), why: span.why ?? family.why, direction: family.direction,
           },
         });
       }

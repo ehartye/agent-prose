@@ -61,7 +61,7 @@ function familiesOf(findings: Finding[]): AuditReport['families'] {
 export const EVIDENCE_WORDS: Record<Evidence, string> = {
   'corpus': 'corpus studies (published word-list studies; abstract-only in our notes)',
   'field-guide': "field guide (Wikipedia's descriptive, informational writing)",
-  'reader-reported': 'reader-reported (habits readers named; no published source)',
+  'reader-reported': 'reader-reported (habits readers and our own baseline audits named; there is no published source)',
 };
 
 /**

@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseDocument } from '../src/document.ts';
-import { buildReport, LIMITS, renderText } from '../src/audit/report.ts';
+import { buildReport, EVIDENCE_WORDS, LIMITS, renderText } from '../src/audit/report.ts';
 import { AUDIT_SOURCES, FAMILIES, MEASURED_NOTES, type Finding } from '../src/audit/detectors.ts';
 import { REFERENCES } from '../src/craft/rules.ts';
 
@@ -95,6 +95,27 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
     hit: ['**One** thing, **two** things and **three** things.', 'Use **a**, then **b**, then **c**, then **d**.'],
     miss: ['Use the **--force** flag once.', '**One** and **two**.'],
     human: ['Some **bold** word and nothing else.'],
+  },
+  // group 1: openers and announcements (reader-reported)
+  'stock-opener': {
+    hit: ['Every team makes hundreds of decisions each quarter.', 'In an era of cheap storage, nobody deletes anything.', 'Imagine a kitchen where nothing is labelled.', 'Have you ever wondered why bread rises?', 'In a world where shops close daily, owners worry.', 'In today’s market, tools change quickly.'],
+    miss: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.', 'Every Monday we meet at the pool.', 'We tested the model.\n\nImagine the result.', 'The first line is plain. Have you ever wondered why?'],
+    human: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery model was tested twice.'],
+  },
+  'announcement-filler': {
+    hit: ['We’re excited to share some news about the studio.', 'I am thrilled to announce our new office.', 'We are so proud to introduce the new line.', 'I\'m delighted to unveil the plan.'],
+    miss: ['We’re excited about the trip.', 'I’m excited to see you on Saturday.', 'We are proud to serve the town since 1950.'],
+    human: ['I am pleased to report that the test passed on the second try.'],
+  },
+  'roadmap-sentence': {
+    hit: ['In this post, we’ll look at what a record contains.', 'In this guide I will walk through the setup.', 'Below is a breakdown of the options.', 'Here’s what we’ll cover.', 'Below we walk through the steps.'],
+    miss: ['In this paper, we propose a method for sorting.', 'In this section, we show that the bound holds.', 'Below is the wiring table.', 'Here’s what happened next.'],
+    human: ['In this chapter the author argues that the harbour failed.'],
+  },
+  'dive-in': {
+    hit: ['Let’s dive in.', 'Let’s unpack the problem.', 'This is a deep dive into the budget.', 'The talk dives into pricing.', 'Let’s delve into the data.'],
+    miss: ['She dove into the pool.', 'The divers dive into the quarry at noon.', 'He dived into the lake.'],
+    human: ['The kids jumped into the lake and swam to the raft.'],
   },
 };
 
@@ -198,6 +219,18 @@ describe('detectors', () => {
   });
 });
 
+describe('dive-in does not double-report the vocabulary word', () => {
+  it('leaves a bare "delve into" to the vocabulary family only', () => {
+    expect(all(report('We delve into the data.')).map(f => [f.family, f.text])).toEqual([['vocabulary', 'delve']]);
+  });
+  it('reports "Let’s delve" once, as dive-in, not also as vocabulary', () => {
+    expect(all(report('Let’s delve into the data.')).map(f => [f.family, f.text])).toEqual([['dive-in', 'Let’s delve']]);
+  });
+  it('reports "In today’s fast-paced world" once, as undue-significance, not also as stock-opener', () => {
+    expect(all(report('In today’s fast-paced digital world, shops close.')).map(f => f.family)).toEqual(['undue-significance']);
+  });
+});
+
 describe('inline-header bullets, narrowed', () => {
   const list = (...labels: string[]) => labels.map(l => `- **${l}:** text`).join('\n');
   const hits = (text: string) => famOf(text, 'inline-header-bullets').length;
@@ -252,6 +285,20 @@ const SPANS: Array<[family: string, text: string, spans: string[]]> = [
   ['emoji-lead', '- ✅ Tests pass', ['✅ Tests pass']],
   ['title-case-heading', '## Understanding the Role of Technology in Modern Education', ['Understanding the Role of Technology in Modern Education']],
   ['mechanical-bold', 'Use **a**, then **b**, then **c**, then **d**. We met on Tuesday and walked home together.', ['**a**, then **b**, then **c**, then **d**']],
+  ['stock-opener', 'Every team makes hundreds of decisions each quarter.', ['Every team']],
+  ['stock-opener', 'Imagine a kitchen where nothing is labelled.', ['Imagine']],
+  ['stock-opener', 'In an era of cheap storage, nobody deletes anything.', ['In an era of']],
+  ['stock-opener', 'Have you ever wondered why bread rises?', ['Have you ever wondered']],
+  ['stock-opener', 'In today’s market, tools change quickly.', ['In today’s']],
+  ['announcement-filler', 'We’re excited to share some news about the studio.', ['We’re excited to share']],
+  ['announcement-filler', 'I am thrilled to announce our new office.', ['I am thrilled to announce']],
+  ['roadmap-sentence', 'In this post, we’ll look at what a record contains.', ['In this post, we’ll look at']],
+  ['roadmap-sentence', 'Below is a breakdown of the options.', ['Below is a breakdown']],
+  ['roadmap-sentence', 'Here’s what we’ll cover.', ['Here’s what we’ll cover']],
+  ['dive-in', 'Let’s dive in.', ['Let’s dive in']],
+  ['dive-in', 'This is a deep dive into the budget.', ['deep dive']],
+  ['dive-in', 'The talk dives into pricing.', ['dives into']],
+  ['dive-in', 'Let’s delve into the data.', ['Let’s delve']],
 ];
 
 describe('matched spans', () => {
@@ -447,15 +494,21 @@ describe('summary, limits and forbidden wording', () => {
   });
 });
 
+/** The v2 families that rest on readers and our baseline audits, not on a published source. Grows by group. */
+const READER_REPORTED = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in'];
+
 describe('evidence tiers', () => {
   const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));
-  it('gives every family an evidence tier, and none is reader-reported yet', () => {
+  it('gives every family an evidence tier', () => {
     for (const f of FAMILIES) expect(['corpus', 'field-guide', 'reader-reported'], f.id).toContain(f.evidence);
-    expect(FAMILIES.filter(f => f.evidence === 'reader-reported')).toEqual([]);
   });
-  it('assigns vocabulary to corpus studies and every other family to the field guide', () => {
+  it('assigns vocabulary to corpus studies, the v1 families to the field guide and the v2 hallmarks as listed', () => {
     expect(FAMILIES.filter(f => f.evidence === 'corpus').map(f => f.id)).toEqual(['vocabulary']);
-    expect(FAMILIES.filter(f => f.evidence === 'field-guide')).toHaveLength(FAMILIES.length - 1);
+    expect(FAMILIES.filter(f => f.evidence === 'reader-reported').map(f => f.id)).toEqual(READER_REPORTED);
+    expect(FAMILIES.filter(f => f.evidence === 'field-guide')).toHaveLength(FAMILIES.length - 1 - READER_REPORTED.length);
+  });
+  it('says in plain words that a reader-reported family has no published source', () => {
+    expect(EVIDENCE_WORDS['reader-reported']).toMatch(/no published source/);
   });
   it('lists evidence and sources for each family that has findings in a top-level families map', () => {
     const r = read('model-like.md');
@@ -481,7 +534,9 @@ describe('sources', () => {
   it('cites only known references from every family, and the limits and measured notes', () => {
     const ids = new Set(REFERENCES.map(r => r.id));
     for (const entry of AUDIT_SOURCES) {
-      expect(entry.sources.length, entry.id).toBeGreaterThan(0);
+      const def = FAMILIES.find(f => f.id === entry.id);
+      // A reader-reported family has no published source; every other entry cites at least one.
+      if (def?.evidence !== 'reader-reported') expect(entry.sources.length, entry.id).toBeGreaterThan(0);
       for (const s of entry.sources) expect(ids, `${entry.id} -> ${s}`).toContain(s);
     }
     for (const f of FAMILIES) expect(AUDIT_SOURCES.map(e => e.id)).toContain(f.id);
