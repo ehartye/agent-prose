@@ -1,0 +1,71 @@
+{
+  "path": "tests/fixtures/pilot.fountain",
+  "format": "fountain",
+  "form": "tv-drama",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "info": [
+    {
+      "rule": "script.runtime.report",
+      "severity": "info",
+      "message": "About 0.42 pages, 0.39 min (range 0.31–0.47 min)",
+      "at": {
+        "line": null
+      },
+      "measured": {
+        "layout": "screenplay",
+        "lines": 23,
+        "pages": 0.42,
+        "minutes": 0.39,
+        "band": [
+          0.31,
+          0.47
+        ],
+        "scenes": 2,
+        "dialogueWords": 13,
+        "actionWords": 16,
+        "dialogueShare": 0.45,
+        "scenesDetail": [
+          {
+            "line": 6,
+            "heading": "INT. HOSPITAL CORRIDOR - NIGHT",
+            "lines": 17,
+            "pages": 0.31
+          },
+          {
+            "line": 21,
+            "heading": "FLASHBACK - THE ER",
+            "lines": 6,
+            "pages": 0.11
+          }
+        ],
+        "speeches": {
+          "count": 2,
+          "longestWords": 10,
+          "longestLine": 12
+        }
+      }
+    }
+  ],
+  "judgement": [
+    {
+      "rule": "comedy.serious-moments",
+      "severity": "warn",
+      "statement": "Stop joking when a scene turns genuinely serious; a joke that stays should keep the pain visible.",
+      "sources": [
+        "espenson-unfunny"
+      ]
+    },
+    {
+      "rule": "voice.distinct",
+      "severity": "warn",
+      "statement": "Swap test: no line could be given to another character without anyone noticing.",
+      "sources": [
+        "sela-distinctiveness",
+        "igda-locsig"
+      ]
+    }
+  ]
+}

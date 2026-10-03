@@ -1,0 +1,13 @@
+{
+  "schema": "prose/lexicon@1",
+  "id": "filler",
+  "sources": ["google-voice-tone"],
+  "note": "Words the Google developer documentation style guide asks writers to avoid in instructions.",
+  "entries": [
+    { "id": "please", "pattern": "\\bplease\\b", "tier": "filler" },
+    { "id": "simply", "pattern": "\\bsimply\\b", "tier": "filler" },
+    { "id": "its-easy", "pattern": "\\bit['’]s easy\\b", "tier": "filler" },
+    { "id": "quickly", "pattern": "\\bquickly\\b", "tier": "filler" },
+    { "id": "at-this-time", "pattern": "\\bat this time\\b", "tier": "filler" }
+  ]
+}

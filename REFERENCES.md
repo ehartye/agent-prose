@@ -1,0 +1,38 @@
+# References
+
+Generated from `craft/references.json` by `npm run refs`. Do not edit by hand.
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| ar-25-50 | Headquarters, Department of the Army, 2020. [Army Regulation 25-50: Preparing and Managing Correspondence](https://www.maine.gov/dvem/policies/documents/AR%2025-50%20(10%20October%202020).pdf) | standard | formal.bluf, plain.there-is, style.passive.report |
+| bbc-subtitles | BBC. [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/) | style-guide | youtube.segment.pace |
+| crs-speechwriting | Congressional Research Service, 2007. [Speechwriting in Perspective: A Brief Guide to Effective and Persuasive Communication (98-170)](https://www.everycrsreport.com/files/20070412_98-170_9a7487f68c4e6092a69af51d49414e4d8d654c3f.html) | review | length.target, spoken.duration.report, spoken.sentence.max |
+| espenson-unfunny | Jane Espenson, 2006. [How to write jokes that aren't funny](https://janeespenson.com/archives/00000219.php) | practitioner | comedy.serious-moments |
+| final-draft-sitcom | Final Draft. [Single-Camera vs. Multi-Camera TV Sitcom Scripts: What's the Difference](https://www.finaldraft.com/blog/differences-single-camera-multi-camera-tv-pilot-scripts) | platform-doc | script.multicam.caps-action, script.runtime.report |
+| follows-page-minute | Stephen Follows, 2026. [Does one page of a screenplay really equal one minute of screen time?](https://stephenfollows.com/is-the-page-per-minute-rule-correct/) | practitioner | length.target, script.runtime.report |
+| fountain-syntax | Fountain, 2014. [Fountain 1.1 Syntax](https://fountain.io/syntax) | standard | script.unclosed-note, script.unprinted-marker |
+| gag-subtitles | Game Accessibility Guidelines. [If any subtitles/captions are used, present them in a clear, easy to read way](https://gameaccessibilityguidelines.com/if-any-subtitles-captions-are-used-present-them-in-a-clear-easy-to-read-way/) | style-guide | dialog.line.box |
+| google-procedures | Google. [Procedures (Google developer documentation style guide)](https://developers.google.com/style/procedures) | style-guide | procedure.single-step, procedure.step.imperative |
+| google-voice-tone | Google. [Voice and tone (Google developer documentation style guide)](https://developers.google.com/style/tone) | style-guide | lexicon:filler, procedure.filler |
+| gov-uk-25-words | GOV.UK (Inside GOV.UK blog), 2014. [Sentence length: why 25 words is our limit](https://insidegovuk.blog.gov.uk/2014/08/04/sentence-length-why-25-words-is-our-limit/) | style-guide | style.sentence.max |
+| igda-locsig | IGDA Localization SIG, 2012. [Best Practices for Game Localization (v22)](https://igda-website.s3.us-east-2.amazonaws.com/wp-content/uploads/2021/04/09142137/Best-Practices-for-Game-Localization-v22.pdf) | practitioner | voice.banned, voice.bible-valid, voice.distinct, voice.unvoiced |
+| inkle-writing-with-ink | inkle. [Writing with ink](https://github.com/inkle/ink/blob/master/Documentation/WritingWithInk.md) | platform-doc | dialog.choices.fallback, dialog.graph.dangling, dialog.graph.dead-end, dialog.graph.exit, dialog.graph.unreachable, dialog.revisit.variety |
+| language-portal-readability | Language Portal of Canada, 2024. [Readability formulas, programs and tools: Do they work for plain language?](https://our-languages.canada.ca/en/blogue-blog/readability-formulas-eng) | review | readability.grade.report |
+| mac-readability-rct | Mac, Ayre, McCaffery, Boroumand, Bell, Muscat, 2025. [The Readability Study: A Randomised Trial of Health Information Written at Different Grade Reading Levels](https://pmc.ncbi.nlm.nih.gov/articles/PMC12119439/) | peer-reviewed | readability.grade.report |
+| microsoft-steps | Microsoft. [Writing step-by-step instructions (Microsoft Writing Style Guide)](https://learn.microsoft.com/en-us/style-guide/procedures-instructions/writing-step-by-step-instructions) | style-guide | procedure.step.imperative |
+| millar-budgell | Millar & Budgell, 2019. [The passive voice and comprehensibility of biomedical texts: an experimental study with 2 cohorts of chiropractic students](https://pmc.ncbi.nlm.nih.gov/articles/PMC6417867) | peer-reviewed | style.passive.report |
+| nng-plain-language-experts | Loranger (Nielsen Norman Group), 2017. [Plain Language Is for Everyone, Even Experts](https://www.nngroup.com/articles/plain-language-experts/) | practitioner | style.sentence.max |
+| padmakumar-diversity | Padmakumar & He, 2024. [Does Writing with Language Models Reduce Content Diversity?](https://arxiv.org/abs/2309.05196) | peer-reviewed | style.echo |
+| pinker-curse | Association for Psychological Science (report of a Steven Pinker address), 2015. [The Curse of Knowledge: Pinker Describes a Key Cause of Bad Writing](https://www.psychologicalscience.org/observer/the-curse-of-knowledge-pinker-describes-a-key-cause-of-bad-writing) | practitioner | lexicon:hedges |
+| sela-distinctiveness | Šeļa, Eder et al., 2023. [From stage to page: language independent bootstrap measures of distinctiveness in fictional speech](https://arxiv.org/abs/2301.05659) | peer-reviewed | voice.distinct, voice.targets |
+| short-beyond-branching | Emily Short, 2016. [Beyond Branching: Quality-Based, Salience-Based, and Waypoint Narrative Structures](https://emshort.blog/2016/04/12/beyond-branching-quality-based-and-salience-based-narrative-structures/) | practitioner | dialog.barks.variety, dialog.graph.unreachable |
+| short-conversation-design | Emily Short. [Analysis: Conversation Design in Games](https://www.gamedeveloper.com/game-platforms/analysis-conversation-design-in-games) | practitioner | dialog.revisit.variety |
+| wgaw-comedy-rooms | Writers Guild of America West (Nastaran Dibai), 2022. [Ask a Mentor: Switching from Drama to Comedy Rooms](https://writtenby.com/career-craft/ask-a-mentor/2022/switching-from-drama-to-comedy-rooms) | practitioner | comedy.premise |
+| wgf-primer-20 | Writers Guild Foundation, 2022. [Formatting Your Spec Script, a Primer: Part 20](https://www.wgfoundation.org/blog/2022/3/24/formatting-your-spec-script-a-primer-part-20) | practitioner | script.multicam.caps-action |
+| wikipedia-signs-ai | WikiProject AI Cleanup, 2026. [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) | practitioner | ai.artifact, ai.copula-avoidance, ai.promotional, ai.vocabulary, draft.placeholders, formal.supported-claims, lexicon:ai-tells, lexicon:hedges |
+| williams-farkas | Williams & Farkas, 1992. [Minimalism Reconsidered](https://faculty.washington.edu/farkas/dfpubs/Williams-Farkas-MinimalismReconsidered.pdf) | peer-reviewed | procedure.recovery |
+| wingrove-ted | Wingrove, 2017. [How suitable are TED talks for academic listening?](https://research.chalmers.se/en/publication/547664) | peer-reviewed | spoken.duration.report |
+| xag-104 | Microsoft. [Xbox Accessibility Guideline 104: Subtitles and captions](https://learn.microsoft.com/en-us/gaming/accessibility/xbox-accessibility-guidelines/104) | platform-doc | dialog.line.box |
+| yarn-saliency | Yarn Spinner. [Saliency](https://docs.yarnspinner.dev/write-yarn-scripts/advanced-scripting/saliency) | platform-doc | dialog.barks.variety |
+| youtube-clickbait | YouTube, 2024. [Strengthening enforcement against egregious clickbait on YouTube](https://blog.google/intl/en-in/products/platforms/strengthening-enforcement-against-egregious-clickbait-on-youtube/) | platform-doc | youtube.promise-delivery |
+| youtube-key-moments | YouTube Help. [Measure key moments for audience retention](https://support.google.com/youtube/answer/9314415) | platform-doc | youtube.promise-delivery |

@@ -1,0 +1,108 @@
+{
+  "path": "tests/fixtures/pilot.fountain",
+  "format": "fountain",
+  "form": "tv-drama",
+  "register": null,
+  "style": {
+    "words": 29,
+    "sentences": 6,
+    "sentenceLength": {
+      "mean": 4.83,
+      "sd": 3.44,
+      "max": 10
+    },
+    "longest": {
+      "line": 12,
+      "words": 10
+    },
+    "passive": {
+      "count": 0,
+      "rate": 0
+    },
+    "nominalizations": {
+      "count": 0,
+      "per100": 0
+    },
+    "hedges": {
+      "count": 0,
+      "per1000": 0
+    },
+    "contractions": {
+      "count": 0,
+      "per1000": 0
+    },
+    "thereIs": {
+      "count": 0,
+      "lines": []
+    },
+    "echo": [],
+    "readingGrade": null
+  },
+  "lexicon": {
+    "aiTells": [],
+    "filler": []
+  },
+  "spoken": null,
+  "script": {
+    "layout": "screenplay",
+    "lines": 23,
+    "pages": 0.42,
+    "minutes": 0.39,
+    "band": [
+      0.31,
+      0.47
+    ],
+    "scenes": 2,
+    "dialogueWords": 13,
+    "actionWords": 16,
+    "dialogueShare": 0.45,
+    "scenesDetail": [
+      {
+        "line": 6,
+        "heading": "INT. HOSPITAL CORRIDOR - NIGHT",
+        "lines": 17,
+        "pages": 0.31
+      },
+      {
+        "line": 21,
+        "heading": "FLASHBACK - THE ER",
+        "lines": 6,
+        "pages": 0.11
+      }
+    ],
+    "speeches": {
+      "count": 2,
+      "longestWords": 10,
+      "longestLine": 12
+    }
+  },
+  "dialog": null,
+  "speakers": {
+    "DR. OKAFOR": {
+      "blocks": 1,
+      "words": 3,
+      "sentenceMean": 1.5,
+      "contractionsPer1000": 0,
+      "hedgesPer1000": 0,
+      "exclaimPer100": 50
+    },
+    "MAYA": {
+      "blocks": 1,
+      "words": 10,
+      "sentenceMean": 10,
+      "contractionsPer1000": 0,
+      "hedgesPer1000": 0,
+      "exclaimPer100": 0
+    }
+  },
+  "voices": {
+    "matches": {
+      "DR. OKAFOR": null,
+      "MAYA": null
+    },
+    "bibles": []
+  },
+  "segments": [],
+  "target": null,
+  "placeholders": []
+}

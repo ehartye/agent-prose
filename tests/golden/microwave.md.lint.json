@@ -1,0 +1,102 @@
+{
+  "path": "tests/fixtures/microwave.md",
+  "format": "markdown",
+  "form": "youtube",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "length.target",
+      "severity": "warn",
+      "message": "Runs 0.36 minutes against a 1-minute target (-64%); add about 103 words at 160 wpm",
+      "at": {
+        "line": null
+      },
+      "measured": {
+        "unit": "minutes",
+        "target": 1,
+        "measured": 0.36,
+        "ratio": 0.36
+      }
+    },
+    {
+      "rule": "youtube.segment.pace",
+      "severity": "warn",
+      "message": "0:08–0:18: 41 words in 10 s is 246 wpm (cap 180); cut about 11 words",
+      "at": {
+        "line": 12
+      },
+      "measured": {
+        "start": "0:08",
+        "end": "0:18",
+        "seconds": 10,
+        "words": 41,
+        "wpm": 246,
+        "line": 12
+      },
+      "fix": "Cut words or widen the segment."
+    },
+    {
+      "rule": "spoken.sentence.max",
+      "severity": "warn",
+      "message": "Sentence of 31 words (limit 16)",
+      "at": {
+        "line": 14
+      },
+      "measured": 31,
+      "fix": "Split at a clause boundary, or turn a series into a list."
+    }
+  ],
+  "info": [
+    {
+      "rule": "readability.grade.report",
+      "severity": "info",
+      "message": "Reading grade about 4.3 (reported only; not a target)",
+      "at": {
+        "line": null
+      },
+      "measured": 4.3
+    },
+    {
+      "rule": "style.passive.report",
+      "severity": "info",
+      "message": "1 passive sentence(s), rate 0.2 (reported only)",
+      "at": {
+        "line": null
+      },
+      "measured": {
+        "count": 1,
+        "rate": 0.2
+      }
+    },
+    {
+      "rule": "spoken.duration.report",
+      "severity": "info",
+      "message": "Reads in about 0.36 min at 160 wpm (57 words); longest breath unit 10 words (line 14)",
+      "at": {
+        "line": null
+      },
+      "measured": {
+        "wpm": 160,
+        "words": 57,
+        "minutes": 0.36,
+        "longestBreathUnit": {
+          "words": 10,
+          "line": 14
+        }
+      }
+    }
+  ],
+  "judgement": [
+    {
+      "rule": "youtube.promise-delivery",
+      "severity": "warn",
+      "statement": "The first 30 seconds confirm the title and thumbnail promise, and the video delivers it.",
+      "sources": [
+        "youtube-key-moments",
+        "youtube-clickbait"
+      ]
+    }
+  ]
+}

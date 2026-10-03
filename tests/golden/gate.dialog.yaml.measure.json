@@ -1,0 +1,152 @@
+{
+  "path": "tests/fixtures/gate.dialog.yaml",
+  "format": "dialog",
+  "form": "quest-dialog",
+  "register": null,
+  "style": {
+    "words": 51,
+    "sentences": 11,
+    "sentenceLength": {
+      "mean": 4.64,
+      "sd": 3.84,
+      "max": 16
+    },
+    "longest": {
+      "line": 6,
+      "words": 16
+    },
+    "passive": {
+      "count": 0,
+      "rate": 0
+    },
+    "nominalizations": {
+      "count": 0,
+      "per100": 0
+    },
+    "hedges": {
+      "count": 0,
+      "per1000": 0
+    },
+    "contractions": {
+      "count": 1,
+      "per1000": 19.61
+    },
+    "thereIs": {
+      "count": 0,
+      "lines": []
+    },
+    "echo": [
+      {
+        "phrase": "night on the",
+        "count": 2,
+        "lines": [
+          33,
+          34
+        ]
+      },
+      {
+        "phrase": "on the wall",
+        "count": 2,
+        "lines": [
+          33,
+          34
+        ]
+      },
+      {
+        "phrase": "quiet night on",
+        "count": 2,
+        "lines": [
+          33,
+          34
+        ]
+      }
+    ],
+    "readingGrade": 1
+  },
+  "lexicon": {
+    "aiTells": [],
+    "filler": []
+  },
+  "spoken": {
+    "wpm": 150,
+    "words": 44,
+    "minutes": 0.29,
+    "longestBreathUnit": {
+      "words": 9,
+      "line": 6
+    }
+  },
+  "script": null,
+  "dialog": {
+    "nodes": 5,
+    "choices": 2,
+    "barkPools": 2,
+    "boxChars": 40,
+    "boxLines": 2,
+    "issues": [
+      {
+        "kind": "dead-end",
+        "node": "passing",
+        "line": 17
+      },
+      {
+        "kind": "dangling",
+        "node": "lost",
+        "to": "nowhere",
+        "line": 24
+      },
+      {
+        "kind": "unreachable",
+        "node": "orphan",
+        "line": 20
+      },
+      {
+        "kind": "unreachable",
+        "node": "lost",
+        "line": 24
+      },
+      {
+        "kind": "single-variant",
+        "pool": "guard-alarm",
+        "line": 35
+      }
+    ],
+    "overflow": [
+      {
+        "line": 6,
+        "chars": 100,
+        "lines": 3,
+        "text": "Halt. State your business at the gate, traveller, before the bell rings twice and the captain wakes."
+      }
+    ],
+    "nearRepeats": [
+      {
+        "pool": "guard-idle",
+        "a": 33,
+        "b": 34,
+        "ai": 7,
+        "bi": 8,
+        "similarity": 0.83
+      }
+    ]
+  },
+  "speakers": {
+    "GUARD": {
+      "blocks": 8,
+      "words": 44,
+      "sentenceMean": 4.89,
+      "contractionsPer1000": 0,
+      "hedgesPer1000": 0,
+      "exclaimPer100": 11.11
+    }
+  },
+  "voices": {
+    "matches": {
+      "GUARD": null
+    },
+    "bibles": []
+  },
+  "segments": [],
+  "target": null,
+  "placeholders": []
+}

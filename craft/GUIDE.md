@@ -1,0 +1,120 @@
+# Craft guide
+
+Why the rules in `craft/rules.json` exist and how much weight each can bear. Every rule cites its
+sources in [REFERENCES.md](../REFERENCES.md); this guide explains the reasoning between them.
+
+Three principles run through everything:
+
+1. **Measure, don't assert.** The most common failure of a writing agent is claiming a length,
+   pace or fit it never checked. Lint measures; the agent reports the numbers.
+2. **Thresholds are conventions unless a source tested them.** Authorities disagree on sentence
+   caps, speech length, page timing and line limits. Rules built on those numbers warn and cite;
+   they never pretend to be laws. A rule marked `derived: true` uses a threshold this plugin chose.
+3. **Rules can pull against each other.** Rules declare `conflicts`, and lint shows the trade-off
+   on the finding instead of letting one fix silently create another problem.
+
+## Length and timing
+
+`length.target` compares a draft with the length it declares (`target: 5 minutes`, `Target: 3
+pages`, `target: 200 words`) and says how much to cut or add. Spoken time is planned from words
+at a rate — 130 words per minute for speeches (CRS); the 150 used for game dialogue and the 160
+used for YouTube are this plugin's planning defaults — and script runtime from pages. Both are
+estimates with real spread: individual speakers range widely, and Follows suggests treating a
+script page as about a minute, ±20%, because few scripts land close to it. So a miss is a prompt
+to check, not a failure: the finding is a warning, and its ±10% tolerance is this plugin's choice
+(`derived`). A page or word target is compared with measured pages or words, not with an
+estimated runtime. When the real reader's pace is known, set it: `wpm` (and the dialog box size)
+can be set in `.agent-prose/project.json`, per form under `forms.<id>`, and `wpm` in a draft's
+own metadata; the most specific wins. `spoken.duration.report` and `script.runtime.report`
+report the estimates. `youtube.segment.pace` warns when a timestamped segment runs above 180
+words per minute, the top of the 160–180 range BBC subtitle timing assumes.
+
+Rules whose thresholds this plugin chose, rather than a source: `length.target` (±10%),
+`spoken.sentence.max` (16 words), `style.echo` (3 repeats), `ai.vocabulary` (3 terms),
+`youtube.segment.pace` (180 as a cap), `dialog.barks.variety` (0.6 overlap), and the reporting
+rules built on planning defaults.
+
+Configuration that changes the numbers (`project.json`, a draft's `wpm`) stops the run with an
+error when it is invalid, because every figure after it would be wrong. Configuration that only
+feeds one rule family (a voice bible) becomes a finding, so the rest of lint still runs.
+
+## Sentences for the eye and the ear
+
+`style.sentence.max` warns on written sentences over 25 words (GOV.UK's cap; NN/g suggests
+15–20 even for experts). `spoken.sentence.max` uses 16 words, the top of the 8–16-word average
+that speechwriting guidance gives for spoken sentences, and the longest breath unit is reported
+for speeches. Neither is a hard rule: the sources disagree, GOV.UK's supporting comprehension
+figures are second-hand, and NN/g's range is advice.
+
+## Readability, passive voice and plain style
+
+`readability.grade.report` reports a reading grade but never targets one: a randomised trial
+found no comprehension difference between grade-8 and grade-14 versions, and rewriting to lower
+a score does not help readers. `style.passive.report` counts passive voice without banning it —
+a controlled study found active rewrites changed neither length nor comprehension.
+`plain.there-is` flags empty "There is / There are" openers (Army writing standard) and declares
+a conflict with `ai.copula-avoidance`: the fix is to delete the empty opener, not to swap in
+"serves as", which is a documented tell of generated text. `style.echo` flags a three-word phrase
+repeated three or more times, the repetition that model-assisted writing tends to introduce.
+
+## Machine-like prose
+
+`ai.artifact` (error) catches leaked chatbot markup and unfilled placeholders that must never
+ship. `ai.vocabulary` warns when three or more era-tagged words cluster in one draft (one or two
+can be coincidence); the lexicon is tagged by model era because the tells change.
+`ai.copula-avoidance` and `ai.promotional` are informational. All of these are style findings:
+automated detectors are unreliable and biased against non-native writers, so nothing here is a
+verdict on who wrote a text. `draft.placeholders` lists `[bracketed]` gaps still to fill — an
+honest placeholder beats an invented fact, but it must not ship.
+
+## Instructions
+
+`procedure.step.imperative`, `procedure.single-step` and `procedure.filler` follow the Google
+and Microsoft style guides: one action per step, lead with the verb (or a short location, then
+the verb), a single step is a bullet, and no "please", "simply" or "easy". `procedure.recovery`
+is a judgement rule: every failure state needs a way back in, because cutting information
+causes task failure.
+
+## Scripts
+
+`script.multicam.caps-action` and `script.unprinted-marker` encode multi-camera format (ALL-CAPS
+description) and Fountain's rule that `#` sections do not print. `script.unclosed-note` catches a
+note whose closing brackets went missing, which turns note text into script text and inflates
+every count. `comedy.premise` and `comedy.serious-moments` are judgement rules from working
+showrunners: jokes grow from the scene's premise, and jokes release the tension a serious scene
+is building.
+
+## YouTube
+
+`youtube.segment.pace` checks pace per segment; `youtube.promise-delivery` (judgement) asks
+whether the first 30 seconds confirm the title and thumbnail promise — YouTube reads 30-second
+retention exactly that way and removes clickbait whose promise the video never keeps.
+
+## Game dialogue
+
+`dialog.graph.dangling`, `dialog.graph.dead-end`, `dialog.graph.unreachable`,
+`dialog.graph.exit` and `dialog.choices.fallback` keep a conversation from breaking or trapping
+the player — ink treats loose ends as errors and uses fallback choices so players never run out
+of options. `dialog.revisit.variety` asks for rotating variants wherever a player can return,
+because a hub that repeats one line makes an implausibly patient NPC. `dialog.line.box` checks
+lines against the text box — by default the 40-character, two-line subtitle limit accessibility
+guidelines set; a project can set `boxChars` and `boxLines` per form.
+`dialog.barks.variety` flags single-line pools and near-duplicates; salience systems rotate
+least-recently-heard lines, so a thin pool repeats audibly.
+
+## Voice
+
+`voice.targets`, `voice.banned` and `voice.unvoiced` check speakers against the project's voice
+bibles: character voice is measurable, and concrete style guides name what a character would
+never say. Ranges from fewer than 40 words are too noisy to check. `voice.bible-valid` is an
+error when a bible fails to load (bad YAML or schema, an id that is not the file name, a duplicate
+id, or a speaker two bibles claim): a broken style guide cannot check anyone, so the other voice
+rules wait until it is fixed while the rest of lint still runs. `voice.distinct` is the swap
+test, a judgement rule: no line could move to another character unnoticed.
+
+## Formal writing
+
+`formal.bluf` puts the main result or request in the first or second sentence (Army writing
+standard). `formal.supported-claims` keeps claims inside the evidence: generalizations past the
+data and invented significance are documented failures of generated prose, and a missing value
+is a placeholder, never a guess.

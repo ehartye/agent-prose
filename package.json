@@ -1,0 +1,51 @@
+{
+  "name": "agent-prose",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Writing-craft toolkit for coding agents: drafts in native formats (Fountain, Markdown, dialog YAML), measured and linted against cited craft rules per form and register",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ehartye/agent-prose.git"
+  },
+  "homepage": "https://github.com/ehartye/agent-prose#readme",
+  "bugs": {
+    "url": "https://github.com/ehartye/agent-prose/issues"
+  },
+  "keywords": [
+    "writing",
+    "prose",
+    "dialogue",
+    "screenwriting",
+    "fountain",
+    "speechwriting",
+    "technical-writing",
+    "game-dialogue",
+    "lint",
+    "claude-code-plugin"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "prose": "scripts/prose.mjs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "setup": "node scripts/setup.js",
+    "refs": "node scripts/build-references.mjs",
+    "refs:check": "node scripts/build-references.mjs --check"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "commander": "15.0.0",
+    "yaml": "2.9.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

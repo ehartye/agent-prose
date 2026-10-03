@@ -1,0 +1,76 @@
+{
+  "path": "tests/fixtures/setup-guide.md",
+  "format": "markdown",
+  "form": "instructions",
+  "register": null,
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "procedure.filler",
+      "severity": "warn",
+      "message": "Filler word: “Please”",
+      "at": {
+        "line": 7
+      },
+      "measured": "please",
+      "fix": "Delete it; the step reads the same without it."
+    },
+    {
+      "rule": "procedure.filler",
+      "severity": "warn",
+      "message": "Filler word: “simply”",
+      "at": {
+        "line": 7
+      },
+      "measured": "simply",
+      "fix": "Delete it; the step reads the same without it."
+    },
+    {
+      "rule": "style.sentence.max",
+      "severity": "warn",
+      "message": "Sentence of 30 words (limit 25)",
+      "at": {
+        "line": 10
+      },
+      "measured": 30,
+      "fix": "Split at a clause boundary, or turn a series into a list."
+    }
+  ],
+  "info": [
+    {
+      "rule": "readability.grade.report",
+      "severity": "info",
+      "message": "Reading grade about 2.6 (reported only; not a target)",
+      "at": {
+        "line": null
+      },
+      "measured": 2.6
+    },
+    {
+      "rule": "plain.there-is",
+      "severity": "info",
+      "message": "Sentence opens with There is/are/was/were or Here is/are",
+      "at": {
+        "line": 7
+      },
+      "fix": "Rewrite around the real subject and verb.",
+      "tradeoffs": [
+        {
+          "rule": "ai.copula-avoidance",
+          "note": "Fix by deleting the empty opener, not by swapping in 'serves as' or 'boasts', which is a documented AI tell."
+        }
+      ]
+    }
+  ],
+  "judgement": [
+    {
+      "rule": "procedure.recovery",
+      "severity": "warn",
+      "statement": "Every failure state says where to resume, and 'nothing happens' cases give a time limit or a check.",
+      "sources": [
+        "williams-farkas"
+      ]
+    }
+  ]
+}

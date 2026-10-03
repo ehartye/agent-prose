@@ -1,0 +1,43 @@
+{
+  "path": "tests/fixtures/microwave.md",
+  "format": "markdown",
+  "form": "youtube",
+  "register": null,
+  "meta": {
+    "form": "youtube",
+    "target": "60 seconds"
+  },
+  "blocks": [
+    {
+      "kind": "heading",
+      "text": "0:00–0:08",
+      "line": 6,
+      "meta": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "paragraph",
+      "text": "VISUAL: A fork in a microwave throws sparks.",
+      "line": 8
+    },
+    {
+      "kind": "paragraph",
+      "text": "VO: You've been told never to do this. But the inside of your microwave is already metal.",
+      "line": 10
+    },
+    {
+      "kind": "heading",
+      "text": "0:08–0:18",
+      "line": 12,
+      "meta": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "paragraph",
+      "text": "VO: So why does a fork spark when the walls don't? The answer is the shape of the metal, and the field that piles up on every sharp point, tine and edge of it, all at once, faster than you can see.",
+      "line": 14
+    }
+  ]
+}

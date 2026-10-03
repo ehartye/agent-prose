@@ -1,0 +1,21 @@
+{
+  "schema": "prose/forms@1",
+  "defaults": { "fountain": "tv-drama", "markdown": "professional", "dialog": "conversation" },
+  "forms": [
+    { "id": "quest-dialog", "format": "dialog", "spoken": true, "wpm": 150, "boxChars": 40, "boxLines": 2, "basis": "Box 40 chars x 2 lines: Game Accessibility Guidelines and Xbox XAG 104 subtitle limits. 150 wpm is a planning default (derived)." },
+    { "id": "barks", "format": "dialog", "spoken": true, "wpm": 150, "boxChars": 40, "boxLines": 2, "basis": "As quest-dialog." },
+    { "id": "conversation", "format": "dialog", "spoken": true, "wpm": 150, "boxChars": 40, "boxLines": 2, "basis": "As quest-dialog." },
+    { "id": "instructions", "format": "markdown", "spoken": false, "basis": "Read form." },
+    { "id": "tech-doc", "format": "markdown", "spoken": false, "basis": "Read form." },
+    { "id": "academic", "format": "markdown", "spoken": false, "basis": "Read form." },
+    { "id": "professional", "format": "markdown", "spoken": false, "basis": "Read form." },
+    { "id": "sitcom-multicam", "format": "fountain", "spoken": true, "minutesPerPage": 0.45, "layout": "multicam", "basis": "Multi-cam runs ~40-58 pages for ~22 minutes (WGF primers; Final Draft); 0.45 min/page is derived from that span." },
+    { "id": "sitcom-singlecam", "format": "fountain", "spoken": true, "minutesPerPage": 0.92, "layout": "screenplay", "basis": "~55 s per page, +/-20% (Follows, 2,520 scripts)." },
+    { "id": "tv-drama", "format": "fountain", "spoken": true, "minutesPerPage": 0.92, "layout": "screenplay", "basis": "~55 s per page, +/-20% (Follows)." },
+    { "id": "stage-play", "format": "fountain", "spoken": true, "minutesPerPage": 1.0, "layout": "screenplay", "basis": "Festivals use 1 page ~ 1 minute; stage layout differs from screenplay layout (derived approximation until a stage layout source is captured)." },
+    { "id": "youtube", "format": "markdown", "spoken": true, "wpm": 160, "basis": "Narration runs 130-180 wpm; 160 is a planning default (derived)." },
+    { "id": "speech-small", "format": "markdown", "spoken": true, "wpm": 130, "lineBreakPauses": true, "basis": "CRS 98-170: ~2,600 words per 20 minutes (~130 wpm); speakers range 115-175." },
+    { "id": "speech-large", "format": "markdown", "spoken": true, "wpm": 130, "lineBreakPauses": true, "basis": "As speech-small; no source distinguishes venue size." },
+    { "id": "speech-recorded", "format": "markdown", "spoken": true, "wpm": 130, "lineBreakPauses": true, "basis": "As speech-small; no source distinguishes recorded delivery." }
+  ]
+}

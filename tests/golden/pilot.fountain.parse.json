@@ -1,0 +1,87 @@
+{
+  "path": "tests/fixtures/pilot.fountain",
+  "format": "fountain",
+  "form": "tv-drama",
+  "register": null,
+  "meta": {
+    "title": "Night Shift",
+    "credit": "Written by",
+    "author": "A. Writer",
+    "form": "tv-drama"
+  },
+  "blocks": [
+    {
+      "kind": "scene",
+      "text": "INT. HOSPITAL CORRIDOR - NIGHT",
+      "line": 6
+    },
+    {
+      "kind": "action",
+      "text": "Fluorescent lights hum. MAYA (30s) pushes a cart past an empty desk.",
+      "line": 8
+    },
+    {
+      "kind": "parenthetical",
+      "text": "under her breath",
+      "line": 11,
+      "speaker": "MAYA",
+      "meta": {
+        "speech": 0
+      }
+    },
+    {
+      "kind": "line",
+      "text": "Nobody told me the quiet would be the hard part.",
+      "line": 12,
+      "speaker": "MAYA",
+      "meta": {
+        "speech": 0
+      }
+    },
+    {
+      "kind": "line",
+      "text": "Maya! Room four.",
+      "line": 15,
+      "speaker": "DR. OKAFOR",
+      "meta": {
+        "speech": 1,
+        "extension": "O.S."
+      }
+    },
+    {
+      "kind": "action",
+      "text": "CRASH FROM ROOM FOUR.",
+      "line": 17
+    },
+    {
+      "kind": "transition",
+      "text": "CUT TO:",
+      "line": 19
+    },
+    {
+      "kind": "scene",
+      "text": "FLASHBACK - THE ER",
+      "line": 21
+    },
+    {
+      "kind": "note",
+      "text": "cut this if long",
+      "line": 23
+    },
+    {
+      "kind": "synopsis",
+      "text": "Maya remembers her first night.",
+      "line": 28
+    },
+    {
+      "kind": "lyric",
+      "text": "Hush now, the night is long.",
+      "line": 30
+    },
+    {
+      "kind": "centered",
+      "text": "THE END",
+      "line": 31
+    }
+  ]
+}

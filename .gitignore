@@ -1,0 +1,6 @@
+.superpowers/
+node_modules/
+.agent-prose/
+coverage/
+*.log
+evals/results/

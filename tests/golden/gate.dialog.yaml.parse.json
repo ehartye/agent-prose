@@ -1,0 +1,105 @@
+{
+  "path": "tests/fixtures/gate.dialog.yaml",
+  "format": "dialog",
+  "form": "quest-dialog",
+  "register": null,
+  "meta": {
+    "form": "quest-dialog"
+  },
+  "blocks": [
+    {
+      "kind": "line",
+      "text": "Halt. State your business at the gate, traveller, before the bell rings twice and the captain wakes.",
+      "line": 6,
+      "speaker": "GUARD",
+      "meta": {
+        "node": "gate"
+      }
+    },
+    {
+      "kind": "choice",
+      "text": "I'm here to trade.",
+      "line": 8,
+      "meta": {
+        "node": "gate",
+        "to": "trade"
+      }
+    },
+    {
+      "kind": "choice",
+      "text": "Just passing through.",
+      "line": 10,
+      "meta": {
+        "node": "gate",
+        "to": "passing",
+        "condition": "has_pass"
+      }
+    },
+    {
+      "kind": "line",
+      "text": "Market's that way.",
+      "line": 15,
+      "speaker": "GUARD",
+      "meta": {
+        "node": "trade"
+      }
+    },
+    {
+      "kind": "line",
+      "text": "Go on, then.",
+      "line": 19,
+      "speaker": "GUARD",
+      "meta": {
+        "node": "passing"
+      }
+    },
+    {
+      "kind": "line",
+      "text": "You should never hear this.",
+      "line": 22,
+      "speaker": "GUARD",
+      "meta": {
+        "node": "orphan"
+      }
+    },
+    {
+      "kind": "line",
+      "text": "This points nowhere.",
+      "line": 26,
+      "speaker": "GUARD",
+      "meta": {
+        "node": "lost"
+      }
+    },
+    {
+      "kind": "bark",
+      "text": "Quiet night on the wall.",
+      "line": 33,
+      "speaker": "GUARD",
+      "meta": {
+        "pool": "guard-idle",
+        "context": "idle"
+      }
+    },
+    {
+      "kind": "bark",
+      "text": "Quiet night on the wall again.",
+      "line": 34,
+      "speaker": "GUARD",
+      "meta": {
+        "pool": "guard-idle",
+        "context": "idle"
+      }
+    },
+    {
+      "kind": "bark",
+      "text": "To arms!",
+      "line": 39,
+      "speaker": "GUARD",
+      "meta": {
+        "pool": "guard-alarm",
+        "context": "alarm"
+      }
+    }
+  ]
+}

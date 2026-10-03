@@ -1,0 +1,15 @@
+{
+  "schema": "prose/lexicon@1",
+  "id": "hedges",
+  "sources": ["pinker-curse", "wikipedia-signs-ai"],
+  "note": "Classic style removes hedges (Pinker); human text carries more of some hedges than LLM text (Wikipedia). Counted, never banned.",
+  "entries": [
+    { "id": "somewhat", "pattern": "\\bsomewhat\\b", "tier": "hedge" },
+    { "id": "nearly", "pattern": "\\bnearly\\b", "tier": "hedge" },
+    { "id": "relatively", "pattern": "\\brelatively\\b", "tier": "hedge" },
+    { "id": "apparently", "pattern": "\\bapparently\\b", "tier": "hedge" },
+    { "id": "very", "pattern": "\\bvery\\b", "tier": "hedge" },
+    { "id": "perhaps", "pattern": "\\bperhaps\\b", "tier": "hedge" },
+    { "id": "tends-to", "pattern": "\\btends?\\s+to\\b", "tier": "hedge" }
+  ]
+}

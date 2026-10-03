@@ -1,0 +1,54 @@
+{
+  "path": "tests/fixtures/keynote.md",
+  "format": "markdown",
+  "form": "speech-large",
+  "register": "professional",
+  "meta": {
+    "form": "speech-large",
+    "register": "professional"
+  },
+  "blocks": [
+    {
+      "kind": "heading",
+      "text": "Opening",
+      "line": 6,
+      "meta": {
+        "level": 1
+      }
+    },
+    {
+      "kind": "paragraph",
+      "text": "Friends, we came here with a question. Not whether the bridge would hold, but whether we would.",
+      "line": 8
+    },
+    {
+      "kind": "paragraph",
+      "text": "We built it anyway. We built it in the rain, in the dark, and in the long months when nobody believed us.",
+      "line": 10
+    },
+    {
+      "kind": "step",
+      "text": "Thank the crew.",
+      "line": 12,
+      "meta": {
+        "n": 1
+      }
+    },
+    {
+      "kind": "step",
+      "text": "Thank the town.",
+      "line": 13,
+      "meta": {
+        "n": 2
+      }
+    },
+    {
+      "kind": "note",
+      "text": "Slide: the finished bridge at dawn",
+      "line": 15,
+      "meta": {
+        "onscreen": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "path": "tests/fixtures/setup-guide.md",
+  "format": "markdown",
+  "form": "instructions",
+  "register": null,
+  "style": {
+    "words": 47,
+    "sentences": 5,
+    "sentenceLength": {
+      "mean": 9.4,
+      "sd": 10.4,
+      "max": 30
+    },
+    "longest": {
+      "line": 10,
+      "words": 30
+    },
+    "passive": {
+      "count": 0,
+      "rate": 0
+    },
+    "nominalizations": {
+      "count": 0,
+      "per100": 0
+    },
+    "hedges": {
+      "count": 0,
+      "per1000": 0
+    },
+    "contractions": {
+      "count": 0,
+      "per1000": 0
+    },
+    "thereIs": {
+      "count": 1,
+      "lines": [
+        7
+      ]
+    },
+    "echo": [
+      {
+        "phrase": "close the case",
+        "count": 2,
+        "lines": [
+          10,
+          11
+        ]
+      }
+    ],
+    "readingGrade": 2.6
+  },
+  "lexicon": {
+    "aiTells": [],
+    "filler": [
+      {
+        "id": "please",
+        "tier": "filler",
+        "count": 1,
+        "lines": [
+          7
+        ],
+        "examples": [
+          "Please"
+        ]
+      },
+      {
+        "id": "simply",
+        "tier": "filler",
+        "count": 1,
+        "lines": [
+          7
+        ],
+        "examples": [
+          "simply"
+        ]
+      }
+    ]
+  },
+  "spoken": null,
+  "script": null,
+  "dialog": null,
+  "speakers": {},
+  "voices": {
+    "matches": {},
+    "bibles": []
+  },
+  "segments": [],
+  "target": null,
+  "placeholders": []
+}

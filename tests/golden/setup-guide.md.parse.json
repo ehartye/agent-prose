@@ -1,0 +1,48 @@
+{
+  "path": "tests/fixtures/setup-guide.md",
+  "format": "markdown",
+  "form": "instructions",
+  "register": null,
+  "meta": {
+    "form": "instructions"
+  },
+  "blocks": [
+    {
+      "kind": "heading",
+      "text": "How to install the sensor",
+      "line": 5,
+      "meta": {
+        "level": 1
+      }
+    },
+    {
+      "kind": "paragraph",
+      "text": "There are three steps. Please read them before you simply start.",
+      "line": 7
+    },
+    {
+      "kind": "step",
+      "text": "Open the case.",
+      "line": 9,
+      "meta": {
+        "n": 1
+      }
+    },
+    {
+      "kind": "step",
+      "text": "Insert the sensor until it clicks, then close the case, plug in the cable, and wait for the green light on the front panel to blink twice before you continue.",
+      "line": 10,
+      "meta": {
+        "n": 2
+      }
+    },
+    {
+      "kind": "step",
+      "text": "Close the case.",
+      "line": 11,
+      "meta": {
+        "n": 3
+      }
+    }
+  ]
+}

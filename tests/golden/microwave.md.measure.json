@@ -1,0 +1,90 @@
+{
+  "path": "tests/fixtures/microwave.md",
+  "format": "markdown",
+  "form": "youtube",
+  "register": null,
+  "style": {
+    "words": 67,
+    "sentences": 5,
+    "sentenceLength": {
+      "mean": 13.4,
+      "sd": 8.87,
+      "max": 31
+    },
+    "longest": {
+      "line": 14,
+      "words": 31
+    },
+    "passive": {
+      "count": 1,
+      "rate": 0.2
+    },
+    "nominalizations": {
+      "count": 0,
+      "per100": 0
+    },
+    "hedges": {
+      "count": 0,
+      "per1000": 0
+    },
+    "contractions": {
+      "count": 2,
+      "per1000": 29.85
+    },
+    "thereIs": {
+      "count": 0,
+      "lines": []
+    },
+    "echo": [],
+    "readingGrade": 4.3
+  },
+  "lexicon": {
+    "aiTells": [],
+    "filler": []
+  },
+  "spoken": {
+    "wpm": 160,
+    "words": 57,
+    "minutes": 0.36,
+    "longestBreathUnit": {
+      "words": 10,
+      "line": 14
+    }
+  },
+  "script": null,
+  "dialog": null,
+  "speakers": {},
+  "voices": {
+    "matches": {},
+    "bibles": []
+  },
+  "segments": [
+    {
+      "start": "0:00",
+      "end": "0:08",
+      "seconds": 8,
+      "words": 16,
+      "wpm": 120,
+      "line": 6
+    },
+    {
+      "start": "0:08",
+      "end": "0:18",
+      "seconds": 10,
+      "words": 41,
+      "wpm": 246,
+      "line": 12
+    }
+  ],
+  "target": {
+    "checks": [
+      {
+        "unit": "minutes",
+        "target": 1,
+        "measured": 0.36,
+        "ratio": 0.36
+      }
+    ]
+  },
+  "placeholders": []
+}

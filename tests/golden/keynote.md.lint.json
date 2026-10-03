@@ -1,0 +1,49 @@
+{
+  "path": "tests/fixtures/keynote.md",
+  "format": "markdown",
+  "form": "speech-large",
+  "register": "professional",
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "rule": "spoken.sentence.max",
+      "severity": "warn",
+      "message": "Sentence of 18 words (limit 16)",
+      "at": {
+        "line": 10
+      },
+      "measured": 18,
+      "fix": "Split at a clause boundary, or turn a series into a list."
+    }
+  ],
+  "info": [
+    {
+      "rule": "readability.grade.report",
+      "severity": "info",
+      "message": "Reading grade about 1.2 (reported only; not a target)",
+      "at": {
+        "line": null
+      },
+      "measured": 1.2
+    },
+    {
+      "rule": "spoken.duration.report",
+      "severity": "info",
+      "message": "Reads in about 0.35 min at 130 wpm (45 words); longest breath unit 9 words (line 10)",
+      "at": {
+        "line": null
+      },
+      "measured": {
+        "wpm": 130,
+        "words": 45,
+        "minutes": 0.35,
+        "longestBreathUnit": {
+          "words": 9,
+          "line": 10
+        }
+      }
+    }
+  ],
+  "judgement": []
+}

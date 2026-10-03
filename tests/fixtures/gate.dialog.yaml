@@ -1,0 +1,39 @@
+form: quest-dialog
+start: gate
+nodes:
+  - id: gate
+    speaker: GUARD
+    text: Halt. State your business at the gate, traveller, before the bell rings twice and the captain wakes.
+    choices:
+      - text: I'm here to trade.
+        to: trade
+      - text: Just passing through.
+        to: passing
+        condition: has_pass
+  - id: trade
+    speaker: GUARD
+    text: Market's that way.
+    end: true
+  - id: passing
+    speaker: GUARD
+    text: Go on, then.
+  - id: orphan
+    speaker: GUARD
+    text: You should never hear this.
+    end: true
+  - id: lost
+    speaker: GUARD
+    text: This points nowhere.
+    next: nowhere
+barks:
+  - pool: guard-idle
+    speaker: GUARD
+    context: idle
+    lines:
+      - Quiet night on the wall.
+      - Quiet night on the wall again.
+  - pool: guard-alarm
+    speaker: GUARD
+    context: alarm
+    lines:
+      - To arms!

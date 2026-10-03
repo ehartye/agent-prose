@@ -1,0 +1,72 @@
+{
+  "path": "tests/fixtures/keynote.md",
+  "format": "markdown",
+  "form": "speech-large",
+  "register": "professional",
+  "style": {
+    "words": 45,
+    "sentences": 6,
+    "sentenceLength": {
+      "mean": 7.5,
+      "sd": 5.32,
+      "max": 18
+    },
+    "longest": {
+      "line": 10,
+      "words": 18
+    },
+    "passive": {
+      "count": 0,
+      "rate": 0
+    },
+    "nominalizations": {
+      "count": 0,
+      "per100": 0
+    },
+    "hedges": {
+      "count": 0,
+      "per1000": 0
+    },
+    "contractions": {
+      "count": 0,
+      "per1000": 0
+    },
+    "thereIs": {
+      "count": 0,
+      "lines": []
+    },
+    "echo": [
+      {
+        "phrase": "we built it",
+        "count": 2,
+        "lines": [
+          10
+        ]
+      }
+    ],
+    "readingGrade": 1.2
+  },
+  "lexicon": {
+    "aiTells": [],
+    "filler": []
+  },
+  "spoken": {
+    "wpm": 130,
+    "words": 45,
+    "minutes": 0.35,
+    "longestBreathUnit": {
+      "words": 9,
+      "line": 10
+    }
+  },
+  "script": null,
+  "dialog": null,
+  "speakers": {},
+  "voices": {
+    "matches": {},
+    "bibles": []
+  },
+  "segments": [],
+  "target": null,
+  "placeholders": []
+}
