@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 // Measurement harness for the style audit. Runs the audit's detectors in-process over three groups of plain-text
 // abstracts (human, model-plain, model-clean), splits the ids into a calibration half and a held-out half with a
-// seeded shuffle, and prints flag rates, soft-finding density and the cluster rule's rate with Wilson intervals.
+// seeded shuffle, and prints per-family flag rates, soft-finding density and a paired comparison, with Wilson intervals.
 //
-//   node scripts/audit-measure.mjs <dataDir> [--seed N] [--json] [--sweep]
-//        [--threshold-families K --threshold-per-thousand X]
+//   node scripts/audit-measure.mjs <dataDir> [--seed N] [--json]
 //
 // <dataDir> holds human/<id>.txt, model-plain/<id>.txt and model-clean/<id>.txt. The data is never copied into the
 // repository. Deterministic: no network, no clock, no randomness beyond the seeded shuffle.
@@ -13,27 +12,25 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseDocument } from '../src/document.ts';
 import { buildReport } from '../src/audit/report.ts';
-import { clusterOf, DEFAULT_THRESHOLD } from '../src/audit/cluster.ts';
 import { FAMILIES } from '../src/audit/detectors.ts';
 
 const GROUPS = ['human', 'model-plain', 'model-clean'];
 const DEFAULT_SEED = 20261003;
+/** Passages under this many words are counted as short in the report; it is context only and flags nothing. */
+const MIN_WORDS = 100;
 const SOFT = FAMILIES.filter(f => f.tier === 'soft').map(f => f.id);
 const HARD = FAMILIES.filter(f => f.tier === 'hard').map(f => f.id);
 
 function parseArgs(argv) {
-  const o = { dir: undefined, seed: DEFAULT_SEED, json: false, sweep: false, families: undefined, perThousand: undefined };
+  const o = { dir: undefined, seed: DEFAULT_SEED, json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--json') o.json = true;
-    else if (a === '--sweep') o.sweep = true;
     else if (a === '--seed') o.seed = Number(argv[++i]);
-    else if (a === '--threshold-families') o.families = Number(argv[++i]);
-    else if (a === '--threshold-per-thousand') o.perThousand = Number(argv[++i]);
     else if (!a.startsWith('--') && o.dir === undefined) o.dir = a;
     else throw new Error(`Unknown argument: ${a}`);
   }
-  if (!o.dir) throw new Error('Usage: node scripts/audit-measure.mjs <dataDir> [--seed N] [--json] [--sweep] [--threshold-families K --threshold-per-thousand X]');
+  if (!o.dir) throw new Error('Usage: node scripts/audit-measure.mjs <dataDir> [--seed N] [--json]');
   if (!Number.isInteger(o.seed)) throw new Error('--seed needs an integer');
   return o;
 }
@@ -100,13 +97,6 @@ function load(dir) {
   return groups;
 }
 
-const thresholdOf = o => ({
-  ...DEFAULT_THRESHOLD,
-  ...(o.families !== undefined ? { minFamilies: o.families } : {}),
-  ...(o.perThousand !== undefined ? { minPerThousand: o.perThousand } : {}),
-});
-const meets = (rec, thr) => clusterOf(rec.findings, rec.words, thr).met;
-
 function familyRates(recs) {
   const out = {};
   for (const fam of [...SOFT, ...HARD]) {
@@ -116,28 +106,29 @@ function familyRates(recs) {
   return out;
 }
 
-function summarize(recs, thr) {
+function summarize(recs) {
   const dens = recs.map(r => (r.words ? (r.findings.filter(f => f.tier === 'soft').length * 1000) / r.words : 0)).sort((a, b) => a - b);
-  const k = recs.filter(r => meets(r, thr)).length;
   const anySoft = recs.filter(r => r.findings.some(f => f.tier === 'soft')).length;
   return {
     n: recs.length,
     meanWords: mean(recs.map(r => r.words)),
-    underMinWords: recs.filter(r => r.words < thr.minWords).length,
+    underMinWords: recs.filter(r => r.words < MIN_WORDS).length,
     families: familyRates(recs),
     anySoft: { k: anySoft, ...wilson(anySoft, recs.length) },
     softPerThousand: { mean: mean(dens), median: percentile(dens, 0.5), p90: percentile(dens, 0.9) },
-    cluster: { k, ...wilson(k, recs.length) },
   };
 }
 
-function paired(humans, models, ids, thr) {
+/** Whether a passage has at least one soft finding. */
+const flagged = rec => rec.findings.some(f => f.tier === 'soft');
+
+function paired(humans, models, ids) {
   const c = { both: 0, modelOnly: 0, humanOnly: 0, neither: 0, n: 0 };
   for (const id of [...ids].sort()) {
     const h = humans.get(id), m = models.get(id);
     if (!h || !m) continue;
     c.n++;
-    const hm = meets(h, thr), mm = meets(m, thr);
+    const hm = flagged(h), mm = flagged(m);
     if (hm && mm) c.both++; else if (mm) c.modelOnly++; else if (hm) c.humanOnly++; else c.neither++;
   }
   return c;
@@ -157,26 +148,6 @@ function topSpans(recs, limit = 10) {
   });
 }
 
-/** Every (families, per-thousand) setting on the calibration half; hard findings never count. */
-function sweep(groups, ids) {
-  const grid = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
-  const pick = g => [...groups[g].values()].filter(r => ids.has(r.id));
-  const human = pick('human'), plain = pick('model-plain');
-  const rows = [];
-  for (let minFamilies = 1; minFamilies <= 5; minFamilies++) {
-    for (const minPerThousand of grid) {
-      const thr = { ...DEFAULT_THRESHOLD, minFamilies, minPerThousand };
-      const h = human.filter(r => meets(r, thr)).length, m = plain.filter(r => meets(r, thr)).length;
-      rows.push({ minFamilies, minPerThousand, humanFp: h / human.length, humanK: h, plainRate: m / plain.length, plainK: m });
-    }
-  }
-  // At most 5% human false positives; then the highest plain-prompt rate. Ties go to the stricter setting (fewer
-  // human false positives, then more families, then a higher density), so a tie never loosens the rule.
-  const ok = rows.filter(r => r.humanFp <= 0.05);
-  ok.sort((a, b) => b.plainRate - a.plainRate || a.humanFp - b.humanFp || b.minFamilies - a.minFamilies || b.minPerThousand - a.minPerThousand);
-  return { rows, chosen: ok[0] ?? null };
-}
-
 const pct = v => (v === null ? 'n/a' : `${(v * 100).toFixed(1)}%`);
 const ci = r => `${pct(r.rate)} [${pct(r.lo)}, ${pct(r.hi)}]`;
 const num = v => (v === null ? 'n/a' : v.toFixed(2));
@@ -184,9 +155,7 @@ const cell = (w, ...xs) => xs.map(s => String(s).padEnd(w)).join(' ');
 
 function render(result) {
   const out = [];
-  const t = result.threshold;
-  const un = t.uncounted?.length ? `; not counted as families: ${t.uncounted.join(', ')}` : '';
-  out.push(`Audit measurement (seed ${result.seed}); cluster rule: >= ${t.minFamilies} soft families, >= ${t.minPerThousand} soft findings per 1,000 words, >= ${t.minWords} words${un}`);
+  out.push(`Audit measurement (seed ${result.seed})`);
   const drop = Object.entries(result.droppedModelIds);
   out.push(`Model ids absent from the human set, dropped: ${drop.length ? drop.map(([g, n]) => `${g} ${n}`).join(', ') : '0'}`);
   for (const half of ['calibration', 'heldout']) {
@@ -196,16 +165,14 @@ function render(result) {
     out.push(cell(32, '', ...names));
     out.push(cell(32, 'n', ...names.map(g => gs[g].n)));
     out.push(cell(32, 'mean words', ...names.map(g => num(gs[g].meanWords))));
-    out.push(cell(32, 'under the minimum words', ...names.map(g => gs[g].underMinWords)));
+    out.push(cell(32, 'under 100 words', ...names.map(g => gs[g].underMinWords)));
     out.push('', 'Family flag rate (share of abstracts with at least one finding)');
     for (const fam of [...HARD, ...SOFT]) out.push(cell(32, `${fam} (${HARD.includes(fam) ? 'hard' : 'soft'})`, ...names.map(g => pct(gs[g].families[fam].rate))));
     out.push(cell(32, 'any soft', ...names.map(g => pct(gs[g].anySoft.rate))));
     out.push('', 'Soft findings per 1,000 words (mean / median / p90)');
     for (const g of names) out.push(`  ${g.padEnd(12)} ${num(gs[g].softPerThousand.mean)} / ${num(gs[g].softPerThousand.median)} / ${num(gs[g].softPerThousand.p90)}`);
-    out.push('', 'Cluster rule flag rate [Wilson 95% interval]');
-    for (const g of names) out.push(`  ${g.padEnd(12)} ${gs[g].cluster.k}/${gs[g].n} = ${ci(gs[g].cluster)}`);
     for (const [g, c] of Object.entries(result.halves[half].paired)) {
-      out.push('', `Paired by title, human vs ${g} (n=${c.n}): both ${c.both}, ${g} only ${c.modelOnly}, human only ${c.humanOnly}, neither ${c.neither}`);
+      out.push('', `Paired by title, any soft finding, human vs ${g} (n=${c.n}): both ${c.both}, ${g} only ${c.modelOnly}, human only ${c.humanOnly}, neither ${c.neither}`);
     }
     out.push('', 'Ten most frequent soft spans in the human group');
     for (const s of result.halves[half].topHumanSpans) out.push(`  ${String(s.count).padStart(3)}  ${s.family}: "${s.span}"`);
@@ -214,28 +181,12 @@ function render(result) {
   for (const s of result.topHumanSpansAll) out.push(`  ${String(s.count).padStart(3)}  ${s.family}: "${s.span}"`);
   out.push('', 'Hard findings in any group');
   for (const g of GROUPS) out.push(`  ${g}: ${result.hardFindings[g].length}${result.hardFindings[g].map(h => `\n    ${h.id} ${h.family}: "${h.text}"`).join('')}`);
-  if (result.sweep) {
-    out.push('', '=== calibration sweep (calibration half only): human false-positive % / plain-prompt %, exact counts in brackets ===');
-    const grid = [...new Set(result.sweep.rows.map(r => r.minPerThousand))];
-    out.push(cell(12, 'fam\\per1000', ...grid));
-    for (let f = 1; f <= 5; f++) {
-      out.push(cell(14, f, ...grid.map(p => {
-        const r = result.sweep.rows.find(x => x.minFamilies === f && x.minPerThousand === p);
-        return `${(r.humanFp * 100).toFixed(0)}/${(r.plainRate * 100).toFixed(0)} [${r.humanK},${r.plainK}]`;
-      })));
-    }
-    const cal = result.halves.calibration.groups;
-    out.push(`Bracketed counts are human flagged, plain-prompt flagged, out of ${cal.human?.n} human and ${cal['model-plain']?.n} plain-prompt abstracts.`);
-    const c = result.sweep.chosen;
-    out.push(c ? `Chosen: minFamilies ${c.minFamilies}, minPerThousand ${c.minPerThousand} (human FP ${pct(c.humanFp)}, plain ${pct(c.plainRate)})` : 'No setting reaches 5% human false positives.');
-  }
   return out.join('\n');
 }
 
 export function run(opts) {
   const groups = load(opts.dir);
   const { calibration, heldout } = splitIds([...groups.human.keys()], opts.seed);
-  const thr = thresholdOf(opts);
   // Ids are split from the human set, so a model id with no human counterpart belongs to neither half: count and say so.
   const dropped = {};
   for (const g of GROUPS) {
@@ -251,8 +202,8 @@ export function run(opts) {
     const gs = {}, pairs = {};
     for (const g of GROUPS) {
       const recs = [...groups[g].values()].filter(r => ids.has(r.id));
-      if (recs.length) gs[g] = summarize(recs, thr);
-      if (g !== 'human' && recs.length) pairs[g] = paired(groups.human, groups[g], ids, thr);
+      if (recs.length) gs[g] = summarize(recs);
+      if (g !== 'human' && recs.length) pairs[g] = paired(groups.human, groups[g], ids);
     }
     halves[name] = { ids: ids.size, groups: gs, paired: pairs, topHumanSpans: topSpans([...groups.human.values()].filter(r => ids.has(r.id))) };
   }
@@ -260,7 +211,7 @@ export function run(opts) {
   for (const g of GROUPS) {
     hardFindings[g] = [...groups[g].values()].flatMap(r => r.findings.filter(f => f.tier === 'hard').map(f => ({ id: r.id, family: f.family, text: f.text })));
   }
-  return { seed: opts.seed, threshold: thr, droppedModelIds: dropped, halves, topHumanSpansAll: topSpans([...groups.human.values()]), hardFindings, ...(opts.sweep ? { sweep: sweep(groups, calibration) } : {}) };
+  return { seed: opts.seed, droppedModelIds: dropped, halves, topHumanSpansAll: topSpans([...groups.human.values()]), hardFindings };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

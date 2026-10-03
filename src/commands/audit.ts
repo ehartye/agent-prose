@@ -6,7 +6,7 @@ import { buildReport, renderText } from '../audit/report.ts';
 
 export function registerAuditCommand(program: Command, io: Io): void {
   program.command('audit')
-    .description('Hard artifacts, clustered default-model habits and measured context in a draft; findings only, never a verdict on who wrote it')
+    .description('Hard artifacts, phrasing and structure hallmarks and measured context in a draft; findings only, never a verdict on who wrote it')
     .argument('<file>', '.md, .fountain or .dialog.yaml draft')
     .option('--form <id>', 'override the form declared in the draft')
     .option('--text', 'print a readable list grouped by family instead of JSON')

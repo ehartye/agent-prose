@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseDocument } from '../src/document.ts';
 import { buildReport, LIMITS, renderText } from '../src/audit/report.ts';
-import { clusterOf, DEFAULT_THRESHOLD } from '../src/audit/cluster.ts';
 import { AUDIT_SOURCES, FAMILIES, MEASURED_NOTES, type Finding } from '../src/audit/detectors.ts';
 import { REFERENCES } from '../src/craft/rules.ts';
 
@@ -321,72 +320,26 @@ describe('measured values', () => {
   });
 });
 
-describe('cluster rule', () => {
-  const f = (family: string, tier: 'hard' | 'soft' = 'soft'): Finding => ({ tier, family, line: 1, text: 'x', why: 'w', direction: 'd' });
-  const spread = (n: number, families: string[]) => Array.from({ length: n }, (_, i) => f(families[i % families.length]));
-
-  it('keeps the calibrated defaults in one exported constant', () => {
-    expect(DEFAULT_THRESHOLD).toEqual({ minFamilies: 3, minPerThousand: 4, minWords: 100 });
-  });
-  it('is met at exactly the threshold', () => {
-    const c = clusterOf(spread(4, ['a', 'b', 'c']), 1000);
-    expect(c).toMatchObject({ met: true, softPerThousand: 4, families: ['a', 'b', 'c'], threshold: DEFAULT_THRESHOLD });
-  });
-  it('is not met just below it', () => {
-    expect(clusterOf(spread(3, ['a', 'b', 'c']), 1000).met).toBe(false); // 3 per 1,000
-    expect(clusterOf(spread(40, ['a', 'b']), 1000).met).toBe(false); // two families
-    expect(clusterOf(spread(4, ['a', 'b', 'c']), 1001).met).toBe(false); // 3.996 per 1,000
-  });
-  it('counts only soft findings', () => {
-    const c = clusterOf([...spread(2, ['a', 'b']), f('x', 'hard'), f('y', 'hard'), f('z', 'hard')], 100);
-    expect(c.families).toEqual(['a', 'b']);
-    expect(c.met).toBe(false);
-  });
-  it('is never met under 100 words, and the summary says so', () => {
-    expect(clusterOf(spread(30, ['a', 'b', 'c']), 99).met).toBe(false);
-    expect(clusterOf(spread(30, ['a', 'b', 'c']), 100).met).toBe(true);
-    const r = report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place. Experts argue so.');
-    expect(r.words).toBeLessThan(100);
-    expect(r.cluster.met).toBe(false);
-    expect(r.summary).toMatch(/under 100 words/);
-  });
-});
-
 describe('summary, limits and forbidden wording', () => {
   const drafts = ['model-like.md', 'human-plain.md'];
   const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));
 
-  it('says exactly one of the two conclusions', () => {
-    const met = read('model-like.md');
-    expect(met.cluster.met).toBe(true);
-    expect(met.summary).toMatch(/^Reads like default model prose in \d+ places \(families: [a-z, -]+\)\. These are style findings, not evidence of who wrote it\./);
-    const no = read('human-plain.md');
-    expect(no.cluster.met).toBe(false);
-    expect(no.summary).toBe('No cluster of default-model habits found. This does not show a person wrote it.');
+  it('has no cluster field and no cluster wording in the summary', () => {
+    for (const d of drafts) {
+      const r = read(d);
+      expect(r).not.toHaveProperty('cluster');
+      expect(r.summary).not.toMatch(/cluster/i);
+    }
   });
   it('adds a hard-findings sentence when there are hard findings', () => {
     const r = report('Certainly! Here is the draft. ' + 'We met on Tuesday and walked home together. '.repeat(3));
-    expect(r.summary).toMatch(/^No cluster of default-model habits found\. This does not show a person wrote it\. 1 hard artifact/);
+    expect(r.summary).toMatch(/1 hard artifact/);
   });
-  it('says the cluster rule was not applied for a short text with three or more soft families', () => {
-    const r = report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place. Experts argue so. Despite its charm, it faces challenges.');
-    expect(r.words).toBeLessThan(100);
-    expect(r.cluster.families.length).toBeGreaterThanOrEqual(3);
-    expect(r.summary).toBe('Cluster rule not applied (under 100 words). This does not show a person wrote it.');
-    expect(r.summary).not.toMatch(/No cluster/);
-  });
-  it('keeps the hard-findings sentence after the not-applied sentence', () => {
-    const r = report('Certainly! Here is the draft.\n\nIt stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place. Experts argue so. Despite its charm, it faces challenges.');
-    expect(r.cluster.families.length).toBeGreaterThanOrEqual(3);
-    expect(r.summary).toMatch(/^Cluster rule not applied \(under 100 words\)\. This does not show a person wrote it\. 1 hard artifact/);
-  });
-  it('writes "1 family" and "2 families" in the text rendering', () => {
-    const text = 'It stands as a testament to the garden and its people. We met on Tuesday.';
-    const one = report(text);
-    expect(one.cluster.families.length).toBe(1);
-    expect(renderText(one)).toMatch(/in 1 family \(/);
-    expect(renderText(one)).not.toMatch(/in 1 families/);
-    expect(renderText(report('We met on Tuesday and walked home together.'))).toMatch(/in 0 families/);
+  it('writes "1 family" and "2 families" in the summary', () => {
+    const one = report('It stands as a testament to the garden and its people. We met on Tuesday.');
+    expect(one.summary).toMatch(/in 1 family/);
+    expect(one.summary).not.toMatch(/1 families/);
+    expect(report('We met on Tuesday and walked home together.').summary).toMatch(/0 families/);
   });
   it('states the standing limits', () => {
     const { limits } = read('human-plain.md');
@@ -435,8 +388,7 @@ describe('summary, limits and forbidden wording', () => {
       '---\nform: limerick\n---\nA line.\n',
     ];
 
-    it('renderText has no authorship, probability or score wording for a cluster-met draft, a plain one, hard findings and a skipped form', () => {
-      expect(report(texts[0]).cluster.met).toBe(true);
+    it('renderText has no authorship, probability or score wording for a model-like draft, a plain one, hard findings and a skipped form', () => {
       for (const t of texts) {
         const out = renderText(report(t));
         expect(bannedIn(lines(out)), t.slice(0, 40)).toEqual([]);
@@ -453,7 +405,7 @@ describe('summary, limits and forbidden wording', () => {
           prose('audit', '--help'), prose('--help'),
         ];
         for (const o of outputs) expect(bannedIn(lines(o)), o.slice(0, 60)).toEqual([]);
-        expect(outputs[0]).toMatch(/Reads like default model prose/);
+        expect(outputs[0]).toMatch(/Soft findings by family/);
       } finally { rmSync(dir, { recursive: true, force: true }); }
     });
     it('the guard catches the new phrases', () => {

@@ -2,7 +2,6 @@ import type { Doc } from '../ir.ts';
 import { getForm } from '../forms.ts';
 import { AI_TELLS } from '../measure/lexicon.ts';
 import { parseMarkdown } from '../parse/markdown.ts';
-import { clusterOf, type Cluster } from './cluster.ts';
 import { detect, measureUnits, unitsOf, type Finding, type Measured } from './detectors.ts';
 
 export interface AuditReport {
@@ -11,7 +10,6 @@ export interface AuditReport {
   words: number;
   tiers: { hard: Finding[]; soft: Finding[] };
   measured: Measured;
-  cluster: Cluster;
   summary: string;
   limits: string;
   lexicon: { reviewed: string };
@@ -34,14 +32,10 @@ const SKIPPED = 'Verse forms are skipped: the prose style habits this audit look
 
 const noun = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-function summaryOf(soft: Finding[], hard: Finding[], cluster: Cluster, words: number): string {
-  const short = words < cluster.threshold.minWords;
-  const notApplied = short && cluster.families.length >= cluster.threshold.minFamilies;
-  const parts = [cluster.met
-    ? `Reads like default model prose in ${soft.length} places (families: ${cluster.families.join(', ')}). These are style findings, not evidence of who wrote it.`
-    : `${notApplied ? `Cluster rule not applied (under ${cluster.threshold.minWords} words).` : 'No cluster of default-model habits found.'} This does not show a person wrote it.`];
+function summaryOf(soft: Finding[], hard: Finding[]): string {
+  const families = new Set(soft.map(f => f.family)).size;
+  const parts = [`${noun(soft.length, 'soft finding', 'soft findings')} in ${noun(families, 'family', 'families')}. This shows nothing about who wrote the passage.`];
   if (hard.length) parts.push(`${noun(hard.length, 'hard artifact', 'hard artifacts')} found; these are defects in finished text whoever wrote it.`);
-  if (short && !notApplied) parts.push(`The text is under ${cluster.threshold.minWords} words, too short for the cluster rule.`);
   return parts.join(' ');
 }
 
@@ -56,7 +50,7 @@ export function buildReport(doc: Doc, source?: string): AuditReport {
     return {
       ...base, words: 0, tiers: { hard: [], soft: [] },
       measured: { emDashesPer1000: null, sentenceLengthVariation: null, tripletListsPer1000: null, isAreShare: null, notes: [] },
-      cluster: clusterOf([], 0), summary: 'Skipped: verse forms are not audited.', limits: LIMITS, lexicon: { reviewed }, skipped: SKIPPED,
+      summary: 'Skipped: verse forms are not audited.', limits: LIMITS, lexicon: { reviewed }, skipped: SKIPPED,
     };
   }
   const raws: string[] = [];
@@ -70,8 +64,7 @@ export function buildReport(doc: Doc, source?: string): AuditReport {
     : counted;
   const hard = findings.filter(f => f.tier === 'hard');
   const soft = findings.filter(f => f.tier === 'soft');
-  const cluster = clusterOf(findings, words);
-  return { ...base, words, tiers: { hard, soft }, measured, cluster, summary: summaryOf(soft, hard, cluster, words), limits: LIMITS, lexicon: { reviewed } };
+  return { ...base, words, tiers: { hard, soft }, measured, summary: summaryOf(soft, hard), limits: LIMITS, lexicon: { reviewed } };
 }
 
 function group(findings: Finding[]): string[] {
@@ -91,15 +84,12 @@ const show = (v: number | null) => (v === null ? 'n/a' : String(v));
 
 /** The report as a readable list grouped by family, with the limits at the end. */
 export function renderText(r: AuditReport): string {
-  const t = r.cluster.threshold;
   return [
     `Style audit of ${r.path} (${r.form}, ${r.words} words)`,
     ...(r.skipped ? ['', r.skipped] : []),
     ...(r.tiers.hard.length ? ['', 'Hard artifacts (defects in finished text, whoever wrote it)', ...group(r.tiers.hard)] : []),
     ...(r.tiers.soft.length ? ['', 'Soft findings by family', ...group(r.tiers.soft)] : []),
     ...(r.skipped ? [] : [
-      '',
-      `Cluster: ${r.cluster.met ? 'met' : 'not met'}; ${r.tiers.soft.length} soft findings (${r.cluster.softPerThousand} per 1,000 words) in ${noun(r.cluster.families.length, 'family', 'families')}${r.cluster.families.length ? ` (${r.cluster.families.join(', ')})` : ''}. The rule needs at least ${t.minFamilies} families, ${t.minPerThousand} per 1,000 words and ${t.minWords} words.`,
       '',
       'Measured, not flagged',
       `  em dashes per 1,000 words: ${show(r.measured.emDashesPer1000)}`,

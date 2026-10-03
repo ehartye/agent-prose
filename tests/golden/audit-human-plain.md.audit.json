@@ -17,17 +17,7 @@
       "The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies."
     ]
   },
-  "cluster": {
-    "met": false,
-    "families": [],
-    "softPerThousand": 0,
-    "threshold": {
-      "minFamilies": 3,
-      "minPerThousand": 4,
-      "minWords": 100
-    }
-  },
-  "summary": "No cluster of default-model habits found. This does not show a person wrote it.",
+  "summary": "0 soft findings in 0 families. This shows nothing about who wrote the passage.",
   "limits": "Style alone cannot show authorship: this audit does not say who wrote a text. A clean result proves nothing, because removing these habits is easy. Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them. Thresholds and word lists are conventions that date, which is why the lexicon review date is printed.",
   "lexicon": {
     "reviewed": "2026-10-03"

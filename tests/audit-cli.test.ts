@@ -30,10 +30,8 @@ describe('golden audit outputs', () => {
   it('finds several families in the model-like paragraph and none in the plain one', async () => {
     const m = await run('audit', MODEL);
     expect(new Set(m.tiers.soft.map((f: any) => f.family)).size).toBeGreaterThanOrEqual(6);
-    expect(m.cluster.met).toBe(true);
     const h = await run('audit', HUMAN);
     expect(h.tiers).toEqual({ hard: [], soft: [] });
-    expect(h.cluster.met).toBe(false);
   });
 });
 
@@ -41,9 +39,9 @@ describe('prose audit', () => {
   it('prints JSON with the documented shape', () => {
     const { status, json: r } = prose('audit', MODEL);
     expect(status).toBe(0);
-    expect(Object.keys(r)).toEqual(['path', 'form', 'words', 'tiers', 'measured', 'cluster', 'summary', 'limits', 'lexicon']);
+    expect(Object.keys(r)).toEqual(['path', 'form', 'words', 'tiers', 'measured', 'summary', 'limits', 'lexicon']);
     expect(Object.keys(r.tiers)).toEqual(['hard', 'soft']);
-    expect(Object.keys(r.cluster)).toEqual(['met', 'families', 'softPerThousand', 'threshold']);
+    expect(r).not.toHaveProperty('cluster');
     expect(r.lexicon.reviewed).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(r.form).toBe('professional');
     for (const f of r.tiers.soft) expect(Object.keys(f)).toEqual(expect.arrayContaining(['tier', 'family', 'line', 'text', 'why', 'direction']));
@@ -55,7 +53,7 @@ describe('prose audit', () => {
     expect(json).toBeUndefined();
     const heads = ['undue-significance', 'negative-parallelism', 'inline-header-bullets'].map(f => stdout.indexOf(f));
     expect(heads.every(i => i >= 0)).toBe(true);
-    expect(stdout).toMatch(/Reads like default model prose in \d+ places/);
+    expect(stdout).not.toMatch(/[Cc]luster/);
     expect(stdout).toMatch(/line \d+/);
     const limits = stdout.indexOf('Limits');
     expect(limits).toBeGreaterThan(stdout.indexOf('undue-significance'));
