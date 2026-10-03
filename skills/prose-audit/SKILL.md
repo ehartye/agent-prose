@@ -1,6 +1,6 @@
 ---
 name: prose-audit
-description: Audit a draft for generic, formulaic prose habits with agent-prose - stock openers, hollow significance claims, formula sentence shapes, chat residue, model-era vocabulary - and revise it span by span toward specifics, without ever judging who wrote it.
+description: Audit a draft for phrasing or structure hallmarks some readers associate with AI-generated text with agent-prose - stock openers, hollow significance claims, formula sentence shapes, chat residue, model-era vocabulary - and revise it span by span toward specifics, without ever judging who wrote it.
 when_to_use: Use when asked whether text "sounds like AI", to make writing "less AI", "more natural" or "more human", to audit a draft for AI tells, generic filler or boilerplate, or when prose audit reports findings. Never use it to decide who wrote something. Not for tone or voice edits (prose-voice) or for writing a new piece (the skill for its form, such as prose-formal, prose-speech or prose-script).
 ---
 # prose-audit
@@ -14,7 +14,7 @@ directories above this file. If a command prints `E_RUNTIME_MISSING`, run the pr
   model or a person, even when asked directly ("just give me a number"). Say in one line that style cannot show
   authorship, then say what the spans show and what would help instead (earlier drafts, version history, named sources).
 - **A quiet report means only that these patterns are absent.** The tool is often quiet on current model text and on
-  short drafts (under 100 words it cannot report a cluster). Say so every time.
+  short drafts (under 100 words there is little to find). Say so every time.
 - **Plain wording, even rhythm, perfect grammar and a formal register are not findings.**
 - **Never say "reads human" or "no longer reads like AI".** Say which generic patterns you removed and which remain.
 - **Never invent specifics.** Use only facts the owner gave you.
@@ -34,9 +34,10 @@ directories above this file. If a command prints `E_RUNTIME_MISSING`, run the pr
      facts, or ask. The tool does not know other placeholders or tracking parameters: also scan for `[...]`, `{{...}}`,
      `TODO` and `utm_` yourself.
    - **Soft** families (vocabulary, undue-significance claims, trailing "highlighting..." clauses, "not just X but Y",
-     unnamed experts, inline-header bullets and others): style findings. The tool's cluster rule has not been shown
-     to separate model text from human text, so judge each span on its own. If the summary reports a cluster, relay
-     it as "these habits are present here", not as a verdict.
+     unnamed experts, inline-header bullets and others): phrasing or structure hallmarks some readers associate with
+     AI-generated text. Human writers use these patterns too, so judge each span on its own and relay the count as
+     "these patterns are present here", never as a verdict. Each family prints how well it is documented (`Evidence:`
+     corpus studies, field guide or reader-reported); say so when a span rests on the weaker tier.
    - **Measured** values (em dashes, sentence-length variation, three-item lists): context only, never a finding.
 
 ## What the tool cannot see: a short judgement pass

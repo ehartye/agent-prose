@@ -1,5 +1,7 @@
 # Style audit: measured behaviour on abstracts
 
+> Note (v2): the cluster rule this document describes, and `src/audit/cluster.ts`, were removed in audit v2, which reports a count of hallmarks instead of a cluster verdict. The measurements below are kept as they were run and are not rewritten.
+
 Date: 2026-10-03. Script: `scripts/audit-measure.mjs`. Cluster defaults: `src/audit/cluster.ts`. Sample ids: `2026-10-03-ai-audit-sample-ids.txt`.
 
 Short version: on this sample the audit's cluster rule never fired, for human abstracts or for model abstracts. It produced no human false positives (0 of 175 held out), and it caught none of the plain-prompt model abstracts either (0 of 175). Soft findings are rare in both groups, and where they occur they are more common in the human abstracts. The audit is a revision aid for spans; these numbers give no support for using it to tell who wrote a text, and it is not meant for that.
