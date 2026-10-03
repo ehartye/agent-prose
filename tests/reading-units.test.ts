@@ -153,6 +153,15 @@ describe('layoutOf', () => {
     expect(layoutOf(SONNET, 'markdown', 'professional').units.length).toBeLessThan(6);
   });
 
+  it('reads a song the way the verse engine does: directions skipped, plain and bold labels as headings', () => {
+    const song = '---\nform: song\n---\nFolk, about 90 bpm, 4/4\n\n**Verse 1**\nThe road was long\n(hum softly)\nthe night came down\n\nChorus\nTake me home (ooh)\nI love you 24/7';
+    const l = layoutOf(song, 'markdown', 'song');
+    expect(l.units).toEqual(['Verse 1', 'The road was long', 'the night came down', 'Chorus', 'Take me home (ooh)', 'I love you 24/7']);
+    expect(l.breaks).toEqual([1, 3, 4]);
+    // a poem keeps every line, labels and parentheses included
+    expect(layoutOf(song.replace('form: song', 'form: free-verse'), 'markdown', 'free-verse').units).toContain('(hum softly)');
+  });
+
   it('lays Fountain out as lines with a break at each block, keeping a parenthetical with its speech', () => {
     const l = layoutOf(FOUNTAIN, 'fountain', 'tv-drama');
     expect(l.layout).toBe('lines');

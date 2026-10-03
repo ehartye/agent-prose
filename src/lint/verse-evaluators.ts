@@ -1,5 +1,5 @@
 import { getForm } from '../forms.ts';
-import type { LineStat, VerseStats } from '../measure/verse.ts';
+import { baseLabel, lineTargets, stanzaPatterns, syllableFit, syllableRange, type LineStat, type VerseStats } from '../measure/verse.ts';
 import { pronounce } from '../verse/pronounce.ts';
 import { fitsMeter } from '../verse/meter.ts';
 import { normalise } from '../verse/lines.ts';
@@ -31,10 +31,16 @@ function verseOf(m: Parameters<Evaluator>[0]['m']) {
 }
 const srcLine = (v: VerseStats, i: number) => v.lines[i]!.line;
 
-/** Line indexes of each lowercase scheme letter ("A" refrain letters group with "a"), in first-appearance order. */
-function groupsOf(scheme: string, indexes: number[]): number[][] {
+/** The letter an author-declared scheme uses for a line that is not constrained to rhyme with any other. */
+const FREE = 'x';
+
+/**
+ * Line indexes of each lowercase scheme letter ("A" refrain letters group with "a"), in first-appearance order.
+ * A declared scheme passes `free` so its unconstrained lines never pair.
+ */
+function groupsOf(scheme: string, indexes: number[], free = ''): number[][] {
   const groups = new Map<string, number[]>();
-  [...scheme.toLowerCase()].forEach((letter, k) => groups.set(letter, [...(groups.get(letter) ?? []), indexes[k]!]));
+  [...scheme.toLowerCase()].forEach((letter, k) => { if (letter !== free) groups.set(letter, [...(groups.get(letter) ?? []), indexes[k]!]); });
   return [...groups.values()].filter(g => g.length > 1);
 }
 
@@ -42,9 +48,9 @@ interface PairResult { first: number; other: number; cls: RhymeClass; uncertain:
 interface SchemeResult { warn: PairResult[]; slant: PairResult[]; weak: PairResult[] }
 
 /** Compare every member of each rhyme group with the group's first line, using the end words' pronunciations. */
-function checkScheme(v: VerseStats, indexes: number[], scheme: string): SchemeResult {
+function checkScheme(v: VerseStats, indexes: number[], scheme: string, free = ''): SchemeResult {
   const out: SchemeResult = { warn: [], slant: [], weak: [] };
-  for (const group of groupsOf(scheme, indexes)) {
+  for (const group of groupsOf(scheme, indexes, free)) {
     const first = group[0]!;
     const a = v.lines[first]!.endWord;
     if (a === null) continue;
@@ -108,26 +114,73 @@ const lineCount: Evaluator = ({ m }) => {
   return hits;
 };
 
+/**
+ * A per-section map in the frontmatter that the draft cannot satisfy: a key that matches no section base label (a typo
+ * such as `vers`), or a map on a draft with no labelled sections. Both are silent otherwise, so the pattern would never
+ * apply. A warning, because the declaration is the author's own. A list (not a map) is unaffected.
+ */
+function unmatchedSections(v: VerseStats, key: 'syllables' | 'scheme'): Hit[] {
+  const declared = v.declared?.[key];
+  if (!declared || typeof declared !== 'object' || Array.isArray(declared)) return [];
+  const bases = unique(v.stanzas.flatMap(st => (st.section === null ? [] : [baseLabel(st.section)])));
+  const line = v.lines.length ? srcLine(v, 0) : null;
+  if (!bases.length) {
+    return [{
+      message: `${key} is a per-section map but the draft has no section labels; label sections with ## Verse 1 or [Verse 1]`,
+      line, measured: { key, sections: [] }, fix: 'Label the sections with ## Verse 1 or [Verse 1], or declare a list instead of a map.',
+    }];
+  }
+  return Object.keys(declared).filter(name => !bases.includes(baseLabel(name))).map(name => ({
+    message: `${key} names section ${quote(name)}, but the draft has sections: ${bases.join(', ')}`,
+    line, measured: { key, section: name, sections: bases }, fix: `Rename the key to one of the draft's sections, or label a section ${quote(name)}.`,
+  }));
+}
+
+/** A stanza whose line count differs from the author's pattern; reported once per stanza. */
+function wrongLength(v: VerseStats, stanza: number, what: 'pattern' | 'scheme', want: number): Hit {
+  const st = v.stanzas[stanza]!;
+  return {
+    message: `Stanza ${stanza + 1} has ${plural(st.count, 'line')}; your ${what} has ${want}`,
+    line: srcLine(v, st.start), measured: { stanza: stanza + 1, lines: st.count, want },
+    fix: `Add or cut lines to match, or change ${what === 'scheme' ? 'scheme' : 'syllables'} in the frontmatter.`,
+  };
+}
+
 const rhymeScheme: Evaluator = ({ m }) => {
   const ctx = verseOf(m);
   if (!ctx) return [];
   const { v, def } = ctx;
-  const schemes = def.scheme ? [def.scheme] : def.schemes ?? [];
-  if (!schemes.length) return [];
-  // Domains whose line count is wrong stay silent: the line-count rule speaks for them.
-  const domains: number[][] = def.lines !== undefined
-    ? (v.count.lines === def.lines ? [v.lines.map((_, i) => i)] : [])
-    : v.stanzas.filter(s => !def.stanzaSizes || def.stanzaSizes.includes(s.count)).map(s => Array.from({ length: s.count }, (_, k) => s.start + k));
   const total: SchemeResult = { warn: [], slant: [], weak: [] };
-  for (const indexes of domains) {
-    const r = bestScheme(v, indexes, schemes);
-    if (r) { total.warn.push(...r.warn); total.slant.push(...r.slant); total.weak.push(...r.weak); }
+  const add = (r: SchemeResult | null) => { if (r) { total.warn.push(...r.warn); total.slant.push(...r.slant); total.weak.push(...r.weak); } };
+  const hits: Hit[] = [];
+  if (v.declared?.scheme) {
+    // The author's scheme (per stanza, or per section) replaces the form's. A stanza of another length is skipped here:
+    // the syllables rule speaks for it when it declares a pattern for that stanza, and this rule speaks when it does not.
+    hits.push(...unmatchedSections(v, 'scheme'));
+    const patterns = stanzaPatterns(v);
+    v.stanzas.forEach((st, i) => {
+      const scheme = patterns[i]!.scheme;
+      if (!scheme) return;
+      if (scheme.length !== st.count) {
+        if (!patterns[i]!.syllables) hits.push(wrongLength(v, i, 'scheme', scheme.length));
+        return;
+      }
+      add(checkScheme(v, Array.from({ length: st.count }, (_, k) => st.start + k), scheme, FREE));
+    });
+  } else {
+    const schemes = def.scheme ? [def.scheme] : def.schemes ?? [];
+    if (!schemes.length) return [];
+    // Domains whose line count is wrong stay silent: the line-count rule speaks for them.
+    const domains: number[][] = def.lines !== undefined
+      ? (v.count.lines === def.lines ? [v.lines.map((_, i) => i)] : [])
+      : v.stanzas.filter(s => !def.stanzaSizes || def.stanzaSizes.includes(s.count)).map(s => Array.from({ length: s.count }, (_, k) => s.start + k));
+    for (const indexes of domains) add(bestScheme(v, indexes, schemes));
   }
-  const hits: Hit[] = total.warn.map(p => ({
+  hits.push(...total.warn.map(p => ({
     message: `${cap(pairText(v, p))} should rhyme in this form, but the end words do not rhyme`,
     line: srcLine(v, p.other), measured: { first: srcLine(v, p.first), other: srcLine(v, p.other), class: p.cls },
-    fix: 'Reword one of the lines so the end words rhyme, or change the form.',
-  }));
+    fix: v.declared?.scheme ? 'Reword one of the lines so the end words rhyme, or change scheme in the frontmatter.' : 'Reword one of the lines so the end words rhyme, or change the form.',
+  })));
   if (total.slant.length) {
     hits.push({
       message: `Slant rhyme only (assonance or consonance, not a full rhyme): ${joinList(total.slant.map(p => pairText(v, p)))}${total.slant.some(p => p.uncertain) ? `; ${WEAKER}` : ''}`,
@@ -149,18 +202,39 @@ const rhymeScheme: Evaluator = ({ m }) => {
   return hits;
 };
 
-const rangeText = (l: LineStat) => (l.syllablesAlt === undefined ? String(l.syllables) : `${Math.min(l.syllables, l.syllablesAlt)} or ${Math.max(l.syllables, l.syllablesAlt)}`);
+const rangeText = (l: LineStat) => (l.syllablesAlt === undefined ? String(l.syllables) : syllableRange(l).join(' or '));
+
+/** The author's declared pattern: a warning, because it is their own requirement for the tune, not a convention of the form. */
+function declaredSyllables(v: VerseStats): Hit[] {
+  const patterns = stanzaPatterns(v);
+  const lines = v.stanzas.flatMap((st, i): Hit[] => {
+    const pattern = patterns[i]!.syllables;
+    if (!pattern) return [];
+    if (pattern.length !== st.count) return [wrongLength(v, i, 'pattern', pattern.length)];
+    return pattern.flatMap((want, k): Hit[] => {
+      const l = v.lines[st.start + k]!;
+      if (syllableFit(l, want).fit === 'ok') return [];
+      const weak = l.guessed.length || l.syllablesAlt !== undefined;
+      return [{
+        message: `Line ${l.line} has ${rangeText(l)} syllables; your pattern asks for ${want} (stanza ${i + 1}, line ${k + 1})${weak ? `; ${WEAKER}` : ''}`,
+        line: l.line, measured: { syllables: l.syllables, ...(l.syllablesAlt !== undefined ? { alt: l.syllablesAlt } : {}), want, stanza: i + 1 },
+        fix: 'Add or cut a syllable so the line fits the tune, or change syllables in the frontmatter.',
+      }];
+    });
+  });
+  return [...unmatchedSections(v, 'syllables'), ...lines];
+}
 
 const syllables: Evaluator = ({ m }) => {
   const ctx = verseOf(m);
-  if (!ctx?.def.syllables) return [];
+  if (!ctx) return [];
+  if (ctx.v.declared?.syllables) return declaredSyllables(ctx.v);
+  if (!ctx.def.syllables) return [];
   const { v, def } = ctx;
   const target = def.syllables!;
   return v.lines.slice(0, target.length).flatMap((l, i) => {
     const want = target[i]!;
-    const lo = Math.min(l.syllables, l.syllablesAlt ?? l.syllables);
-    const hi = Math.max(l.syllables, l.syllablesAlt ?? l.syllables);
-    if (want >= lo && want <= hi) return [];
+    if (syllableFit(l, want).fit === 'ok') return [];
     const weak = l.guessed.length || l.syllablesAlt !== undefined;
     const soft = def.soft === true;
     return [{
@@ -269,11 +343,19 @@ const guessed: Evaluator = ({ m }) => {
  * scheme groups it.
  */
 function expectedRhymeLines(v: VerseStats, def: NonNullable<ReturnType<typeof verseOf>>['def']): Set<number> {
+  const out = new Set<number>();
+  if (v.declared?.scheme) {
+    const patterns = stanzaPatterns(v);
+    v.stanzas.forEach((st, i) => {
+      const scheme = patterns[i]!.scheme;
+      if (scheme?.length === st.count) groupsOf(scheme, Array.from({ length: st.count }, (_, k) => st.start + k), FREE).forEach(g => g.forEach(j => out.add(j)));
+    });
+    return out;
+  }
   const schemes = def.scheme ? [def.scheme] : def.schemes ?? [];
   const domains: number[][] = def.lines !== undefined
     ? [v.lines.map((_, i) => i)]
     : v.stanzas.map(s => Array.from({ length: s.count }, (_, k) => s.start + k));
-  const out = new Set<number>();
   for (const indexes of domains) {
     for (const s of schemes.filter(x => x.length === indexes.length)) for (const g of groupsOf(s, indexes)) g.forEach(i => out.add(i));
   }
@@ -287,9 +369,6 @@ function verdictDepends(a: ReturnType<typeof pronounce>, b: ReturnType<typeof pr
   return hits > 0 && hits < a.variantKeys.length;
 }
 
-/** The range of the line's syllable counts, as [low, high]. */
-const rangeOf = (l: LineStat): [number, number] => [Math.min(l.syllables, l.syllablesAlt ?? l.syllables), Math.max(l.syllables, l.syllablesAlt ?? l.syllables)];
-
 /**
  * Report an ambiguous word only when the choice of reading matters here: (a) the end word, when its readings rhyme
  * differently and the line is in a rhyme group the form expects or its rhyme with another line depends on the reading;
@@ -302,6 +381,7 @@ const ambiguous: Evaluator = ({ m }) => {
   const v = m.verse;
   const found: Array<{ word: string; line: number; why: 'rhyme' | 'count' }> = [];
   const rhymed = ctx ? expectedRhymeLines(v, ctx.def) : new Set<number>();
+  const targets = lineTargets(v);
   const ends = v.lines.map(l => (l.endWord === null ? null : pronounce(l.endWord)));
   v.lines.forEach((l, i) => {
     const end = ends[i];
@@ -311,9 +391,9 @@ const ambiguous: Evaluator = ({ m }) => {
     }
     // Count ambiguity: only against a declared target, and only when the readings disagree about meeting it.
     if (l.syllablesAlt === undefined || !ctx) return;
-    const [lo, hi] = rangeOf(l);
+    const [lo, hi] = syllableRange(l);
     const fits = (n: number): boolean | null => {
-      const target = ctx.def.syllables?.[i];
+      const target = ctx.v.declared?.syllables ? targets[i] ?? undefined : ctx.def.syllables?.[i];
       if (target !== undefined) return n === target;
       const meter = ctx.v.meter?.find(x => x.line === i);
       return meter && ctx.def.meter ? fitsMeter(n, meter.expected, ctx.def.meter.foot === 'anapest') : null;
@@ -351,6 +431,12 @@ const everyLine: Evaluator = ({ m, rule }) => {
 const markup: Evaluator = ({ m }) => (m.verse?.markup ?? []).map(k => ({
   message: `Line ${k.line} was read as a ${k.kind} (a verse line that starts like Markdown); start it with a word or escape the marker`,
   line: k.line, measured: k, fix: 'Start the line with a word, or escape the marker with a backslash.',
+}));
+
+/** Every lyric line the reader skipped as a direction, so a sung line that looks like one is never lost silently. */
+const direction: Evaluator = ({ m }) => (m.verse?.directions ?? []).map(d => ({
+  message: `Line ${d.line} was read as a direction, not a lyric: ${quote(d.text)}. If it is sung, rewrite it without the leading and trailing parentheses or the tempo wording`,
+  line: d.line, measured: d, fix: 'If the line is sung, rewrite it without the leading and trailing parentheses or the tempo wording.',
 }));
 
 const refrainConsistent: Evaluator = ({ m }) => {
@@ -411,6 +497,7 @@ export const VERSE_EVALUATORS: Record<string, Evaluator> = {
   'verse.pronunciation.ambiguous': ambiguous,
   'verse.rhyme.every-line': everyLine,
   'verse.format.markup': markup,
+  'verse.format.direction': direction,
   'lyric.refrain.consistent': refrainConsistent,
   'lyric.sections.line-match': lineMatch,
 };

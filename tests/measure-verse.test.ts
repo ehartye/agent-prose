@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadDocument } from '../src/document.ts';
 import { measure } from '../src/measure/index.ts';
+import { syllableFit, syllableRange } from '../src/measure/verse.ts';
 import type { Doc } from '../src/ir.ts';
 import { fixture } from './helpers.ts';
 
@@ -149,5 +150,16 @@ describe('measure verse: other forms and laziness', () => {
   it('does not load the dictionary for a prose draft, and loads it once for a sonnet', () => {
     expect(probe(fixture('keynote.md'), 'professional')).toEqual([0, 0]);
     expect(probe(fixture('verse/sonnet18.md'), 'sonnet-shakespearean')).toEqual([0, 1]);
+  });
+});
+
+describe('syllableFit and syllableRange', () => {
+  it('compare a target with the whole range a line can be read as', () => {
+    expect(syllableRange({ syllables: 3 })).toEqual([3, 3]);
+    expect(syllableRange({ syllables: 3, syllablesAlt: 2 })).toEqual([2, 3]);
+    expect(syllableFit({ syllables: 3, syllablesAlt: 2 }, 2)).toEqual({ fit: 'ok' });
+    expect(syllableFit({ syllables: 3, syllablesAlt: 2 }, 3)).toEqual({ fit: 'ok' });
+    expect(syllableFit({ syllables: 3, syllablesAlt: 2 }, 1)).toEqual({ fit: 'over', diff: 1 });
+    expect(syllableFit({ syllables: 3, syllablesAlt: 2 }, 5)).toEqual({ fit: 'under', diff: -2 });
   });
 });

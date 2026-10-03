@@ -33,6 +33,8 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose-comedy` | Jokes, alternate lines and punch-up passes with distinct comic mechanisms |
 | `prose-review` | Variant sets for choosing between rewrites: checked for sameness, a sealed guess of the owner's pick, the pick recorded |
 | `prose-voice` | Voice bibles for characters, brands and speakers, fitted from samples and checked on every draft |
+| `prose-poetry` | Poems and verse forms (free verse, sonnet, haiku, limerick, ballad, villanelle, sestina) and words to a given meter, checked for syllables, rhyme and form |
+| `prose-songwriting` | Song lyrics (verse-chorus, AABA, lullaby, hymn text, words to a melody): labelled sections, matched line lengths, refrains, syllables per beat |
 
 ## Commands
 
@@ -209,6 +211,60 @@ Markdown caveat: a verse line that starts with `- `, `1. ` or `> ` is read as a 
 lint reports it (`verse.format.markup`) and the line is still measured. A line starting with `#` becomes a
 heading (a section label) and is not counted as verse. Start such a line with a word, or escape the marker.
 
+Song forms (`song`) also read plain and bold lines as structure, so `**Verse 1**` works like `## Verse 1` and
+`[Verse 1]`. A line that is only a section label is a label, not a lyric: `Verse 1`, `Chorus (x2)`, `Bridge`,
+`Pre-Chorus:` (a trailing colon is fine; the words are verse, chorus, pre-chorus, bridge, intro, outro, refrain,
+hook, interlude, solo, instrumental, tag, coda and break, with an optional number or letter and an optional
+bracketed note), or one capital letter A to D with an optional note (`A`, `B (bridge, rise a little)`) for AABA
+drafts. The label names the section for the stanzas after it, so the chorus and like-section checks apply. A line
+wholly in one parenthesised phrase (`(hum softly)`; `(Ooh) take me home (ooh)` is sung), a line of up to twelve words
+with a bpm figure (`90 bpm`), or a line of up to six words with a stand-alone time signature (`4/4`; `I love you
+24/7` is sung), is a direction. It is never counted or scanned as a lyric, `prose scan` and `prose measure` list it under
+`directions`, and lint reports each one as `verse.format.direction` (info) so a sung line is never lost silently.
+A poem is not affected: there a parenthesised line stays a verse line.
+
+Words written for an existing tune or hymn meter can declare the tune's pattern in the frontmatter, in any verse
+form. `syllables` is the per-stanza count, repeated for every stanza: a list `[8, 6, 8, 6]` or a string `8.6.8.6`,
+`8 6 8 6` or `8,6,8,6`. `scheme` is one letter per line (`x` marks a line that is not constrained to rhyme). Either
+accepts a map by section label (`verse`, `chorus`, `bridge`) instead, for songs whose sections differ; a key that matches no
+section of the draft, or a map on a draft with no section labels, is a lint warning. The declared
+pattern overrides the form's own for the check, a line misses it only when its syllable range (a word such as
+"every" counts two or three) does not include the target, and a stanza of the wrong length is reported once.
+A malformed value stops with an `E_SCHEMA` error that shows the accepted forms.
+
+```markdown
+---
+form: free-verse
+syllables: 8.6.8.6
+scheme: xaxa
+---
+The morning breaks upon the hill
+And wakes the sleeping town
+The river runs with silver light
+Where all the shadows drown
+```
+
+```markdown
+---
+form: song
+syllables:
+  verse: [7, 7, 7, 5]
+  chorus: [7, 7, 8]
+scheme:
+  verse: xaxa
+  chorus: aab
+---
+```
+
+`prose scan` and `prose measure` report the pattern as `declared` (null when none), and `scan --text` adds a `want`
+column: `8 ok`, `8 +2` (two syllables over the declared 8) or `8 -1`.
+
+A song that declares `tempo` (and optionally `beatsPerLine`, default 4) also gets syllables per beat (syllables divided
+by beats per line): `scan` JSON has `syllablesPerBeat` (`tempo`, `beatsPerLine`, `perLine`, `mean`; null when not declared),
+and `--text` adds a trailing `spb` column and a `Syllables per beat: ...` note. Both outputs carry a `legend` (in `--text`,
+the last note lines) saying how to read the stress column, the inferred `Scheme` (perfect and identity rhymes; `near` adds
+slant rhymes) and any declared pattern.
+
 ## Settings
 
 Measurements start from the form's defaults (`prose capabilities` lists the forms). A project
@@ -225,7 +281,7 @@ are timed by pages, so `wpm` there is an error. A bad `project.json` is `E_SCHEM
 
 ## Rules and citations
 
-`prose rules` lists 54 rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
+`prose rules` lists 55 rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
 and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Honesty notes

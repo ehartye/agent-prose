@@ -21,6 +21,13 @@ function lintText(text: string) {
   writeFileSync(file, text);
   return lint(loadDocument(file));
 }
+function writeTmp(text: string): string {
+  const dir = mkdtempSync(join(tmpdir(), 'prose-verse-'));
+  made.push(dir);
+  const file = join(dir, 'draft.md');
+  writeFileSync(file, text);
+  return file;
+}
 const lintFixture = (name: string) => lint(loadDocument(fixture(`verse/${name}`)));
 const measureOf = (name: string) => measure(loadDocument(fixture(`verse/${name}`))).verse!;
 
@@ -35,12 +42,12 @@ describe('verse rules in the table', () => {
   const byId = (id: string) => RULES.find(r => r.id === id)!;
   const VERSE_FORMS = FORMS.filter(f => f.verse).map(f => f.id);
 
-  it('adds the 12 auto rules and 2 judgement rules with the spec severities', () => {
+  it('adds the 13 auto rules and 2 judgement rules with the spec severities', () => {
     const want: Array<[string, 'auto' | 'judgement', string]> = [
-      ['verse.form.line-count', 'auto', 'warn'], ['verse.form.rhyme-scheme', 'auto', 'warn'], ['verse.form.syllables', 'auto', 'info'],
+      ['verse.form.line-count', 'auto', 'warn'], ['verse.form.rhyme-scheme', 'auto', 'warn'], ['verse.form.syllables', 'auto', 'warn'],
       ['verse.form.refrain', 'auto', 'warn'], ['verse.form.end-words', 'auto', 'warn'], ['verse.meter.deviation', 'auto', 'info'],
       ['verse.pronunciation.guessed', 'auto', 'info'], ['verse.pronunciation.ambiguous', 'auto', 'info'], ['verse.rhyme.every-line', 'auto', 'info'],
-      ['verse.format.markup', 'auto', 'warn'], ['lyric.refrain.consistent', 'auto', 'warn'], ['lyric.sections.line-match', 'auto', 'info'],
+      ['verse.format.markup', 'auto', 'warn'], ['verse.format.direction', 'auto', 'info'], ['lyric.refrain.consistent', 'auto', 'warn'], ['lyric.sections.line-match', 'auto', 'info'],
       ['verse.line-break.purpose', 'judgement', 'info'], ['lyric.stress-on-beat', 'judgement', 'info'],
     ];
     for (const [id, check, severity] of want) expect([id, byId(id)?.check, byId(id)?.severity], id).toEqual([id, check, severity]);
@@ -48,8 +55,9 @@ describe('verse rules in the table', () => {
 
   it('restricts each rule to the forms it is about', () => {
     expect(byId('verse.form.line-count').forms).toEqual(['haiku', 'limerick', 'ballad', 'sonnet-shakespearean', 'sonnet-petrarchan', 'villanelle', 'sestina']);
-    expect(byId('verse.form.rhyme-scheme').forms).toEqual(['limerick', 'ballad', 'sonnet-shakespearean', 'sonnet-petrarchan', 'villanelle']);
-    expect(byId('verse.form.syllables').forms).toEqual(['haiku']);
+    // both are no-ops for a form without a pattern unless the draft declares syllables or scheme, so they list every verse form
+    expect(byId('verse.form.rhyme-scheme').forms).toEqual(VERSE_FORMS);
+    expect(byId('verse.form.syllables').forms).toEqual(VERSE_FORMS);
     expect(byId('verse.form.refrain').forms).toEqual(['villanelle']);
     expect(byId('verse.form.end-words').forms).toEqual(['sestina']);
     expect(byId('verse.rhyme.every-line').forms).toEqual(['free-verse']);
@@ -338,6 +346,28 @@ describe('verse.rhyme.every-line', () => {
     const rule = RULES.find(r => r.id === 'verse.rhyme.every-line')!;
     expect(rule.rationale).toMatch(/89%.*40%/);
     expect(rule.rationale).toMatch(/never an authorship verdict/);
+  });
+});
+
+describe('verse.format.direction', () => {
+  const song = (body: string) => verse('song', body);
+  it('is quiet on a song with no directions, and on a poem with parenthesised lines', () => {
+    expect(of(lintFixture('song.md'), 'verse.format.direction')).toEqual([]);
+    expect(of(lintText(verse('free-verse', '(and then the rain)\nabout 90 bpm')), 'verse.format.direction')).toEqual([]);
+  });
+
+  it('reports each skipped direction as info, with the text and the fix', () => {
+    const text = song('Folk, about 90 bpm, 4/4\n\nVerse 1\n\nreal line one\n(hum softly)\nreal line two');
+    const f = of(lintText(text), 'verse.format.direction');
+    expect(f.map(x => [x.severity, x.at?.line])).toEqual([['info', 4], ['info', 9]]);
+    expect(f[0]!.message).toBe('Line 4 was read as a direction, not a lyric: "Folk, about 90 bpm, 4/4". If it is sung, rewrite it without the leading and trailing parentheses or the tempo wording');
+    expect(f[1]!.message).toMatch(/^Line 9 .*"\(hum softly\)"/);
+  });
+
+  it('does not report a sung line that merely looks like one', () => {
+    const text = song('(Ooh) take me home (ooh)\nI love you 24/7\nHalf of me is 1/2 yours\nOh we were dancing in 3/4 time tonight');
+    expect(of(lintText(text), 'verse.format.direction')).toEqual([]);
+    expect(measure(loadDocument(writeTmp(text))).verse!.lines).toHaveLength(4);
   });
 });
 
