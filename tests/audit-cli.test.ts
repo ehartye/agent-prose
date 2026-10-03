@@ -54,6 +54,8 @@ describe('prose audit', () => {
     const heads = ['undue-significance', 'negative-parallelism', 'inline-header-bullets'].map(f => stdout.indexOf(f));
     expect(heads.every(i => i >= 0)).toBe(true);
     expect(stdout).not.toMatch(/[Cc]luster/);
+    expect(stdout).toMatch(/^Hallmarks some readers associate with AI-generated text$/m);
+    expect(stdout).not.toMatch(/Soft findings by family/);
     expect(stdout).toMatch(/line \d+/);
     const limits = stdout.indexOf('Limits');
     expect(limits).toBeGreaterThan(stdout.indexOf('undue-significance'));

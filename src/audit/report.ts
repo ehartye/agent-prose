@@ -19,10 +19,10 @@ export interface AuditReport {
 
 /** The standing text, printed with every report. */
 export const LIMITS = [
-  'Style alone cannot show authorship: this audit does not say who wrote a text.',
-  'A clean result proves nothing, because removing these habits is easy.',
+  'Style alone cannot show authorship: this audit reports hallmarks some readers associate with AI-generated text and does not say who wrote a text.',
+  'A clean result proves nothing, because removing these hallmarks is easy.',
   'Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them.',
-  'Thresholds and word lists are conventions that date, which is why the lexicon review date is printed.',
+  'Word lists date and are conventions, which is why the lexicon review date is printed.',
 ].join(' ');
 
 /** Added to the measured notes when Markdown formatting checks could not read the raw text. */
@@ -30,12 +30,18 @@ export const NO_RAW_NOTE = 'Formatting checks were skipped for lack of raw text.
 
 const SKIPPED = 'Verse forms are skipped: the prose style habits this audit looks for do not apply to poems and lyrics.';
 
+/** A passage shorter than this gets a sentence saying there is little to find. */
+const SHORT_WORDS = 100;
+
 const noun = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-function summaryOf(soft: Finding[], hard: Finding[]): string {
-  const families = new Set(soft.map(f => f.family)).size;
-  const parts = [`${noun(soft.length, 'soft finding', 'soft findings')} in ${noun(families, 'family', 'families')}. This shows nothing about who wrote the passage.`];
+function summaryOf(soft: Finding[], hard: Finding[], words: number): string {
+  const families = [...new Set(soft.map(f => f.family))];
+  const parts = [soft.length
+    ? `${soft.length} phrasing or structure ${soft.length === 1 ? 'hallmark' : 'hallmarks'} some readers associate with AI-generated text, in ${noun(families.length, 'family', 'families')} (${families.join(', ')}). Human writers use these patterns too; this shows nothing about who wrote the passage.`
+    : 'No such hallmarks found. This shows nothing about who wrote the passage.'];
   if (hard.length) parts.push(`${noun(hard.length, 'hard artifact', 'hard artifacts')} found; these are defects in finished text whoever wrote it.`);
+  if (words < SHORT_WORDS) parts.push(`The passage is under ${SHORT_WORDS} words, so there is little to find.`);
   return parts.join(' ');
 }
 
@@ -64,7 +70,7 @@ export function buildReport(doc: Doc, source?: string): AuditReport {
     : counted;
   const hard = findings.filter(f => f.tier === 'hard');
   const soft = findings.filter(f => f.tier === 'soft');
-  return { ...base, words, tiers: { hard, soft }, measured, summary: summaryOf(soft, hard), limits: LIMITS, lexicon: { reviewed } };
+  return { ...base, words, tiers: { hard, soft }, measured, summary: summaryOf(soft, hard, words), limits: LIMITS, lexicon: { reviewed } };
 }
 
 function group(findings: Finding[]): string[] {
@@ -88,7 +94,7 @@ export function renderText(r: AuditReport): string {
     `Style audit of ${r.path} (${r.form}, ${r.words} words)`,
     ...(r.skipped ? ['', r.skipped] : []),
     ...(r.tiers.hard.length ? ['', 'Hard artifacts (defects in finished text, whoever wrote it)', ...group(r.tiers.hard)] : []),
-    ...(r.tiers.soft.length ? ['', 'Soft findings by family', ...group(r.tiers.soft)] : []),
+    ...(r.tiers.soft.length ? ['', 'Hallmarks some readers associate with AI-generated text', ...group(r.tiers.soft)] : []),
     ...(r.skipped ? [] : [
       '',
       'Measured, not flagged',

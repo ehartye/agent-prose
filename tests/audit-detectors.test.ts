@@ -324,6 +324,9 @@ describe('summary, limits and forbidden wording', () => {
   const drafts = ['model-like.md', 'human-plain.md'];
   const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));
 
+  const HEAD = 'phrasing or structure hallmarks some readers associate with AI-generated text';
+  const TAIL = 'Human writers use these patterns too; this shows nothing about who wrote the passage.';
+  const NONE = 'No such hallmarks found. This shows nothing about who wrote the passage.';
   it('has no cluster field and no cluster wording in the summary', () => {
     for (const d of drafts) {
       const r = read(d);
@@ -331,18 +334,39 @@ describe('summary, limits and forbidden wording', () => {
       expect(r.summary).not.toMatch(/cluster/i);
     }
   });
-  it('adds a hard-findings sentence when there are hard findings', () => {
-    const r = report('Certainly! Here is the draft. ' + 'We met on Tuesday and walked home together. '.repeat(3));
-    expect(r.summary).toMatch(/1 hard artifact/);
+  it('says exactly one headline: a count in families, or none found', () => {
+    const m = read('model-like.md');
+    const fams = [...new Set(m.tiers.soft.map(f => f.family))];
+    expect(m.summary).toBe(`${m.tiers.soft.length} ${HEAD}, in ${fams.length} families (${fams.join(', ')}). ${TAIL}`);
+    expect(read('human-plain.md').summary).toBe(NONE);
   });
-  it('writes "1 family" and "2 families" in the summary', () => {
-    const one = report('It stands as a testament to the garden and its people. We met on Tuesday.');
-    expect(one.summary).toMatch(/in 1 family/);
-    expect(one.summary).not.toMatch(/1 families/);
-    expect(report('We met on Tuesday and walked home together.').summary).toMatch(/0 families/);
+  it('uses the singular for one hallmark in one family', () => {
+    const r = report('It stands as a testament to the garden and its people. ' + 'We met on Tuesday and walked home together. '.repeat(12));
+    expect(r.words).toBeGreaterThanOrEqual(100);
+    expect(r.tiers.soft).toHaveLength(1);
+    expect(r.summary).toBe(`1 ${HEAD.replace('hallmarks', 'hallmark')}, in 1 family (undue-significance). ${TAIL}`);
+  });
+  it('adds the hard-findings sentence, then the short-text sentence, after the headline', () => {
+    const long = report('Certainly! Here is the draft. ' + 'We met on Tuesday and walked home together. '.repeat(15));
+    expect(long.summary).toBe(`${NONE} 1 hard artifact found; these are defects in finished text whoever wrote it.`);
+    const short = report('Certainly! Here is the draft.\n\nWe met on Tuesday.');
+    expect(short.summary).toBe(`${NONE} 1 hard artifact found; these are defects in finished text whoever wrote it. The passage is under 100 words, so there is little to find.`);
+  });
+  it('says the passage is short when under 100 words, and not otherwise', () => {
+    const r = report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place.');
+    expect(r.summary).toMatch(/ The passage is under 100 words, so there is little to find\.$/);
+    expect(read('model-like.md').summary).not.toMatch(/under 100 words/);
+  });
+  it('keeps the skipped summary for a verse form', () => {
+    expect(report('A line.\n', 'p.md', 'limerick').summary).toBe('Skipped: verse forms are not audited.');
+  });
+  it('writes "1 family" and "N families" in the summary', () => {
+    expect(report('It stands as a testament to the garden and its people. We met on Tuesday.').summary).toMatch(/in 1 family \(/);
+    expect(report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking place. Experts argue so.').summary).toMatch(/in [2-9] families \(/);
   });
   it('states the standing limits', () => {
     const { limits } = read('human-plain.md');
+    expect(limits).toMatch(/hallmarks some readers associate with AI-generated text/);
     expect(limits).toMatch(/authorship/);
     expect(limits).toMatch(/does not/);
     expect(limits).toMatch(/clean result proves nothing/);
@@ -366,8 +390,10 @@ describe('summary, limits and forbidden wording', () => {
   const BANNED = /likely AI|AI-generated|AI-written|written by (?:an? )?(?:AI|person|human)|human-written|AI-ness|probab|\bscore\b|\d\s*%|\bdetectors?\b/i;
   /** The one sentence about detectors the audit may print: it says they misjudge plain and non-native writing, and claims nothing about a text. */
   const DETECTOR_LIMIT = 'Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them.';
+  /** The only place the phrase 'AI-generated text' may appear (the singular is allowed for the one-hallmark headline). */
+  const HALLMARKS = 'hallmarks some readers associate with AI-generated text';
   const bannedIn = (strings: string[]) => strings
-    .map(s => s.replace(DETECTOR_LIMIT, ''))
+    .map(s => s.replace(DETECTOR_LIMIT, '').replace(new RegExp(HALLMARKS.replace('hallmarks', 'hallmarks?'), 'gi'), ''))
     .filter(s => BANNED.test(s) && !/^As an AI language model/.test(s));
 
   describe('every output surface', () => {
@@ -405,13 +431,15 @@ describe('summary, limits and forbidden wording', () => {
           prose('audit', '--help'), prose('--help'),
         ];
         for (const o of outputs) expect(bannedIn(lines(o)), o.slice(0, 60)).toEqual([]);
-        expect(outputs[0]).toMatch(/Soft findings by family/);
+        expect(outputs[0]).toMatch(/Hallmarks some readers associate with AI-generated text/);
       } finally { rmSync(dir, { recursive: true, force: true }); }
     });
     it('the guard catches the new phrases', () => {
       for (const s of ['This is human-written.', 'It was written by a person.', 'Written by a human.', 'The detector says so.', 'Detectors flag it.'])
         expect(bannedIn([s]), s).toHaveLength(1);
       expect(bannedIn([DETECTOR_LIMIT])).toEqual([]);
+      expect(bannedIn([`These are ${HALLMARKS}.`])).toEqual([]);
+      for (const x of ['This reads as AI-generated text.', 'It is likely AI.', 'A probability of 80%.', 'AI-generated hallmarks.', 'Written by AI.']) expect(bannedIn([x]), x).toHaveLength(1);
     });
   });
   it('prints the lexicon review date', () => {
