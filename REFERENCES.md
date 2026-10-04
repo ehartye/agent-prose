@@ -163,3 +163,30 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | wells-lassagne-2015 | Shannon Wells-Lassagne, 2015. [Short and sweet? Structuring Humor and Morality in American Sitcoms](https://journals.openedition.org/angles/2096) | peer-reviewed | guide:screen-stage |
 | wgf-primer-1 | Writers Guild Foundation (Lauren O'Connor), 2020. [Formatting Your Spec Script While Social Distancing: A Primer, Part 1](https://www.wgfoundation.org/blog/2020/3/19/formatting-your-spec-script-while-social-distancing-a-primer-part-1) | practitioner | guide:screen-stage |
 | wgf-serialized-drama | Writers Guild Foundation (Lauren O'Connor), 2021. [TV Format Fundamentals: Serialized Drama](https://www.wgfoundation.org/blog/2021/11/17/serialized-drama) | practitioner | guide:screen-stage |
+
+### youtube
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| beautemps-bresges-2021 | Jacob Beautemps and Andre Bresges, 2021. [What Comprises a Successful Educational Science YouTube Video? A Five-Thousand User Survey on Viewing Behaviors and Self-Perceived Importance of Various Variables Controlled by Content Creators](https://www.frontiersin.org/articles/10.3389/fcomm.2020.600595/full) | peer-reviewed | guide:youtube |
+| copyright-office-fair-use | US Copyright Office. [Fair Use Index](https://www.copyright.gov/fair-use/) | standard | guide:youtube |
+| dcmp-rate | Described and Captioned Media Program. [Captioning Key: Presentation Rate](https://dcmp.org/learn/captioningkey/601) | style-guide | guide:youtube |
+| ferreira-2023 | Miguel Ferreira et al., 2023. [Video abstract production guide](https://www.frontiersin.org/articles/10.3389/fcomm.2023.1060567/full) | practitioner | guide:youtube |
+| ftc-disclosures-101 | US Federal Trade Commission, 2019. [Disclosures 101 for Social Media Influencers](https://www.ftc.gov/business-guidance/resources/disclosures-101-social-media-influencers) | standard | guide:youtube |
+| guo-kim-rubin-2014 | Philip J. Guo, Juho Kim and Rob Rubin, 2014. [How Video Production Affects Student Engagement: An Empirical Study of MOOC Videos](https://pg.ucsd.edu/publications/edX-MOOC-video-production-and-engagement_LAS-2014.pdf) | peer-reviewed | guide:youtube |
+| kim-dropouts-2014 | Juho Kim et al., 2014. [Understanding In-Video Dropouts and Interaction Peaks in Online Lecture Videos](https://pg.ucsd.edu/publications/edX-MOOC-in-video-dropouts-peaks_LAS-2014.pdf) | peer-reviewed | guide:youtube |
+| kurzgesagt-about | Kurzgesagt. [About our YouTube channel](https://kurzgesagt.org/youtube/) | practitioner | guide:youtube |
+| mrbeast-memo | Jimmy Donaldson (MrBeast), as reproduced by Alexander Jarvis, 2024. [MEMO: How to succeed in MrBeast production](https://www.alexanderjarvis.com/memo-how-to-succeed-in-mrbeast-production/) | practitioner | guide:youtube |
+| muller-sharma-misconceptions | Derek A. Muller and Manjula D. Sharma. [Tackling misconceptions in introductory physics using multimedia presentations](https://openjournals.library.sydney.edu.au/IISME/article/view/6345) | peer-reviewed | guide:youtube |
+| ruzi-2021 | Selina A. Ruzi, Nicole M. Lee and Adrian A. Smith, 2021. [Testing how different narrative perspectives achieve communication objectives and goals in online natural science videos](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0257866) | peer-reviewed | guide:youtube |
+| schorn-2022 | Anna Schorn, 2022. [Online explainer videos: Features, benefits, and effects](https://www.frontiersin.org/articles/10.3389/fcomm.2022.1034199/full) | review | guide:youtube |
+| velho-2020 | Raphaela Martins Velho, Amanda Merian Freitas Mendes and Caio Lucidius Naberezny Azevedo, 2020. [Communicating Science With YouTube Videos: How Nine Factors Relate to and Affect Video Views](https://www.frontiersin.org/articles/10.3389/fcomm.2020.567606/full) | peer-reviewed | guide:youtube |
+| veritasium-clickbait-2021 | Derek Muller (Veritasium), 2021. [Clickbait is Unreasonably Effective](https://www.youtube.com/watch?v=S2xHZPH5Sng) | practitioner | guide:youtube |
+| wcag-captions | W3C. [Understanding Success Criterion 1.2.2: Captions (Prerecorded)](https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html) | standard | guide:youtube |
+| wistia-retention | Alyce Currier, Ezra Fishman and Lisa Marinelli (Wistia), 2020. [Understanding Audience Retention](https://wistia.com/learn/marketing/understanding-audience-retention) | practitioner | guide:youtube |
+| youtube-branded-content | YouTube Help. [Add branded content restrictions and disclosure labels](https://support.google.com/youtube/answer/154235) | platform-doc | guide:youtube |
+| youtube-chapters | YouTube Help. [Video chapters](https://support.google.com/youtube/answer/9884579) | platform-doc | guide:youtube |
+| youtube-end-screens | YouTube Help. [Add end screens to videos](https://support.google.com/youtube/answer/6388789) | platform-doc | guide:youtube |
+| youtube-fair-use | YouTube Help. [Fair use on YouTube](https://support.google.com/youtube/answer/9783148) | platform-doc | guide:youtube |
+| youtube-hook-tips-2014 | YouTube Creator Blog, 2014. [Four tips to hook your viewers on YouTube](https://blog.youtube/creator-and-artist-stories/four-tips-to-hook-your-viewers-on/) | practitioner | guide:youtube |
+| youtube-made-for-kids | YouTube Help. [Set your channel or video's audience](https://support.google.com/youtube/answer/9527654) | platform-doc | guide:youtube |

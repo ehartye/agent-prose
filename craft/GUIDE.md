@@ -27,7 +27,9 @@ estimated runtime. When the real reader's pace is known, set it: `wpm` (and the 
 can be set in `.agent-prose/project.json`, per form under `forms.<id>`, and `wpm` in a draft's
 own metadata; the most specific wins. `spoken.duration.report` and `script.runtime.report`
 report the estimates. `youtube.segment.pace` warns when a timestamped segment runs above 180
-words per minute, the top of the 160–180 range BBC subtitle timing assumes.
+words per minute. The BBC recommends subtitles at 160–180 words per minute, a reading speed for
+subtitles rather than a speech rate; the 180 cap is this plugin's own choice, so that spoken
+segments can be captioned legibly.
 
 Rules whose thresholds this plugin chose, rather than a source: `length.target` (±10%),
 `spoken.sentence.max` (16 words), `style.echo` (3 repeats), `ai.vocabulary` (3 terms),
