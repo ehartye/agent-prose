@@ -69,7 +69,7 @@ const withoutVocabulary = (body: object): string => JSON.stringify({ ...body, di
 const SECURITY = {
   'referrer-policy': 'no-referrer',
   'x-content-type-options': 'nosniff',
-  'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   'cache-control': 'no-store',
 };
 
@@ -144,6 +144,55 @@ describe('security headers', () => {
   });
 });
 
+const FONT_DIR = join(import.meta.dirname, '..', 'runtime', 'reading', 'fonts');
+const FONT_FILES = ['courier-prime-400.ttf', 'courier-prime-700.ttf', 'atkinson-400.ttf', 'atkinson-700.ttf', 'OFL-CourierPrime.txt', 'OFL-Atkinson.txt'];
+/** Bytes, not text: a font must arrive unchanged. */
+function rawBytes(info: ServerInfo, path: string, method = 'GET'): Promise<{ status: number; headers: Record<string, any>; body: Buffer }> {
+  return new Promise((ok, fail) => {
+    const req = request({ host: '127.0.0.1', port: info.port, path, method, agent: false }, res => {
+      const chunks: Buffer[] = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => ok({ status: res.statusCode!, headers: res.headers, body: Buffer.concat(chunks) }));
+    });
+    req.on('error', fail);
+    req.end();
+  });
+}
+
+describe('vendored fonts', () => {
+  it('serves the four fonts and two licences from the fixed table, byte for byte, with no token', async () => {
+    const { info } = await start();
+    const types: Record<string, string> = { ttf: 'font/ttf', txt: 'text/plain; charset=utf-8' };
+    for (const f of FONT_FILES) {
+      const r = await rawBytes(info, `/fonts/${f}`);
+      expect([r.status, r.headers['content-type']], f).toEqual([200, types[f.split('.').pop()!]]);
+      expect(r.body.equals(readFileSync(join(FONT_DIR, f))), f).toBe(true);
+      expect(r.headers['cache-control'], f).toBe('public, max-age=86400');
+      expect(r.headers['content-security-policy'], f).toBe(SECURITY['content-security-policy']);
+      expect(r.headers['x-content-type-options'], f).toBe('nosniff');
+      expect(r.headers['referrer-policy'], f).toBe('no-referrer');
+    }
+  });
+
+  it('keeps every other response no-store, and answers a wrong method or an unlisted name without a file', async () => {
+    const { info } = await start();
+    expect((await raw(info, '/style.css')).headers['cache-control']).toBe('no-store');
+    for (const path of ['/fonts/', '/fonts/x', '/fonts/../server.json']) expect((await raw(info, path)).status, path).toBe(404);
+    for (const method of ['POST', 'PUT', 'DELETE']) expect((await raw(info, '/fonts/atkinson-400.ttf', method)).status, method).toBe(405);
+  });
+
+  it('names a font file that is missing from the runtime as E_SERVER at start', async () => {
+    const dir = tmp('prose-rt-');
+    for (const f of ['index.html', 'app.js', 'style.css']) writeFileSync(join(dir, f), 'x');
+    mkdirSync(join(dir, 'fonts'));
+    const server = new ReadingServer({ host: '127.0.0.1', port: 0, persist: false, runtimeDir: dir });
+    const err = await server.listen().catch(e => e);
+    expect(err).toBeInstanceOf(ProseError);
+    expect(err.code).toBe('E_SERVER');
+    expect(err.message).toContain('fonts/');
+  });
+});
+
 describe('static pages', () => {
   it('serves the three allow-listed files with fixed types, and the page for /s/<id>', async () => {
     const { info } = await start();
@@ -177,6 +226,9 @@ describe('static pages', () => {
     const run = join(dir, 'reading');
     mkdirSync(run);
     for (const f of ['index.html', 'app.js', 'style.css']) writeFileSync(join(run, f), `served ${f}`);
+    mkdirSync(join(run, 'fonts'));
+    for (const f of FONT_FILES) writeFileSync(join(run, 'fonts', f), `served ${f}`);
+    writeFileSync(join(run, 'fonts', 'secret.txt'), 'CANARY-FONTS');
     writeFileSync(join(run, 'secret.txt'), 'CANARY-INSIDE');
     writeFileSync(join(dir, 'secret.txt'), 'CANARY-OUTSIDE');
     const { info } = await start({ runtimeDir: run });
@@ -185,6 +237,7 @@ describe('static pages', () => {
       '/app.js/../x', '/app.js/..', '/app.js/', '/app.js%00', '/app.js%00.html', '/%00', '/api/session/../x', '/api/session/%2e%2e/x', '/api/session/%00',
       '/runtime/reading/app.js', '/runtime/reading/secret.txt', '/reading/app.js', '/secret.txt', '/index.html', '/s/', '/s/READ', '/s/a/b', '/s/..', '/s/%2e%2e', '/APP.JS', '//app.js/x', '/app.js;x',
       '/C:/Windows/win.ini', '/%252e%252e/secret.txt',
+      '/fonts', '/fonts/', '/fonts/secret.txt', '/fonts/../server.json', '/fonts/..%2fapp.js', '/fonts/%2e%2e/app.js', '/fonts/x', '/fonts/courier-prime-400.ttf/', '/fonts/COURIER-PRIME-400.TTF', '/fonts//courier-prime-400.ttf',
     ];
     for (const path of paths) {
       // API paths are tried with a valid token, so the 404 comes from the route table and not from the token check.
