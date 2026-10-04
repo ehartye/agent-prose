@@ -7,8 +7,8 @@ const skillsDir = join(root, 'skills');
 const skills = readdirSync(skillsDir);
 
 describe('skills', () => {
-  it('ships the twelve skills', () => {
-    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-review', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-voice']);
+  it('ships the thirteen skills', () => {
+    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-review', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-strike', 'prose-voice']);
   });
 
   for (const s of skills) {
@@ -75,6 +75,21 @@ describe('the existing line', () => {
       expect(text, needle).toContain(needle);
     }
     expect(text.indexOf('--lines <refs>')).toBeLessThan(text.indexOf('Rewrite each variant file in place'));
+  });
+});
+
+describe('strikes', () => {
+  const flat = (skill: string) => readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8').replaceAll('\r\n', '\n').replace(/\s+/g, ' ');
+  it('prose-strike says a strike is a record, what each reason means, and never to edit or remove a struck line by hand', () => {
+    const text = flat('prose-strike');
+    for (const needle of ['It is a **record**', 'prose strike list <draft>', 'wrong-direction', 'faulty-premise', 'not-worth-rewrite', 'Never edit a draft by hand while strikes are pending', 'stale: true', 'Never rewrite a struck line', 'struck-line-edited', 'Do not remove a struck line yourself', 'prose strike clear <draft> s3', '--local']) {
+      expect(text, needle).toContain(needle);
+    }
+    expect(text).not.toMatch(/prose strike (apply|undo)/);
+  });
+  it('prose-review points at strikes and tells the owner the link can mark lines', () => {
+    const text = flat('prose-review');
+    for (const needle of ['prose-strike', 'excluded', 'struck-line-edited', 'can also mark lines of the draft as struck']) expect(text, needle).toContain(needle);
   });
 });
 

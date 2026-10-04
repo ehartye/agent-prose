@@ -37,6 +37,9 @@ taste is yours. This skill puts the choice with the owner and makes the options 
    a line you did not select.
    Change the words later with `prose set brief <id> --character ... --context ...` (it clears the
    confirmation until the owner agrees again and you pass `--confirmed`); a picked set refuses edits.
+   Lines the owner has struck (pending, not stale) are not rewritten: `set new` records them as `excluded`,
+   `--lines` refuses one, and `set check` rejects a variant that edits one (`struck-line-edited`). Read
+   `prose strike list <draft>` first and see the prose-strike skill.
    Directions: punchier, shorter, longer, warmer, drier, more-formal, less-formal, plainer,
    livelier, weirder. They are measured proxies for style (sentence length, contractions, "you",
    exclamations, word length...), not judgements of quality. Directions are assigned to variants
@@ -83,7 +86,8 @@ If the owner declines to choose, do not invent a pick: `prose set pick` is for r
 The owner reads, hears and compares the kept variants in a browser, so the choice does not
 depend on chat. After step 6:
 
-1. Tell the owner the link will be visible to anyone on the home network, and offer local-only
+1. Tell the owner the link will be visible to anyone on the home network, and that whoever has it can
+   also mark lines of the draft as struck (a record: the page removes no text), and offer local-only
    (this machine): `prose reading open --set <id> --local`. Wait for their answer if they hesitate.
 2. Run `prose reading open --set <id>` (or the `--local` form; add `--prompt "<what they are reading for>"`).
    A server that is already running is reused as it is, local or not; the output's notice says which.
