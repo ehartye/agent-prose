@@ -718,7 +718,7 @@ describe('summary, limits and forbidden wording', () => {
 });
 
 /** The v2 families that rest on readers and our baseline audits, not on a published source. Grows by group. */
-const READER_REPORTED = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in', 'whether-youre', 'from-to-range', 'worth-noting', 'marketing-verbs'];
+const READER_REPORTED = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in', 'whether-youre', 'from-to-range', 'worth-noting', 'marketing-verbs', 'restating-closer'];
 
 describe('evidence tiers', () => {
   const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));

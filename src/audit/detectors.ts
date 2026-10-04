@@ -223,7 +223,7 @@ const DIVE_IN = new RegExp([
 ].join('|'), 'giu');
 
 /**
- * Group 2: phrasing patterns. Reader-reported except restating-closer (an extension of the field guide's closing summary).
+ * Group 2: phrasing patterns, all reader-reported. restating-closer resembles the field guide's closing summary but is not verified there.
  */
 
 /** "Whether you're a ... or ...": the first clause must be a noun or activity ("a pro", "building"), so "Whether you're coming or not" is left alone. */
@@ -653,7 +653,7 @@ export const FAMILIES: Family[] = [
     find: marketingVerbs,
   },
   {
-    id: 'restating-closer', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
+    id: 'restating-closer', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
     why: 'The last paragraph opens by announcing a wrap-up, then repeats earlier points.',
     direction: 'End on the last new fact, or on the next step for the reader.',
     find: restatingCloser,
