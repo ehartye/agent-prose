@@ -52,10 +52,10 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose init [--dir <dir>]` | create `.agent-prose/` (project.json, voices/ and a `.gitignore` for sets and taste data); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
 | `prose voice list [--dir <dir>]` | the voice bibles of the project found from a directory upward |
 | `prose voice fit <file> --speaker <name> --id <id> [--name <name>]` | measure one speaker and write `.agent-prose/voices/<id>.yaml` with ranges around the measurements |
-| `prose set new <draft> --directions <list> [--count <n>] [--id <id>] [--character <text>] [--context <text>] [--brief-confirmed] [--brief-from <set>]` | start a variant set: base copy plus one file per variant to rewrite; the optional brief (who speaks, where the line is heard) is shown to the owner above the variants, and `--brief-from` carries another set's brief into a refine round |
+| `prose set new <draft> --directions <list> [--count <n>] [--id <id>] [--character <text>] [--context <text>] [--brief-confirmed] [--brief-from <set>] [--lines <refs>]` | start a variant set: base copy plus one file per variant to rewrite; the optional brief (who speaks, where the line is heard) is shown to the owner above the variants, and `--brief-from` carries another set's brief into a refine round; `--lines` (source line numbers or ranges such as `12` or `12-13,20`) snapshots the existing line(s) being revised, shown above the variants as "The current line" (context only: never a candidate, never scored) |
 | `prose set brief <id> [--character <text>] [--context <text>] [--clear-character] [--clear-context] [--confirmed] [--dir <project>]` | edit a set's brief; new text clears the owner's confirmation unless `--confirmed` is passed again; a picked set refuses |
-| `prose set list`, `prose set show <id>`, `prose set annotate <id> <n>` (each takes `--dir <project>`) | list sets; show the brief and every variant's text, status and the kept ones; record a variant's angle label or note |
-| `prose set check <id> [--dir <project>]` | reject unchanged, near-duplicate and lint-failing variants; verify each moved in its direction; warn (`brief-unconfirmed`) when the brief was never confirmed |
+| `prose set list`, `prose set show <id>`, `prose set annotate <id> <n>` (each takes `--dir <project>`) | list sets; show the brief, the existing line (`original`, with `stale` once the draft has changed since) and every variant's text, status and the kept ones; record a variant's angle label or note |
+| `prose set check <id> [--dir <project>]` | reject unchanged, near-duplicate and lint-failing variants; verify each moved in its direction; warn (`brief-unconfirmed`) when the brief was never confirmed, or (`outside-selection-changed`) when a variant altered a line outside the `--lines` selection |
 | `prose predict --set <id> --pick <n> [--shortlist <list>] --why <text> [--dir <project>]` | seal a guess of the owner's pick (kept variants only; freezes what is shown and a hash of each variant file); also seals the taste model's own guess, or its abstention, in `model-prediction.json`. `--set <id> --model-only` is a repair: it seals only the model's guess for an agent prediction already sealed (after a crash between the two writes), and only before the pick |
 | `prose set pick <id> --pick <n> [--tags <list>] [--no-predict] [--dir <project>]` | record the owner's choice as taste verdicts and reveal whether the guess hit |
 | `prose taste show [--voice <id>] [--all-projects] [--dir <project>]` | the owner's style tendencies in plain words, learned from their picks and duels (global layer, plus project and voice layers once they have 15 pairs) |
@@ -63,7 +63,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose set duel <id> --a <n> --b <n> --outcome a\|b\|tie\|bothBad` | record a head-to-head from the reading page as one taste verdict (the page calls it; it never ships the set) |
 | `prose serve [--local] [--port <n>] [--foreground] [--stop] [--status]` | start or reuse the LAN reading server and print its link (the link carries the access token) |
 | `prose reading open --set <id> [--no-predict] [--prompt <text>] [--dir <project>]` | put a checked, predicted set on the reading page: freezes what is shown, registers the project, prints the link |
-| `prose reading wait --id <id> [--timeout <s>]` | block until the owner asks to refine, ships or abandons; prints champion, directions, notes with the unit text, and what to do next |
+| `prose reading wait --id <id> [--timeout <s>]` | block until the owner asks to refine, ships or abandons; prints champion, directions, notes with the unit text, the existing line (`original`) and what to do next |
 | `prose reading round --id <id> --set <new-set>` | answer a refine request with a new set; its survivors join the session against the pinned champion |
 | `prose reading status\|list\|close` | the folded session state (and the reveal once shipped), the project's sessions, abandon an open session |
 
@@ -82,7 +82,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 
 ## Choosing between variants
 
-1. Write the draft, agree a brief with the owner (who speaks, where the line is heard), then `prose set new` with a direction per variant (punchier, drier, warmer...) and `--brief-confirmed`.
+1. Write the draft, agree a brief with the owner (who speaks, where the line is heard), then `prose set new` with a direction per variant (punchier, drier, warmer...) and `--brief-confirmed`; add `--lines <refs>` when improving a line that already exists.
 2. Rewrite each variant file in place with a different angle; `prose set check` rejects sameness.
 3. Finish checking, then seal a guess with `prose predict`; never edit variant files afterwards.
 4. Put the kept variants in front of the owner on the reading page (below), or show them in chat, then record the
