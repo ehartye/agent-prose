@@ -214,6 +214,34 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | wcag-122 | W3C. [Understanding Success Criterion 1.2.2: Captions (Prerecorded)](https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html) | standard | guide:speeches |
 | zebregs-2015 | Simone Zebregs, Bas van den Putte, Peter Neijens and Anneke de Graaf, 2015. [The differential impact of statistical and narrative evidence on beliefs, attitude, and intention: a meta-analysis](https://pure.uva.nl/ws/files/2680645/167737_497142.pdf) | peer-reviewed | guide:speeches |
 
+### verse
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| agirrezabal-2016 | Manex Agirrezabal, Aitzol Astigarraga, Bertol Arrieta and Mans Hulden, 2016. [ZeuScansion: a tool for scansion of English poetry](http://jlm.ipipan.waw.pl/index.php/JLM/article/download/102/136) | peer-reviewed | guide:verse |
+| bell-2020 | Alexander Bell (PhD thesis, University of East Anglia), 2020. [Constraint in contemporary poetry](https://ueaeprints.uea.ac.uk/id/eprint/79837/1/2020BellAPhD.pdf) | peer-reviewed | guide:verse |
+| blohm-2018 | Stefan Blohm, Valentin Wagner, Matthias Schlesewsky and Winfried Menninghaus, 2018. [Sentence judgments and the grammar of poetry](https://ids-pub.bsz-bw.de/files/12582/Blohm_Wagner_Sentence_judgments_2018.pdf) | peer-reviewed | guide:verse |
+| chaudhuri-bhattacharya-2025 | Soma Chaudhuri and Joydeep Bhattacharya, 2025. [Creativity judgments in haiku and senryu](https://doi.org/10.1002/jocb.70018) | peer-reviewed | guide:verse |
+| filkukova-klempe-2013 | Petra Filkuková and Sven Hroar Klempe, 2013. [Rhyme as reason in commercial and social advertising](https://europepmc.org/article/MED/23841497) | peer-reviewed | guide:verse |
+| hsa-2004 | Haiku Society of America Definitions Committee, 2004. [Report of the Definitions Committee, September 18, 2004](https://www.hsa-haiku.org/hsa-definitions-2004.html) | style-guide | guide:verse |
+| hsa-2026 | Haiku Society of America, 2026. [HSA Definitions (haiku, senryu and haibun updated in 2026)](https://www.hsa-haiku.org/hsa-definitions.html) | style-guide | guide:verse |
+| knoop-2021 | Christine A. Knoop, Stefan Blohm, Maria Kraxenberger and Winfried Menninghaus, 2021. [How perfect are imperfect rhymes?](https://ids-pub.bsz-bw.de/files/12565/Knoop_Blohm_Kraxenberger_How_Perfect_2021.pdf) | peer-reviewed | guide:verse |
+| mcglone-tofighbakhsh-2000 | Matthew S. McGlone and Jessica Tofighbakhsh, 2000. [Birds of a feather flock conjointly (?): rhyme as reason in aphorisms](https://europepmc.org/article/MED/11228916) | peer-reviewed | guide:verse |
+| poetry-foundation-free-verse | Poetry Foundation, 2024. [Free verse (glossary term)](https://www.poetryfoundation.org/learn/glossary-terms/free-verse) | review | guide:verse |
+| poetry-foundation-shakespearean-sonnet | Poetry Foundation, 2024. [Shakespearean sonnet (glossary term)](https://www.poetryfoundation.org/learn/glossary-terms/shakespearean-sonnet) | review | guide:verse |
+| poets-org-anapest | Academy of American Poets (with Edward Hirsch, A Poet's Glossary), 2023. [Anapest (Glossary of Poetic Terms)](https://poets.org/glossary/anapest) | review | guide:verse |
+| poets-org-caesura | Academy of American Poets (with Edward Hirsch, A Poet's Glossary), 2023. [Caesura (Glossary of Poetic Terms)](https://poets.org/glossary/caesura) | review | guide:verse |
+| poets-org-free-verse | Academy of American Poets (with Edward Hirsch, A Poet's Glossary), 2019. [Free Verse (Glossary of Poetic Terms)](https://poets.org/glossary/free-verse) | review | guide:verse |
+| poets-org-imagery | Academy of American Poets, 2022. [Imagery (Glossary of Poetic Terms)](https://poets.org/glossary/imagery) | review | guide:verse |
+| poets-org-meter | Academy of American Poets, 2023. [Meter (Glossary of Poetic Terms)](https://poets.org/glossary/meter) | review | guide:verse |
+| poets-org-rhyme | Academy of American Poets, 2022. [Rhyme (Glossary of Poetic Terms)](https://poets.org/glossary/rhyme) | review | guide:verse |
+| poets-org-volta | Academy of American Poets, 2022. [Volta (Glossary of Poetic Terms)](https://poets.org/glossary/volta) | review | guide:verse |
+| sen-2026 | Tushar Sen, 2026. [Quantifying Shakespeare's iambic pentameter](https://jdmdh.episciences.org/19417/pdf) | peer-reviewed | guide:verse |
+| sucher-bacon-2014 | Danielle Sucher and Darius Bacon, 2014. [Nantucket, hacking at verse (BangBangCon talk)](https://bangbangcon.com/2014-transcripts/danielle-sucher-darius-bacon-nantucket-hacking-at-verse.txt) | practitioner | guide:verse |
+| welch-haiku | Michael Dylan Welch, 2003. [Becoming a Haiku Poet](https://www.graceguts.com/essays/becoming-a-haiku-poet) | practitioner | guide:verse |
+| wikipedia-ballad-stanza | Wikipedia contributors. [Ballad stanza](https://en.wikipedia.org/wiki/Ballad_stanza) | practitioner | guide:verse |
+| wikipedia-limerick | Wikipedia contributors. [Limerick (poetry)](https://en.wikipedia.org/wiki/Limerick_(poetry)) | practitioner | guide:verse |
+
 ### youtube
 
 | id | Source | Kind | Cited by |
