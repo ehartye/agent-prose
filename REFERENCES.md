@@ -136,3 +136,30 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | sre-troubleshooting | Chris Jones (Google SRE book). [Effective Troubleshooting](https://sre.google/sre-book/effective-troubleshooting/) | practitioner | guide:instruction-docs |
 | uddin-robillard-2015 | Gias Uddin and Martin Robillard, 2015. [How API Documentation Fails](https://www.cs.mcgill.ca/~martin/papers/ieeesw2015.pdf) | peer-reviewed | guide:instruction-docs |
 | wtd-docs-as-code | Write the Docs. [Docs as Code](https://www.writethedocs.org/guide/docs-as-code/) | practitioner | guide:instruction-docs |
+
+### screen-stage
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| august-desperate-punchlines | John August (quoting Jane Espenson), 2010. [Desperate punchlines](https://johnaugust.com/?p=4178) | practitioner | guide:screen-stage |
+| august-long-scripts | John August, 2020. [Long scripts don't necessarily mean long movies](https://johnaugust.com/2020/how-accurate-is-the-page-per-minute-rule-2) | practitioner | guide:screen-stage |
+| bbc-beginnings | BBC Writers. [Scriptwriting Essentials: 3. Beginnings (and Endings)](https://www.bbc.co.uk/writers/resources/scriptwriting-essentials/3-beginnings-and-endings) | style-guide | guide:screen-stage |
+| bbc-dialogue | BBC Writers. [Scriptwriting Essentials: 7. Dialogue](https://www.bbc.co.uk/writers/resources/scriptwriting-essentials/7-dialogue) | style-guide | guide:screen-stage |
+| bbc-medium-format | BBC Writers. [Medium and Format](https://www.bbc.co.uk/writers/resources/medium-and-format) | style-guide | guide:screen-stage |
+| bbc-scenes | BBC Writers. [Scriptwriting Essentials: 6. Scenes](https://www.bbc.co.uk/writers/resources/scriptwriting-essentials/6-scenes) | style-guide | guide:screen-stage |
+| bbc-stage-formats | BBC Writers (Matt Carless). [Sample script formats: stage, UK and US](https://www.bbc.co.uk/writers/documents/stage.pdf) | style-guide | guide:screen-stage |
+| bbc-three-camera | BBC Writers (Matt Carless). [Sample script formats: three-camera sitcom and taped sitcom](https://www.bbc.co.uk/writers/documents/threecamera.pdf) | style-guide | guide:screen-stage |
+| dg-formats | Dramatists Guild of America. [Free downloadable script formats for plays and musicals](https://www.dramatistsguild.com/script-formats) | style-guide | guide:screen-stage |
+| dg-templates | Dramatists Guild of America. [Modern and traditional play format templates and the general formatting guide](https://www.dramatistsguild.com/sites/default/files/2020-01/General-SFI-Formatting-Guidelines-Complete.pdf) | style-guide | guide:screen-stage |
+| espenson-book-of-acts | Jane Espenson, 2007. [The Book of Acts](https://janeespenson.com/082007/the-book-of-acts) | practitioner | guide:screen-stage |
+| forabosco-2008 | Giovannantonio Forabosco, 2008. [Is the concept of incongruity still a useful construct for the advancement of humor research?](https://www.degruyterbrill.com/document/doi/10.2478/v10016-008-0003-5/html) | review | guide:screen-stage |
+| gorenz-schwarz-2024 | Drew Gorenz and Norbert Schwarz, 2024. [How funny is ChatGPT? A comparison of human- and A.I.-produced jokes](https://pmc.ncbi.nlm.nih.gov/articles/PMC11221738/) | peer-reviewed | guide:screen-stage |
+| jentzsch-kersting-2023 | Sophie Jentzsch and Kristian Kersting, 2023. [ChatGPT is fun, but it is not funny! Humor is still challenging Large Language Models](https://aclanthology.org/2023.wassa-1.29) | peer-reviewed | guide:screen-stage |
+| mcgraw-warren-2010 | A. Peter McGraw and Caleb Warren, 2010. [Benign violations: Making immoral behavior funny](https://leeds-faculty.colorado.edu/mcgrawp/pdf/mcgraw.warren.2010.pdf) | peer-reviewed | guide:screen-stage |
+| nicholl-format | Greg Beal (Academy of Motion Picture Arts and Sciences), 2014. [Screenplay format guide for the Nicholl Fellowships](https://www.oscars.org/sites/oscars/files/scriptsample.pdf) | style-guide | guide:screen-stage |
+| provine-1992 | Robert R. Provine, 1992. [Contagious laughter: Laughter is a sufficient stimulus for laughs and smiles](https://link.springer.com/content/pdf/10.3758%2FBF03330380.pdf) | peer-reviewed | guide:screen-stage |
+| thompson-gurus | Kristin Thompson, 2011. [Cognitive scientists 1, screenplay gurus 0](https://www.davidbordwell.net/blog/2011/06/09/cognitive-scientists-1-screenplay-gurus-0/) | practitioner | guide:screen-stage |
+| toplyn-workshop | Joe Toplyn, 2023. [Joke Writing Workshop](https://joetoplyn.com/category/joke-writing-workshop) | practitioner | guide:screen-stage |
+| wells-lassagne-2015 | Shannon Wells-Lassagne, 2015. [Short and sweet? Structuring Humor and Morality in American Sitcoms](https://journals.openedition.org/angles/2096) | peer-reviewed | guide:screen-stage |
+| wgf-primer-1 | Writers Guild Foundation (Lauren O'Connor), 2020. [Formatting Your Spec Script While Social Distancing: A Primer, Part 1](https://www.wgfoundation.org/blog/2020/3/19/formatting-your-spec-script-while-social-distancing-a-primer-part-1) | practitioner | guide:screen-stage |
+| wgf-serialized-drama | Writers Guild Foundation (Lauren O'Connor), 2021. [TV Format Fundamentals: Serialized Drama](https://www.wgfoundation.org/blog/2021/11/17/serialized-drama) | practitioner | guide:screen-stage |
