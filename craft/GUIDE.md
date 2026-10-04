@@ -1,6 +1,6 @@
 # Craft guide
 
-Why the rules in `craft/rules.json` exist and how much weight each can bear. Every rule cites its
+Why the rules in `craft/rules.json` exist and how much weight each can bear. For how to write each kind of thing, see the craft reference guides (`prose guide`, files in `craft/guides/`). Every rule cites its
 sources in [REFERENCES.md](../REFERENCES.md); this guide explains the reasoning between them.
 
 Three principles run through everything:
@@ -252,3 +252,24 @@ Why an unexplained pick weighs one third of a duel when four variants are shown.
 that the winner beat every other shown variant, but the owner compared them loosely. Each loser
 therefore counts 1/(shown-1) of a duel, so one choice carries about one duel of evidence however
 many variants were shown (two shown: weight 1; four shown: one third each).
+
+## Adding a craft guide
+
+Craft guides are one Markdown file per family of forms, listed in `craft/guides/families.json` (every form in
+`craft/forms.json` belongs to exactly one family; a test enforces it). A guide touches only its own files, so
+several can be written in parallel:
+
+1. Copy `craft/guides/game-dialogue.md` to `craft/guides/<family>.md`. Keep the front matter (`family`, `title`,
+   `forms` exactly as in families.json, `reviewed`, `sources`) and the eight H2 sections in the same order, with
+   the two generated fences (rule table, sources) in place.
+2. Cite a source by listing its id in `sources:`, in the order the text first cites it, and writing `[n]` in the
+   text. Ids come from `craft/references.json` or from a new `craft/guides/<family>.refs.json` (same shape as
+   references.json; ids must be unique across both). Read every source before citing it.
+3. Mark every convention with `Convention:` and every claim with no source with `Maintainer judgement:`.
+4. Run `npm run guides` (fills the rule table and the sources list) and `npm run refs` (adds the guide's source
+   section to REFERENCES.md). `npm run refs:check` and the test suite fail when either is stale.
+5. Point only the skills for that family at the guide ("Craft guide: `prose guide <family>`; read the section you
+   need"), keeping each skill's description and when_to_use under 1,536 characters.
+
+Only REFERENCES.md is shared: if two guides conflict there, take either side and run `npm run refs`. To split or
+merge families, edit `families.json` and the affected guides' `forms`; nothing else changes.

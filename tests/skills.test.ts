@@ -155,3 +155,16 @@ describe('the plugin stands alone', () => {
     }
   });
 });
+
+describe('craft guides', () => {
+  const flat = (skill: string) => readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8').replaceAll('\r\n', '\n').replace(/\s+/g, ' ');
+  it('prose-dialog points to its guide as a read-on-demand resource', () => {
+    const text = flat('prose-dialog');
+    for (const needle of ['Craft guide: `prose guide game-dialogue --text --section <name>`', 'Read the section you need, not all of it']) expect(text, needle).toContain(needle);
+  });
+  it('only names guide sections that exist', () => {
+    for (const s of skills) {
+      for (const m of flat(s).matchAll(/prose guide ([a-z-]+)/g)) expect(['game-dialogue', 'instruction-docs', 'formal-prose', 'screen-stage', 'youtube', 'speeches', 'verse', 'song'], `${s}: ${m[0]}`).toContain(m[1]);
+    }
+  });
+});

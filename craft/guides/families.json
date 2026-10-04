@@ -1,0 +1,13 @@
+{
+  "schema": "prose/guide-families@1",
+  "families": [
+    { "id": "game-dialogue", "title": "Game dialogue", "description": "Quest dialogue, branching conversations and barks: lines the player reads or hears in a game, in boxes of limited size and often more than once.", "forms": ["quest-dialog", "barks", "conversation"] },
+    { "id": "instruction-docs", "title": "Instructions and technical docs", "description": "Procedures, how-to steps, troubleshooting and technical documentation read by someone doing a task.", "forms": ["instructions", "tech-doc"] },
+    { "id": "formal-prose", "title": "Academic and professional prose", "description": "Abstracts, papers, reports, proposals, memos and email written to be read and acted on.", "forms": ["academic", "professional"] },
+    { "id": "screen-stage", "title": "Screen and stage scripts", "description": "Multi-camera and single-camera sitcoms, TV drama and stage plays in script format, timed by the page.", "forms": ["sitcom-multicam", "sitcom-singlecam", "tv-drama", "stage-play"] },
+    { "id": "youtube", "title": "YouTube scripts", "description": "Narrated video scripts with timestamped segments, written for the ear and the edit.", "forms": ["youtube"] },
+    { "id": "speeches", "title": "Speeches", "description": "Toasts, eulogies, remarks and keynotes, written to be spoken and timed to a target length.", "forms": ["speech-small", "speech-large", "speech-recorded"] },
+    { "id": "verse", "title": "Poetry and verse forms", "description": "Free verse and the fixed forms: haiku, limerick, ballad, the two sonnets, villanelle and sestina.", "forms": ["free-verse", "haiku", "limerick", "ballad", "sonnet-shakespearean", "sonnet-petrarchan", "villanelle", "sestina"] },
+    { "id": "song", "title": "Song lyrics", "description": "Lyrics with labelled sections, matched line lengths, refrains and words set to a melody.", "forms": ["song"] }
+  ]
+}

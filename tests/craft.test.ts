@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { REFERENCES, RULES, rulesFor } from '../src/craft/rules.ts';
+import { GUIDE_REFERENCES, REFERENCES, RULES, rulesFor } from '../src/craft/rules.ts';
 import { renderReferences } from '../src/craft/references.ts';
 import { ALL_LEXICONS } from '../src/measure/lexicon.ts';
 import { AUDIT_SOURCES } from '../src/audit/detectors.ts';
@@ -64,7 +64,7 @@ describe('craft data', () => {
     expect(missing, 'rule ids missing from craft/GUIDE.md').toEqual([]);
   });
   it('keeps REFERENCES.md in sync', () => {
-    const expected = renderReferences(REFERENCES, RULES, ALL_LEXICONS, AUDIT_SOURCES);
+    const expected = renderReferences(REFERENCES, RULES, ALL_LEXICONS, AUDIT_SOURCES, GUIDE_REFERENCES);
     expect(readFileSync(join(root, 'REFERENCES.md'), 'utf8').replaceAll('\r\n', '\n')).toBe(expected);
   });
 });

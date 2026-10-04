@@ -51,6 +51,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose scan <file> [--form <id>] [--text] [--words]` | syllables, stress, rhyme scheme and meter of a verse draft (US English pronunciations; JSON, or `--text` for a table) |
 | `prose pronounce <word...>` | the dictionary pronunciation, syllables, stress and rhyme key of each word, with its source (dict, affix or guessed) |
 | `prose rules [--form <id>]` | the cited rules, optionally for one form |
+| `prose guide [<family-or-form>] [--section <name>] [--text]` | the craft reference guides: with no name, the families and their forms; with a family or form id, that guide (JSON, or `--text` for Markdown); `--section` prints one of its eight sections (`what`, `anatomy`, `length`, `good`, `failures`, `revise`, `rules`, `sources`) |
 | `prose init [--dir <dir>]` | create `.agent-prose/` (project.json, voices/ and a `.gitignore` for sets, taste data and strike logs); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
 | `prose voice list [--dir <dir>]` | the voice bibles of the project found from a directory upward |
 | `prose voice show <id> [--dir <dir>]` | one voice bible, with its bio |
@@ -330,6 +331,11 @@ are timed by pages, so `wpm` there is an error. A bad `project.json` is `E_SCHEM
 
 `prose rules` lists 55 rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
 and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
+
+## Craft guides
+
+A craft reference guide for each family of forms lives in `craft/guides/`, and `prose guide` prints it. Every guide has the same eight sections: what the form is and who reads it, anatomy and conventions, length and timing, what good looks like, common failures and the habits behind them, how to revise, the rules that apply (generated from `craft/rules.json`, so it cannot drift) and numbered sources. Conventions are marked as conventions and unsourced advice as maintainer judgement. Read the section you need, not the whole guide, for example `prose guide barks --section anatomy --text`. The first guide is game dialogue; the rest are listed by `prose guide` with `written: false` until they exist. To add one, see [Adding a craft guide](craft/GUIDE.md#adding-a-craft-guide).
+
 
 ## Honesty notes
 

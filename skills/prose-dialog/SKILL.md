@@ -18,6 +18,13 @@ Every node has an `id`, a `speaker` and a `text`. A node continues (`next`), bra
 or ends (`end: true`). Lines a player can hear twice get `variants`. Lines a translator needs
 context for get a `comment`.
 
+## Craft guide
+
+Craft guide: `prose guide game-dialogue --text --section <name>` prints one section of the reference guide
+for quest dialogue, conversations and barks. Read the section you need, not all of it: `anatomy` before
+designing a conversation or a bark pool, `failures` and `revise` when a draft is being fixed, `rules` for
+what lint checks. Run `prose guide` to list every guide.
+
 ## Before writing
 
 1. **List the states the conversation can open in** — quest not started, offered, refused, active,

@@ -6,6 +6,7 @@ import { VERSION } from './version.ts';
 import { registerAuditCommand } from './commands/audit.ts';
 import { registerCapabilities } from './commands/capabilities.ts';
 import { registerDocumentCommands } from './commands/document.ts';
+import { registerGuideCommands } from './commands/guide.ts';
 import { registerProjectCommands } from './commands/project.ts';
 import { registerReadingCommands } from './commands/reading.ts';
 import { registerRuleCommands } from './commands/rules.ts';
@@ -24,6 +25,7 @@ export function buildProgram(io: Io): Command {
   registerCapabilities(program, io);
   registerAuditCommand(program, io);
   registerDocumentCommands(program, io);
+  registerGuideCommands(program, io);
   registerProjectCommands(program, io);
   registerReadingCommands(program, io);
   registerRuleCommands(program, io);
