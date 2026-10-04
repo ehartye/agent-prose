@@ -82,3 +82,30 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | short-dynamic-dialogue-2012 | Emily Short, 2012. [GDC 2012 Talk on Dynamic Dialogue](https://emshort.blog/2012/03/16/gdc-2012-talk-on-dynamic-dialogue/) | practitioner | guide:game-dialogue |
 | slabinski-8-principles | Mark Slabinski, 2013. [8 Key Principles of Writing Effective Game Dialogue](https://www.gamedeveloper.com/game-platforms/8-key-principles-of-writing-effective-game-dialogue) | practitioner | guide:game-dialogue |
 | szarkowska-two-or-three-lines | Agnieszka Szarkowska and Olivia Gerber-Morón, 2019. [Two or three lines: a mixed-methods study on subtitle processing and preferences](https://discovery.ucl.ac.uk/id/eprint/10054421/3/Szarkowska_Two%20or%20three%20lines_a%20mixed-methods%20study%20on%20subtitle%20processing%20and%20preferences_plain_FINAL.pdf) | peer-reviewed | guide:game-dialogue |
+
+### instruction-docs
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| diataxis-explanation | Daniele Procida. [Explanation (Diátaxis)](https://diataxis.fr/explanation/) | practitioner | guide:instruction-docs |
+| diataxis-how-to | Daniele Procida. [How-to guides (Diátaxis)](https://diataxis.fr/how-to-guides/) | practitioner | guide:instruction-docs |
+| diataxis-reference | Daniele Procida. [Reference (Diátaxis)](https://diataxis.fr/reference/) | practitioner | guide:instruction-docs |
+| diataxis-tutorials | Daniele Procida. [Tutorials (Diátaxis)](https://diataxis.fr/tutorials/) | practitioner | guide:instruction-docs |
+| digitalgov-principles | Digital.gov (US General Services Administration), 2025. [Principles of plain language](https://digital.gov/guides/plain-language/principles/) | style-guide | guide:instruction-docs |
+| eiler-1997 | Mary Ann Eiler, 1997. [Minimalism and Documentation Downsizing (review)](https://kairos.technorhetoric.net/3.1/reviews/eiler/minimal.html) | review | guide:instruction-docs |
+| google-accessible-docs | Google. [Write accessible documentation (Google developer documentation style guide)](https://developers.google.com/style/accessibility) | style-guide | guide:instruction-docs |
+| google-api-comments | Google. [API reference code comments (Google developer documentation style guide)](https://developers.google.com/style/api-reference-comments) | style-guide | guide:instruction-docs |
+| google-code-samples | Google. [Code samples (Google developer documentation style guide)](https://developers.google.com/style/code-samples) | style-guide | guide:instruction-docs |
+| google-docguide-practices | Google. [Documentation best practices (Google style guides: docguide)](https://google.github.io/styleguide/docguide/best_practices.html) | style-guide | guide:instruction-docs |
+| google-global-audience | Google. [Write for a global audience (Google developer documentation style guide)](https://developers.google.com/style/translation) | style-guide | guide:instruction-docs |
+| google-notices | Google. [Notes, cautions, warnings, and other notices (Google developer documentation style guide)](https://developers.google.com/style/notices) | style-guide | guide:instruction-docs |
+| google-readmes | Google. [READMEs (Google style guides: docguide)](https://google.github.io/styleguide/docguide/READMEs.html) | style-guide | guide:instruction-docs |
+| graham-2000 | Peter Graham, 2000. [Reconstructing minimalism (literature review)](https://static.aminer.org/pdf/PDF/000/591/907/reconstructing_minimalism.pdf) | review | guide:instruction-docs |
+| microsoft-formatting | Microsoft. [Formatting text in instructions (Microsoft Writing Style Guide)](https://learn.microsoft.com/en-us/style-guide/procedures-instructions/formatting-text-in-instructions) | style-guide | guide:instruction-docs |
+| nng-f-pattern | Kara Pernice (Nielsen Norman Group), 2017. [F-Shaped Pattern of Reading on the Web: Misunderstood, But Still Relevant](https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/) | practitioner | guide:instruction-docs |
+| nng-five-users | Jakob Nielsen (Nielsen Norman Group), 2000. [Why You Only Need to Test with 5 Users](https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/) | practitioner | guide:instruction-docs |
+| nng-how-users-read | Jakob Nielsen (Nielsen Norman Group), 1997. [How Users Read on the Web](https://www.nngroup.com/articles/how-users-read-on-the-web/) | practitioner | guide:instruction-docs |
+| osha-1910-145 | US Occupational Safety and Health Administration. [1910.145: Specifications for accident prevention signs and tags](https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.145) | standard | guide:instruction-docs |
+| sre-troubleshooting | Chris Jones (Google SRE book). [Effective Troubleshooting](https://sre.google/sre-book/effective-troubleshooting/) | practitioner | guide:instruction-docs |
+| uddin-robillard-2015 | Gias Uddin and Martin Robillard, 2015. [How API Documentation Fails](https://www.cs.mcgill.ca/~martin/papers/ieeesw2015.pdf) | peer-reviewed | guide:instruction-docs |
+| wtd-docs-as-code | Write the Docs. [Docs as Code](https://www.writethedocs.org/guide/docs-as-code/) | practitioner | guide:instruction-docs |
