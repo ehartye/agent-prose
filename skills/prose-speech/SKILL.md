@@ -8,6 +8,14 @@ when_to_use: Use when asked for a speech, toast, wedding or best-man speech, eul
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 
+## Craft guide
+
+Craft guide: `prose guide speeches --text --section <name>` prints one section of the reference guide for
+toasts, eulogies, keynotes and recorded addresses. Read the section you need, not all of it: `anatomy`
+before writing a toast, eulogy, talk or recorded address, `length` for word budgets and the 130 wpm basis,
+`failures` and `revise` when a draft is being fixed, `rules` for what lint checks. Run `prose guide` to list
+every guide.
+
 ## Set up the file
 
 Write `<name>.md` with frontmatter:

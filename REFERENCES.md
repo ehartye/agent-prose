@@ -164,6 +164,36 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | wgf-primer-1 | Writers Guild Foundation (Lauren O'Connor), 2020. [Formatting Your Spec Script While Social Distancing: A Primer, Part 1](https://www.wgfoundation.org/blog/2020/3/19/formatting-your-spec-script-while-social-distancing-a-primer-part-1) | practitioner | guide:screen-stage |
 | wgf-serialized-drama | Writers Guild Foundation (Lauren O'Connor), 2021. [TV Format Fundamentals: Serialized Drama](https://www.wgfoundation.org/blog/2021/11/17/serialized-drama) | practitioner | guide:screen-stage |
 
+### speeches
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| aristotle-rhetoric-1 | Aristotle, translated by W. Rhys Roberts. [Rhetoric, Book I](https://classics.mit.edu/Aristotle/rhetoric.1.i.html) | book | guide:speeches |
+| bps-obama-romney | Alex Fradera (British Psychological Society Research Digest), 2015. [Comparing Obama's and Romney's speech styles and the way their audiences react](https://bps.org.uk/research-digest/comparing-obamas-and-romneys-speech-styles-and-way-their-audiences-react) | practitioner | guide:speeches |
+| bull-2016 | Peter Bull, 2016. [Claps and Claptrap: The Analysis of Speaker-Audience Interaction in Political Speeches](https://jspp.psychopen.eu/index.php/jspp/article/download/4951/4951.pdf) | review | guide:speeches |
+| chaudron-richards | Craig Chaudron and Jack Richards. [The Effects of Discourse Markers on the Comprehension of Lectureships](https://scholarspace.manoa.hawaii.edu/items/cd3514b8-4bb9-4cb4-927f-8b119167c1bc) | practitioner | guide:speeches |
+| dcmp-presentation-rate | Described and Captioned Media Program. [Captioning Key: Presentation Rate](https://dcmp.org/learn/captioningkey/601) | style-guide | guide:speeches |
+| gernsbacher-2015 | Morton Ann Gernsbacher, 2015. [Video Captions Benefit Everyone](https://gernsbacherlab.org/wp-content/uploads/papers/1/Gernsbacher_Captions_2015.pdf) | review | guide:speeches |
+| gettysburg-bliss | Abraham Lincoln (Bliss copy, text from Wikisource), 1863. [Gettysburg Address (Bliss copy)](https://en.wikisource.org/wiki/Gettysburg_Address_(Bliss_copy)) | book | guide:speeches |
+| guo-2014 | Philip J. Guo, Juho Kim and Rob Rubin, 2014. [How Video Production Affects Student Engagement: An Empirical Study of MOOC Videos](https://pg.ucsd.edu/publications/edX-MOOC-video-production-and-engagement_LAS-2014.pdf) | peer-reviewed | guide:speeches |
+| hayati-2010 | Abdolmajid Hayati, 2010. [The Effect of Speech Rate on Listening Comprehension of EFL Learners](http://www.scirp.org/journal/PaperDownload.aspx?paperID=3014) | peer-reviewed | guide:speeches |
+| lapakko-93 | David Lapakko. [Communication is 93% Nonverbal: An Urban Legend Proliferates](https://cornerstone.lib.mnsu.edu/ctamj/vol34/iss1/2) | peer-reviewed | guide:speeches |
+| liu-2017-applause | Zhe Liu, Anbang Xu, Mengdi Zhang, Jalal Mahmud and Vibha Sinha, 2017. [Fostering User Engagement: Rhetorical Devices for Applause Generation Learnt from TED Talks](https://arxiv.org/abs/1704.02362) | peer-reviewed | guide:speeches |
+| lumen-oral-written | Anne Fleischer, Lumen Learning. [Oral versus Written Style](https://courses.lumenlearning.com/wm-publicspeaking/chapter/oral-vs-written-style/) | book | guide:speeches |
+| mcgraw-warren-2010 | A. Peter McGraw and Caleb Warren, 2010. [Benign Violations: Making Immoral Behavior Funny](https://leeds-faculty.colorado.edu/mcgrawp/pdf/mcgraw.warren.2010.pdf) | peer-reviewed | guide:speeches |
+| npr-marking-scripts | George Bodarky (NPR Training), 2025. [How marking scripts can help you sound more natural](https://www.npr.org/sections/npr-training/2025/09/29/g-s1-90460/how-marking-scripts-can-help-you-sound-more-natural) | practitioner | guide:speeches |
+| sorensen-big-think | Ted Sorensen, 2008. [Ted Sorensen on Writing JFK's Speeches](https://bigthink.com/videos/ted-sorensen-on-writing-jfks-speeches/) | practitioner | guide:speeches |
+| strong-attention-span | Frank Strong, 2022. [Why we need to stop using that statistic about goldfish, brains and attention span](https://www.swordandthescript.com/2022/02/goldfish-attention-span/) | practitioner | guide:speeches |
+| tedx-speaker-guide | TEDx. [TEDx Speaker Guide](https://tedxbend.com/tedx/manuals/tedx_speaker_guide.pdf) | style-guide | guide:speeches |
+| toastmasters-eulogies | Toastmasters International. [Delivering Eulogies](https://www.toastmasters.org/resources/public-speaking-tips/delivering-eulogies) | practitioner | guide:speeches |
+| toastmasters-toast | Toastmasters International. [How to Give a Toast](https://www.toastmasters.org/Resources/Public%20Speaking%20Tips/How%20to%20Give%20a%20Toast) | practitioner | guide:speeches |
+| ucf-monroe-withdrawn | UCF STARS. [A test of Monroe's Motivated Sequence for its effects on ratings of message organization and attitude change](https://stars.library.ucf.edu/facultybib2000/2702) | practitioner | guide:speeches |
+| un-gender-inclusive | United Nations. [Guidelines for Gender-Inclusive Language in English](https://www.un.org/en/gender-inclusive-language/) | style-guide | guide:speeches |
+| unc-speeches | UNC Writing Center. [Speeches](https://writingcenter.unc.edu/tips-and-tools/speeches/) | practitioner | guide:speeches |
+| w3c-wai-events | W3C Web Accessibility Initiative. [Making Events Accessible: Checklist for meetings, conferences, training, and presentations](https://www.w3.org/WAI/teach-advocate/accessible-presentations/) | standard | guide:speeches |
+| wcag-122 | W3C. [Understanding Success Criterion 1.2.2: Captions (Prerecorded)](https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html) | standard | guide:speeches |
+| zebregs-2015 | Simone Zebregs, Bas van den Putte, Peter Neijens and Anneke de Graaf, 2015. [The differential impact of statistical and narrative evidence on beliefs, attitude, and intention: a meta-analysis](https://pure.uva.nl/ws/files/2680645/167737_497142.pdf) | peer-reviewed | guide:speeches |
+
 ### youtube
 
 | id | Source | Kind | Cited by |
