@@ -120,6 +120,22 @@
     ].filter(Boolean);
   }
 
+  /**
+   * The brief as the page shows it: a Character and a Context row (only what is there) and the muted unconfirmed line.
+   * Null when there is nothing to show (a reserved characterRef alone has no text).
+   */
+  function briefParts(b) {
+    if (!b) return null;
+    const rows = [];
+    if (b.character) rows.push({ label: 'Character', text: b.character });
+    if (b.context) rows.push({ label: 'Context', text: b.context });
+    if (!rows.length) return null;
+    return { rows, note: b.confirmed ? null : 'Not confirmed with you yet' };
+  }
+
+  /** What is on screen: stage, round, event count and the brief (an edit of its words or its confirmation re-renders). */
+  const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events + '|' + (p.session && p.session.brief ? JSON.stringify([p.session.brief.character, p.session.brief.context, !!p.session.brief.confirmed]) : '');
+
   /** True only when the browser has a speech synthesizer object and an utterance constructor (the property alone can be undefined). */
   const speechSupported = win => !!(win && win.speechSynthesis && typeof win.SpeechSynthesisUtterance === 'function');
 
@@ -127,7 +143,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, backoff, revealParts, speechSupported, SPEECH_IGNORED };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, signature, backoff, revealParts, speechSupported, SPEECH_IGNORED };
     return;
   }
 
@@ -146,7 +162,7 @@
   let fatal = false;
   const ui = {
     marks: {}, marksRound: -1, selected: null, noteDraft: '', rate: 1, directions: [], like: '', confirmShip: false,
-    showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {},
+    showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: true,
   };
 
   const $ = id => document.getElementById(id);
@@ -215,8 +231,6 @@
     const e = res.body && res.body.error;
     showNotice((e && e.message) || 'Something went wrong (' + res.status + ').', e && e.hint);
   }
-
-  const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events;
 
   function apply(p, quiet) {
     const changed = signature(p) !== renderedSig;
@@ -532,6 +546,18 @@
     return h('article', { class: 'card', 'data-index': String(c.index) }, kids);
   }
 
+  /** "The brief": who speaks and where the line lands, open above the variants unless the owner folded it. Display only. */
+  function briefBlock() {
+    const parts = briefParts(data.session.brief);
+    if (!parts) return null;
+    const el = h('details', { class: 'brief', open: ui.briefOpen },
+      h('summary', { text: 'The brief' }),
+      parts.rows.map(r => h('p', {}, h('strong', { text: r.label + ': ' }), r.text)),
+      parts.note ? h('p', { class: 'quiet brief-note', text: parts.note }) : null);
+    el.addEventListener('toggle', () => { ui.briefOpen = el.open; });
+    return el;
+  }
+
   function lineupScreen() {
     const s = data.state;
     const pinned = s.round > 0 && s.champion !== null && s.lineup.includes(s.champion) ? s.champion : null;
@@ -555,7 +581,7 @@
       const broken = shown.filter(c => !choosable(c) && c.index !== pinned).map(c => c.index);
       await send({ type: 'lineup', kept, duds: [...duds, ...broken], order: shown.map(c => c.index) });
     }, 'primary', { disabled: !ready, 'data-gate': '1' });
-    return [rateControl(), cards, h('div', { class: 'actionbar' }, go,
+    return [briefBlock(), rateControl(), cards, h('div', { class: 'actionbar' }, go,
       h('span', { class: 'quiet', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }))];
   }
 
@@ -588,14 +614,14 @@
     });
     const bar = duelBar(order.map(idx => (candidateOf(idx) || {}).label || '?')).map(b =>
       btn(b.text, choose(b.choice), b.pick ? 'primary bar-pick' : '', { 'data-gate': '1', ...(b.pick ? { 'aria-label': 'Choose ' + b.text.toLowerCase() } : {}) }));
-    return [rateControl(), h('div', { class: 'duel-grid' }, cards), h('div', { class: 'actionbar' }, bar)];
+    return [briefBlock(), rateControl(), h('div', { class: 'duel-grid' }, cards), h('div', { class: 'actionbar' }, bar)];
   }
 
   function refineScreen() {
     const s = data.state;
     const champ = candidateOf(s.champion);
     setTitle('Your favorite so far', 'Tell the writer what to try next, or ship this one.');
-    const out = [];
+    const out = [briefBlock()];
     if (champ) out.push(card(champ, { tag: 'Winning so far', noChange: false }));
     const chips = data.directions.map(d => {
       const on = ui.directions.includes(d);

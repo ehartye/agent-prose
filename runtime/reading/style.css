@@ -128,6 +128,11 @@ button.link { border: 0; background: none; text-decoration: underline; min-heigh
 .chips button { border-radius: 999px; }
 select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 8px; border: 2px solid var(--line); background: var(--surface); max-width: 100%; }
 .confirm { border: 2px solid var(--accent); border-radius: 12px; padding: 0.9rem; margin: 1rem 0; background: var(--surface); }
+/* The brief: who speaks and where the line lands, above the variants. Display only. */
+.brief { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; background: var(--surface); padding: 0 0.9rem; margin: 0.75rem 0; overflow-wrap: anywhere; }
+.brief summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.brief p { max-width: 62ch; white-space: pre-line; }
+.brief .brief-note { font-size: 0.9rem; margin-bottom: 0.75rem; }
 .reveal p { max-width: 62ch; }
 .reveal .why { font-family: var(--serif); border-left: 4px solid var(--accent); padding-left: 0.75rem; }
 .center { text-align: center; padding: 2rem 0; }
