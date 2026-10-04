@@ -1,6 +1,6 @@
 import type { BlockKind, Doc } from '../ir.ts';
 import { AI_TELLS } from '../measure/lexicon.ts';
-import { loadRates } from './rates.ts';
+import { loadRates, type Rates } from './rates.ts';
 import { PROSE_KINDS } from '../kinds.ts';
 import { per1000, plain, round2, sentenceRanges, sentences, words } from '../text.ts';
 
@@ -322,7 +322,11 @@ export const TRIPLET_FALLBACK_PER_1000 = 9;
 
 /** The threshold from a rates file (the committed one by default); the fallback constant when it cannot be read. */
 export function tripletThreshold(ratesPath?: string): number {
-  const rates = loadRates(ratesPath);
+  return thresholdFromRates(loadRates(ratesPath));
+}
+
+/** The same threshold from rates already in hand. */
+export function thresholdFromRates(rates: Rates | undefined | null): number {
   const p95s = Object.values(rates?.datasets ?? {}).map(d => d.human.tripletP95).filter(v => v > 0);
   return p95s.length ? Math.ceil(Math.max(...p95s) * 10 - 1e-9) / 10 : TRIPLET_FALLBACK_PER_1000;
 }
@@ -815,9 +819,19 @@ const SUBSTITUTES = /\b(?:serves?|stands?|functions?|operates?|acts?)\s+as\b|\b(
 export const MEASURED_NOTES = [
   'Em dash rates run from 0.0 to 9.1 per 1,000 words across models, so a rate says little by itself.',
   'Reported for context only; none of these values is flagged.',
-  `The triplet-density hallmark fires above ${TRIPLET_DENSITY_PER_1000} lists per 1,000 words, the 95th percentile of the human samples; their median is 0.`,
   'The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies.',
 ];
+
+/**
+ * The note on the triplet-density threshold, for a prose draft only (dialog and Fountain never run the family), and only
+ * when a rates file is loaded: the threshold and the human medians both come from that file.
+ */
+export function tripletNote(rates: Rates | undefined | null): string | undefined {
+  if (!rates) return undefined;
+  const meds = Object.values(rates.datasets).filter(d => d.human.medians.tripletListsPer1000 !== null);
+  if (!meds.length) return undefined;
+  return `The triplet-density hallmark fires above ${thresholdFromRates(rates)} lists per 1,000 words, the 95th percentile of the human samples; their median is ${meds.map(d => `${d.human.medians.tripletListsPer1000} in ${d.label}`).join('; ')}.`;
+}
 
 /** The context values for the body units, never flagged. `words` is the denominator. */
 export function measureUnits(units: Unit[]): { words: number; measured: Measured } {

@@ -97,3 +97,22 @@ describe('human-rate line in the text report', () => {
     for (const l of rateLines) expect(l).not.toMatch(/likely|probab|written by|wrote|AI-generated/i);
   });
 });
+
+describe('the triplet-density note', () => {
+  const NOTE = /^The triplet-density hallmark fires above /;
+  const notes = (r: ReturnType<typeof buildReport>) => r.measured.notes.filter(n => NOTE.test(n));
+  it('is printed for a prose draft with rates, with the threshold and medians read from the file', () => {
+    const rates = structuredClone(loadRates()!);
+    rates.datasets.arxiv.human.medians.tripletListsPer1000 = 1.5;
+    const [n] = notes(buildReport(doc(), MODEL, rates));
+    expect(n).toContain(`1.5 in ${rates.datasets.arxiv.label}`);
+    expect(n).toContain('above 10.9 lists');
+  });
+  it('is absent without rates', () => {
+    expect(notes(buildReport(doc(), MODEL, null))).toEqual([]);
+  });
+  it('is absent for a Fountain or dialog draft even with rates', () => {
+    const text = 'Title: T\nForm: tv-drama\n\nINT. GARDEN - DAY\n\nHe waits.\n';
+    expect(notes(buildReport(parseDocument('g.fountain', text, {}), text, loadRates()))).toEqual([]);
+  });
+});

@@ -3,7 +3,7 @@ import { getForm } from '../forms.ts';
 import { AI_TELLS } from '../measure/lexicon.ts';
 import { parseMarkdown } from '../parse/markdown.ts';
 import { loadRates, type Rates } from './rates.ts';
-import { detect, FAMILIES, measureUnits, unitsOf, type Evidence, type Finding, type Measured } from './detectors.ts';
+import { detect, FAMILIES, measureUnits, tripletNote, unitsOf, type Evidence, type Finding, type Measured } from './detectors.ts';
 
 /** Share of human texts in a measured sample with at least one finding of the family, by dataset id. */
 export type HumanRate = Record<string, { rate: number; n: number }>;
@@ -101,9 +101,11 @@ export function buildReport(doc: Doc, source?: string, rates: Rates | null = loa
   const findings = detect(units, { markdown: doc.format === 'markdown', limited: doc.format !== 'markdown' });
   const { words, measured: counted } = measureUnits(units);
   // Without raw text the formatting detectors cannot run; say so instead of staying silent.
-  const noted = doc.format === 'markdown' && raws.length !== doc.blocks.length
-    ? { ...counted, notes: [...counted.notes, NO_RAW_NOTE] }
-    : counted;
+  const extra = [
+    ...(doc.format === 'markdown' ? [tripletNote(rates)] : []),
+    ...(doc.format === 'markdown' && raws.length !== doc.blocks.length ? [NO_RAW_NOTE] : []),
+  ].filter((n): n is string => n !== undefined);
+  const noted = extra.length ? { ...counted, notes: [...counted.notes, ...extra] } : counted;
   const medians = humanMediansOf(rates ?? undefined);
   const measured = medians ? { ...noted, humanMedians: medians } : noted;
   const hard = findings.filter(f => f.tier === 'hard');

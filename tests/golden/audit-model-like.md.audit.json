@@ -294,8 +294,8 @@
     "notes": [
       "Em dash rates run from 0.0 to 9.1 per 1,000 words across models, so a rate says little by itself.",
       "Reported for context only; none of these values is flagged.",
-      "The triplet-density hallmark fires above 10.9 lists per 1,000 words, the 95th percentile of the human samples; their median is 0.",
-      "The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies."
+      "The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies.",
+      "The triplet-density hallmark fires above 10.9 lists per 1,000 words, the 95th percentile of the human samples; their median is 0 in arXiv abstracts, 2018 to 2021; 0 in Wikipedia introductions, before 2023."
     ],
     "humanMedians": {
       "arxiv": {
