@@ -38,31 +38,37 @@ const splitProse = (b: Block): string[] => {
   return sentences(b.text);
 };
 const VERSE_BLOCKS = new Set<BlockKind>(['paragraph', 'list-item', 'step', 'quote']);
+/** A unit and, for a verse paragraph, the 0-based line of the block it came from (null: the unit belongs to the whole block). */
+interface At { unit: string; at: number | null }
+const bare = (units: string[]): At[] => units.map(unit => ({ unit, at: null }));
 /**
  * A verse block as groups of units. In a lyric form a plain, bold or bracketed section label is a heading (a group of its
  * own, like a `##` heading) and a direction such as `(hum softly)` is no unit, exactly as extractVerse reads them.
  */
-const splitVerse = (lyric: boolean) => (b: Block): string[][] => {
-  if (b.kind === 'heading') return [b.text.trim() ? [b.text.trim()] : []];
+const splitVerseAt = (lyric: boolean) => (b: Block): At[][] => {
+  if (b.kind === 'heading') return [bare(b.text.trim() ? [b.text.trim()] : [])];
   if (b.kind === 'note' && !b.meta?.onscreen) return [];
-  if (!VERSE_BLOCKS.has(b.kind)) return [sentences(b.text)];
-  if (b.kind !== 'paragraph' || !lyric) return [lines(b.text)];
-  const groups: string[][] = [[]];
-  for (const l of lines(b.text)) {
+  if (!VERSE_BLOCKS.has(b.kind)) return [bare(sentences(b.text))];
+  if (b.kind !== 'paragraph') return [bare(lines(b.text))];
+  if (!lyric) return [lines(b.text).map((unit, at) => ({ unit, at }))];
+  const groups: At[][] = [[]];
+  lines(b.text).forEach((l, at) => {
     const c = classifyLine(l, true);
-    if (c.kind === 'direction') continue;
-    if (c.kind === 'label') groups.push([c.label], []);
-    else groups.at(-1)!.push(l);
-  }
+    if (c.kind === 'direction') return;
+    if (c.kind === 'label') groups.push([{ unit: c.label, at }], []);
+    else groups.at(-1)!.push({ unit: l, at });
+  });
   return groups;
 };
+const splitVerse = (lyric: boolean) => (b: Block): string[][] => splitVerseAt(lyric)(b).map(g => g.map(x => x.unit));
 /** Spoken lines carry who says them, so a script reads as a script: `NAME: text`, a cue extension kept as written (V.O.), CONT'D not. */
-const spoken = (b: Block, l: string): string => {
-  if (b.kind === 'parenthetical') return `(${l})`;
-  if ((b.kind !== 'line' && b.kind !== 'bark') || !b.speaker) return l;
+/** The `NAME (EXT): ` a spoken unit starts with; empty for a unit that carries no speaker. */
+export const speakerPrefix = (b: Block): string => {
+  if ((b.kind !== 'line' && b.kind !== 'bark') || !b.speaker) return '';
   const ext = typeof b.meta?.extension === 'string' ? ` (${b.meta.extension})` : '';
-  return `${b.speaker}${ext}: ${l}`;
+  return `${b.speaker}${ext}: `;
 };
+const spoken = (b: Block, l: string): string => (b.kind === 'parenthetical' ? `(${l})` : `${speakerPrefix(b)}${l}`);
 const splitLines = (kinds: Set<BlockKind>) => (b: Block): string[] => (kinds.has(b.kind) ? lines(b.text).map(l => spoken(b, l)) : []);
 
 /** Groups of units, one group per block: a group is a paragraph (prose), a stanza (verse) or a script block. */
@@ -100,3 +106,21 @@ export function layoutOf(text: string, format: Format, form?: string): UnitLayou
 }
 
 export const unitsOf = (text: string, format: Format, form?: string): string[] => layoutOf(text, format, form).units;
+
+/**
+ * The units of a text with the block each came from, in page order (flattened: `groupsOf` and this agree by construction,
+ * and a test pins it), plus every block the parser found (notes, sections and cues bound a span). `at` is the unit's 0-based
+ * line inside a verse paragraph, else null (the unit is the whole block).
+ */
+export function blockUnits(text: string, format: Format, form?: string): { entries: Array<{ block: Block; units: At[] }>; all: Block[] } {
+  if (text.trim() === '') return { entries: [], all: [] };
+  const def = format === 'markdown' && form !== undefined ? FORMS.find(f => f.id === form)?.verse : undefined;
+  const entries: Array<{ block: Block; units: At[] }> = [];
+  const push = (block: Block, units: At[]) => { if (units.length) entries.push({ block, units }); };
+  const all = format === 'markdown' ? parseMarkdown(text).blocks : format === 'fountain' ? parseFountain(text).blocks : parseDialog(text).blocks;
+  for (const b of all) {
+    if (format === 'markdown') push(b, def ? splitVerseAt(def.kind === 'lyric')(b).flat() : bare(splitProse(b)));
+    else push(b, bare(splitLines(format === 'fountain' ? FOUNTAIN_UNITS : DIALOG_UNITS)(b)));
+  }
+  return { entries, all };
+}
