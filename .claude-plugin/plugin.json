@@ -1,7 +1,7 @@
 {
   "name": "agent-prose",
-  "version": "0.4.0",
-  "description": "Writing-craft toolkit for coding agents: poems and song lyrics, game dialogue and barks, user instructions and docs, academic and professional prose, sitcom, TV drama, stage plays, YouTube scripts and speeches, drafted in native formats, measured and linted against cited craft rules. Twelve skills: prose-setup, prose-dialog, prose-script, prose-speech, prose-instruct, prose-formal, prose-comedy, prose-voice, prose-review, prose-poetry, prose-songwriting, prose-audit. Variant sets let the owner choose between measurably different rewrites, and a taste model learns the owner's style tendencies from those choices.",
+  "version": "0.5.0",
+  "description": "Writing-craft toolkit for coding agents: poems and song lyrics, game dialogue and barks, user instructions and docs, academic and professional prose, sitcom, TV drama, stage plays, YouTube scripts and speeches, drafted in native formats, measured and linted against cited craft rules. Twelve skills: prose-setup, prose-dialog, prose-script, prose-speech, prose-instruct, prose-formal, prose-comedy, prose-voice, prose-review, prose-poetry, prose-songwriting, prose-audit. Variant sets let the owner choose between measurably different rewrites, a taste model learns the owner's style tendencies from those choices, and prose audit reports phrasing and structure hallmarks some readers associate with AI-generated text (never who wrote a passage).",
   "author": { "name": "ehartye" },
   "repository": "https://github.com/ehartye/agent-prose",
   "license": "MIT",
