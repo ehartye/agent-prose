@@ -25,6 +25,9 @@ taste is yours. This skill puts the choice with the owner and makes the options 
    (`--context`, at most 400). Show it to the owner and change it until they agree. Only then open the
    set with `--brief-confirmed`; never write variants against a brief the owner has not confirmed.
    The brief is shown to the owner above the variants, so they judge a rewrite knowing who says it.
+   If the speaker has a voice bible, `--character <voice-id>` snapshots its bio (or name and description) into
+   the brief; with no `--character` the bible of the reviewed lines' speaker is used when exactly one matches,
+   and the output says so. Either way it is unconfirmed: show the owner that text, not just the id.
    It describes the speaker and the setting; it is not a taste signal and changes no ranking.
    Name the directions, one per variant:
    `prose set new <draft> --directions punchier,drier,warmer --count 4 --character "<who>" --context "<where>" --brief-confirmed`

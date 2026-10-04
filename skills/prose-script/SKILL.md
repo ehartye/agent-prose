@@ -54,7 +54,8 @@ conventions; [references/youtube.md](references/youtube.md) for segments, hooks 
 ## When the owner will choose between rewrites
 
 Write the brief first (prose-review): the character is how the speaker talks and what they want in
-the scene; the context is the scene and who is listening. Confirm it with the owner before
+the scene; the context is the scene and who is listening. A speaker with a voice bible can supply the character: `--character <voice-id>`
+(prose-voice). Confirm it with the owner before
 `prose set new ... --brief-confirmed`.
 
 ## Check, then report numbers

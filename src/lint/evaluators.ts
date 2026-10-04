@@ -235,7 +235,7 @@ export const EVALUATORS: Record<string, Evaluator> = {
           message: `${speaker}: ${TARGET_LABEL[key]} ${value} is outside [${range[0]}, ${range[1]}] from voice ${voice.id}`,
           line: firstLine(doc, speaker), speaker,
           measured: { voice: voice.id, target: key, value, range, words: stats.words },
-          fix: value > range[1] ? `Bring ${TARGET_LABEL[key]} down toward the bible's samples.` : `Bring ${TARGET_LABEL[key]} up toward the bible's samples.`,
+          fix: value > range[1] ? `Bring ${TARGET_LABEL[key]} down toward the bible's target range.` : `Bring ${TARGET_LABEL[key]} up toward the bible's target range.`,
         }];
       });
     });

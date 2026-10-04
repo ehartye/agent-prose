@@ -13,7 +13,8 @@ import { EVENT_ID_RE, setDir } from '../owner/paths.ts';
 import { withSetLock } from '../owner/fsutil.ts';
 import { predictWithModel, repairModelPrediction } from '../taste/prediction.ts';
 import { isStale, originalLines } from '../owner/original.ts';
-import { briefView, createSet, editedBrief, listSetsDetailed, readSet, variantPath, writeSet, type Brief, type BriefInput } from '../owner/sets.ts';
+import { resolveBySpeaker, resolveCharacterText } from '../owner/character.ts';
+import { briefView, createSet, newBrief, editedBrief, listSetsDetailed, readSet, variantPath, writeSet, type Brief, type BriefInput } from '../owner/sets.ts';
 
 const whole = (text: string, what: string): number => {
   if (!/^\d+$/.test(text.trim())) throw new ProseError('E_USAGE', `${what} must be a whole number`, { hint: `Got "${text}"` });
@@ -34,7 +35,7 @@ export function registerSetCommands(program: Command, io: Io): void {
     .option('--directions <list>', 'comma-separated directions, assigned to variants in turn (e.g. punchier,drier)')
     .option('--count <n>', 'number of variants, 2-6 (default: one per direction, at least 3)')
     .option('--id <id>', 'set id (default: generated)')
-    .option('--character <text>', 'the brief: who speaks and how they talk (at most 600 characters), shown to the owner above the variants')
+    .option('--character <text|voice-id>', 'the brief: who speaks and how they talk (at most 600 characters), shown to the owner above the variants; a voice id (a bible in .agent-prose/voices) snapshots its bio. Without it, the bible of a speaker of the reviewed lines picks the bible when exactly one matches')
     .option('--context <text>', 'the brief: where and how the lines are heard (at most 400 characters)')
     .option('--brief-confirmed', 'the owner agreed to this brief; without it the set records the brief as unconfirmed and set check warns')
     .option('--brief-from <set-id>', "copy another set's brief, confirmation included (a refine round); not with --character or --context")
@@ -42,13 +43,21 @@ export function registerSetCommands(program: Command, io: Io): void {
     .action((draft: string, opts: { directions?: string; count?: string; id?: string; character?: string; context?: string; briefConfirmed?: boolean; briefFrom?: string; lines?: string }) => {
       const project = needProject(dirname(resolve(draft)));
       let brief: BriefInput | Brief | undefined;
+      const notes: string[] = [];
       if (opts.briefFrom !== undefined) {
         if (opts.character !== undefined || opts.context !== undefined) throw new ProseError('E_USAGE', '--brief-from copies a brief, so it cannot be mixed with --character or --context', { hint: 'Edit afterwards with prose set brief <id>' });
         const from = readSet(project, opts.briefFrom).brief;
         if (!from) throw new ProseError('E_USAGE', `Set ${opts.briefFrom} has no brief to copy`, { hint: 'Pass --character and --context instead' });
         brief = opts.briefConfirmed ? { ...from, confirmedAt: new Date().toISOString() } : from;
-      } else if (opts.character !== undefined || opts.context !== undefined || opts.briefConfirmed) {
-        brief = { character: opts.character, context: opts.context, confirmed: opts.briefConfirmed };
+      } else {
+        // An id match wins: --character <voice-id> snapshots the bible; other text stays inline. Without --character the speaker of the lines decides.
+        const picked = opts.character !== undefined
+          ? resolveCharacterText(project, opts.character)
+          : resolveBySpeaker(project, draft, readFileSync(draft, 'utf8'), opts.lines);
+        notes.push(...picked.notes);
+        if (picked.character !== undefined || opts.context !== undefined || opts.briefConfirmed) {
+          brief = newBrief({ character: picked.character, characterRef: picked.characterRef, context: opts.context, confirmed: opts.briefConfirmed }, new Date());
+        }
       }
       const s = createSet(project, draft, {
         ...(brief ? { brief } : {}),
@@ -63,6 +72,7 @@ export function registerSetCommands(program: Command, io: Io): void {
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: false } : null,
         excluded: s.excluded ?? null,
+        ...(notes.length ? { notes } : {}),
         next: `${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}${s.excluded ? `${s.excluded.length} struck line${s.excluded.length === 1 ? ' is' : 's are'} excluded: leave ${s.excluded.length === 1 ? 'it' : 'them'} exactly as ${s.excluded.length === 1 ? 'it is' : 'they are'} in every variant (set check rejects an edit). ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
       });
     });
@@ -70,7 +80,7 @@ export function registerSetCommands(program: Command, io: Io): void {
   set.command('brief')
     .description('Edit the brief of a set (character and context). New text clears the confirmation unless --confirmed is passed again; a picked set is refused')
     .argument('<id>', 'set id')
-    .option('--character <text>', 'who speaks and how they talk (at most 600 characters)')
+    .option('--character <text|voice-id>', 'who speaks and how they talk (at most 600 characters); a voice id takes a fresh snapshot of that bible')
     .option('--context <text>', 'where and how the lines are heard (at most 400 characters)')
     .option('--clear-character', 'remove the character')
     .option('--clear-context', 'remove the context')
@@ -78,16 +88,19 @@ export function registerSetCommands(program: Command, io: Io): void {
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
     .action((id: string, opts: { character?: string; context?: string; clearCharacter?: boolean; clearContext?: boolean; confirmed?: boolean; dir?: string }) => {
       const project = needProject(opts.dir ?? process.cwd());
+      const notes: string[] = [];
       const brief = withSetLock(project, id, ctx => {
         const s = readSet(project, id);
         if (s.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${id} is already picked, so its brief cannot change`, { hint: 'The owner chose with the old brief on screen; start a new set for new words' });
-        const next = editedBrief(s.brief, opts, new Date());
+        const picked = opts.character !== undefined ? resolveCharacterText(project, opts.character) : undefined;
+        if (picked) notes.push(...picked.notes);
+        const next = editedBrief(s.brief, picked ? { ...opts, character: picked.character, characterRef: picked.characterRef } : opts, new Date());
         const { brief: _old, ...rest } = s;
         ctx.heartbeat();
         writeSet(project, next ? { ...rest, brief: next } : rest);
         return next;
       });
-      io.emit({ set: id, brief: brief ? briefView(brief) : null });
+      io.emit({ set: id, brief: brief ? briefView(brief) : null, ...(notes.length ? { notes } : {}) });
     });
 
   set.command('list')

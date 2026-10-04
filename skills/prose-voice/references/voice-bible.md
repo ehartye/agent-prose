@@ -13,11 +13,13 @@ lint finds the project by walking up from the draft's directory.
 | `speakers` | yes | speaker names this bible covers (case-insensitive), e.g. `[GRIMBLE, GRIMBLE (O.S.)]` |
 | `register` | no | e.g. `gruff transactional`, `warm formal` |
 | `description` | yes | who they are, what they want, how they talk |
-| `samples` | yes | real lines in the voice (3–10) |
+| `bio` | no | personality and background, at most 600 characters; no lint rule reads it, `set new --character <id>` snapshots it into a review brief |
+| `samples` | no | real lines in the voice (3–10); empty when the bible was made with `prose voice new` |
 | `banned` | no | words or phrases the character never says |
 | `catchphrases` | no | lines or phrases they repeat on purpose |
 | `targets` | no | measured ranges: `sentenceMean`, `contractionsPer1000`, `hedgesPer1000`, `exclaimPer100`, each `[min, max]` |
 
+`prose voice new --id ID --name NAME --speaker NAME [--bio TEXT]` writes a bible with no draft: no samples, no targets.
 `prose voice fit <draft> --speaker NAME --id ID` writes a bible with up to five samples and each
 target set to the measured value ±25%. Ranges from a handful of lines are noisy — widen them by
 hand until you have about 50 words of the character.
@@ -30,6 +32,7 @@ id: grimble
 name: Grimble
 speakers: [GRIMBLE]
 register: gruff, transactional, suspicious
+bio: Goblin merchant who lost a family shop to a creditor and now trusts no one with a coin.
 description: >
   Goblin merchant. Wants coin and nothing else; treats every customer as a probable thief.
   Clipped sentences, dark deadpan, prices everything — including insults.
