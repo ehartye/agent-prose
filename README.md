@@ -35,6 +35,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose-voice` | Voice bibles for characters, brands and speakers (bio, samples, ranges), made from a description or fitted from lines, and checked on every draft |
 | `prose-poetry` | Poems and verse forms (free verse, sonnet, haiku, limerick, ballad, villanelle, sestina) and words to a given meter, checked for syllables, rhyme and form |
 | `prose-songwriting` | Song lyrics (verse-chorus, AABA, lullaby, hymn text, words to a melody): labelled sections, matched line lengths, refrains, syllables per beat |
+| `prose-review-batch` | Many lines in one sitting: one reading-page queue over up to 50 sets, a choice per set staged and sent together, picks recorded like any other, `reading wait` returning them as they arrive |
 | `prose-strike` | Lines the owner wants gone: strikes recorded with a reason, read back, kept out of rewrites; removed only after the owner confirms the exact text (apply, undo) |
 | `prose-audit` | Audit a draft for generic or formulaic prose (stock openers, hollow significance, formula sentence shapes, chat residue, model-era vocabulary) and revise it by span toward specifics; never judges who wrote it |
 
@@ -71,9 +72,11 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose strike list [<draft>] [--all] [--reason <tag>] [--state pending\|applied\|all]` | strikes with their reasons and `stale` flags, counts by reason, across drafts with `--all` |
 | `prose serve [--local] [--port <n>] [--foreground] [--stop] [--status]` | start or reuse the LAN reading server and print its link (the link carries the access token) |
 | `prose reading open --set <id> [--no-predict] [--prompt <text>] [--dir <project>]` | put a checked, predicted set on the reading page: freezes what is shown, registers the project, prints the link |
+| `prose reading open --sets a,b,c \| --pending [--limit <n>] [--no-predict] [--prompt <text>]` | one batch session over up to 50 sets (mixed forms allowed): a queue over ordinary sessions, one link. `--sets` checks every set first and opens nothing if any fails; `--pending` takes every set with a sealed prediction and no pick, oldest first, and lists the ones it left out with a reason |
 | `prose reading wait --id <id> [--timeout <s>]` | block until the owner asks to refine, ships or abandons; prints champion, directions, notes with the unit text, the existing line (`original`) and what to do next |
+| `prose reading wait --id <queue id> [--since <cursor>] [--settle <s>] [--timeout <s>]` | a batch: block until picks arrive (together, once no further pick has been recorded for `--settle` seconds, default 1.5) and print them with each reveal and the `cursor` to pass next; `event: done` when every set has a pick, the owner pressed Finish, or the queue was closed |
 | `prose reading round --id <id> --set <new-set>` | answer a refine request with a new set; its survivors join the session against the pinned champion |
-| `prose reading status\|list\|close` | the folded session state (and the reveal once shipped), the project's sessions, abandon an open session |
+| `prose reading status\|list\|close` | the folded session state (and the reveal once shipped), the project's sessions and queues, abandon an open session; with a queue id: each set and, for sent ones only, the pick and its reveal; `close` abandons the unsent items and keeps the picks already sent |
 
 ## Taste
 
@@ -117,6 +120,25 @@ terminal. `prose serve` runs a small web server and the agent hands the owner a 
 Every judgement lands in the same taste log as `prose set pick`. The page never edits a draft itself;
 every write, including a removal, goes through the `prose` CLI.
 
+### Reviewing many lines at once
+
+`prose reading open --sets a,b,c` (or `--pending`) opens one page for up to 50 sets. The left rail lists each item (the
+character and the line, with a mark: a hollow circle waiting, a filled circle with the picked letter, a red slash skipped; each
+also has its words), with an "N of M chosen" count; on a phone the rail is a strip across the top. The owner walks the queue
+with the mouse, touch or the keyboard (`j` and `k` for next and previous, `n` for the next unchosen item, `a` to `f` to keep
+a draft, `s` to skip, `?` for the list; shortcuts can be turned off), keeps one draft per item (or none), and presses **Send picks**.
+
+- **Choices are staged.** Keeping a draft is saved in `.agent-prose/queues/<id>/` and can be changed; nothing is recorded until
+  Send picks, which opens a confirmation listing every pick. Sending runs `prose set pick` per set, so predictions reveal and the
+  taste model get exactly what they get from a single-set session. Picks cannot be changed once sent.
+- **A batch item is a quick pick.** No duel, no refine round and no notes, so a batch yields pick rows, not duel rows. Each item
+  links to its own full session. Skipped items return at the end of the queue; **Finish** ends the review and leaves unpicked sets
+  sealed, for `--pending` to offer again.
+- **Sealed predictions stay sealed per set** until its own pick. A set picked from the command line while the queue is open shows
+  as picked outside the page.
+- A batch is a queue over ordinary sessions: single-set sessions and their links work exactly as before. The queue folder is
+  working data: add `queues/` to an existing project's `.agent-prose/.gitignore` (new projects get it).
+
 **Exposure.** By default the server listens on the whole network, and anyone on it who has the link can read the drafts
 in the projects registered with the server, and delete lines from them (strike, then apply: the page shows the exact text and asks for confirmation, and an undo restores the lines; the record is in `.agent-prose/strikes/`). Traffic is plain HTTP; the link carries a random token. Tell the owner
 before opening a session, and use `prose serve --local` to keep the server on this machine (the page then works only
@@ -140,7 +162,7 @@ the registered projects (`AGENT_PROSE_HOME` moves it).
 
 **Not included.** No cloud text-to-speech (the browser's voice only; cloud audio belongs to the planned render command).
 
-`prose init` writes `.agent-prose/.gitignore` so sets, taste data and strike logs (which hold struck text) stay out of version control (an existing project keeps its own file: add `strikes/` to it);
+`prose init` writes `.agent-prose/.gitignore` so sets, taste data, review queues and strike logs (which hold struck text) stay out of version control (an existing project keeps its own file: add `strikes/` and `queues/` to it);
 voice bibles stay trackable. Per-user taste logs live under `~/.agent-prose/taste` (override with
 `AGENT_PROSE_HOME`). `AGENT_PROSE_HOME` moves both the managed runtime and the taste logs; to reinstall,
 remove `releases/<key>`, not the directory: it also holds your taste history.

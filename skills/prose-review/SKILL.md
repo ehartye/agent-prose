@@ -119,6 +119,12 @@ Do not:
 `prose serve --status` shows whether the server runs; `prose serve --stop` stops it and keeps
 the link working for next time.
 
+## Many lines at once, and the lineup
+
+For many lines in one sitting, use prose-review-batch: `reading open --sets a,b,c` or `--pending` gives the owner one
+queue, with picks sent together. The lineup shows the current line and the drafts side by side with the differences
+marked; Keep marks the ones worth a duel.
+
 ## What gets learned
 
 Each pick is stored with its measured style, per project and per user. A pick among N shown

@@ -43,6 +43,8 @@ context for get a `comment`.
   not just proximity. Two lines in a pool must differ in more than a word or two.
 - Conditions are free-text strings for the engine; the format has no key for setting variables, so describe state changes in a node's `comment` and make sure every flag a condition tests is set somewhere in the game.
 
+For many lines to judge at once, use the prose-review-batch skill.
+
 ## Check, then report numbers
 
 1. Run `prose lint <file>`. Fix every error. Fix each warning or say why it stays.
