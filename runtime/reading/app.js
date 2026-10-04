@@ -133,8 +133,18 @@
     return { rows, note: b.confirmed ? null : 'Not confirmed with you yet' };
   }
 
-  /** What is on screen: stage, round, event count and the brief (an edit of its words or its confirmation re-renders). */
-  const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events + '|' + (p.session && p.session.brief ? JSON.stringify([p.session.brief.character, p.session.brief.context, !!p.session.brief.confirmed]) : '');
+  /**
+   * The existing line as the page shows it: one row per line, `Speaker: text` as units read, plus a muted note when the
+   * draft has changed since the set was made. Null when the set records no original. Display only.
+   */
+  function originalParts(o) {
+    if (!o || !Array.isArray(o.lines) || !o.lines.length) return null;
+    return { rows: o.lines.map(l => (l.speaker ? l.speaker + ': ' : '') + l.text), note: o.stale ? 'The draft has changed since this set was made' : null };
+  }
+
+  /** What is on screen: stage, round, event count, the brief and the existing line (an edit of either, or a stale draft, re-renders). */
+  const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events + '|' + (p.session && p.session.brief ? JSON.stringify([p.session.brief.character, p.session.brief.context, !!p.session.brief.confirmed]) : '')
+    + (p.session && p.session.original ? '|' + JSON.stringify([p.session.original.stale, p.session.original.lines.map(l => [l.speaker, l.text])]) : '');
 
   /** True only when the browser has a speech synthesizer object and an utterance constructor (the property alone can be undefined). */
   const speechSupported = win => !!(win && win.speechSynthesis && typeof win.SpeechSynthesisUtterance === 'function');
@@ -143,7 +153,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, signature, backoff, revealParts, speechSupported, SPEECH_IGNORED };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, originalParts, signature, backoff, revealParts, speechSupported, SPEECH_IGNORED };
     return;
   }
 
@@ -162,7 +172,7 @@
   let fatal = false;
   const ui = {
     marks: {}, marksRound: -1, selected: null, noteDraft: '', rate: 1, directions: [], like: '', confirmShip: false,
-    showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: true,
+    showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: true, originalOpen: true,
   };
 
   const $ = id => document.getElementById(id);
@@ -558,6 +568,18 @@
     return el;
   }
 
+  /** "The current line": what the set was asked to improve, open above the variants. Context only: no controls, no notes. */
+  function originalBlock() {
+    const parts = originalParts(data.session.original);
+    if (!parts) return null;
+    const el = h('details', { class: 'original', open: ui.originalOpen },
+      h('summary', { text: 'The current line' }),
+      parts.rows.map(row => h('p', { class: 'original-line', text: row })),
+      parts.note ? h('p', { class: 'quiet original-note', text: parts.note }) : null);
+    el.addEventListener('toggle', () => { ui.originalOpen = el.open; });
+    return el;
+  }
+
   function lineupScreen() {
     const s = data.state;
     const pinned = s.round > 0 && s.champion !== null && s.lineup.includes(s.champion) ? s.champion : null;
@@ -581,7 +603,7 @@
       const broken = shown.filter(c => !choosable(c) && c.index !== pinned).map(c => c.index);
       await send({ type: 'lineup', kept, duds: [...duds, ...broken], order: shown.map(c => c.index) });
     }, 'primary', { disabled: !ready, 'data-gate': '1' });
-    return [briefBlock(), rateControl(), cards, h('div', { class: 'actionbar' }, go,
+    return [briefBlock(), originalBlock(), rateControl(), cards, h('div', { class: 'actionbar' }, go,
       h('span', { class: 'quiet', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }))];
   }
 
@@ -614,14 +636,14 @@
     });
     const bar = duelBar(order.map(idx => (candidateOf(idx) || {}).label || '?')).map(b =>
       btn(b.text, choose(b.choice), b.pick ? 'primary bar-pick' : '', { 'data-gate': '1', ...(b.pick ? { 'aria-label': 'Choose ' + b.text.toLowerCase() } : {}) }));
-    return [briefBlock(), rateControl(), h('div', { class: 'duel-grid' }, cards), h('div', { class: 'actionbar' }, bar)];
+    return [briefBlock(), originalBlock(), rateControl(), h('div', { class: 'duel-grid' }, cards), h('div', { class: 'actionbar' }, bar)];
   }
 
   function refineScreen() {
     const s = data.state;
     const champ = candidateOf(s.champion);
     setTitle('Your favorite so far', 'Tell the writer what to try next, or ship this one.');
-    const out = [briefBlock()];
+    const out = [briefBlock(), originalBlock()];
     if (champ) out.push(card(champ, { tag: 'Winning so far', noChange: false }));
     const chips = data.directions.map(d => {
       const on = ui.directions.includes(d);

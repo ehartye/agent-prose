@@ -133,6 +133,11 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 8px; border: 2
 .brief summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
 .brief p { max-width: 62ch; white-space: pre-line; }
 .brief .brief-note { font-size: 0.9rem; margin-bottom: 0.75rem; }
+/* The current line: what the set was asked to improve, above the variants. Display only; set apart from the brief by a muted edge and the serif text units use. */
+.original { border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 8px; background: var(--surface); padding: 0 0.9rem; margin: 0.75rem 0; overflow-wrap: anywhere; }
+.original summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.original .original-line { max-width: 62ch; font-family: var(--serif); white-space: pre-line; }
+.original .original-note { font-size: 0.9rem; margin-bottom: 0.75rem; }
 .reveal p { max-width: 62ch; }
 .reveal .why { font-family: var(--serif); border-left: 4px solid var(--accent); padding-left: 0.75rem; }
 .center { text-align: center; padding: 2rem 0; }

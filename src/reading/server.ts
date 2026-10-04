@@ -20,6 +20,7 @@ import { writeFileAtomic } from '../owner/fsutil.ts';
 import { ID_RE, projectKey, proseHome, sessionDir, sessionsDir, setDir, validId } from '../owner/paths.ts';
 import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
 import { readPrediction, textHash } from '../owner/prediction.ts';
+import { draftHash, originalLines, type Original } from '../owner/original.ts';
 import { briefView, readSet, variantPath, type PromptSet } from '../owner/sets.ts';
 import {
   CLIENT_EVENTS, EventSchema, appendEventAsync, checkTransition, foldSession, nextPair, readEvents, readReveal, readSession, variantOf, writeRevealAsync,
@@ -337,8 +338,11 @@ interface Candidate { index: number; label: string; units?: string[]; layout?: L
 
 interface SessionRow { id: string; setId: string; form: string; stage: string; createdAt: string; project: string }
 
+/** The line(s) the set revises, as the owner sees them, and whether the draft has changed since. */
+export interface OriginalView { source: string; lines: ReturnType<typeof originalLines>; stale: boolean }
+
 export interface SessionPayload {
-  session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null; brief: ReturnType<typeof briefView> | null };
+  session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null; brief: ReturnType<typeof briefView> | null; original: OriginalView | null };
   state: Omit<SessionState, 'candidates'>;
   candidates: Candidate[];
   order: number[];
@@ -464,13 +468,14 @@ export class ReadingServer {
   /** One write at a time per session: the read-check-CLI-append of two events never interleaves. */
   private queues = new Map<string, Promise<unknown>>();
   /** Parsed sets by set.json path, valid while its (mtime, size) is unchanged. */
+  private draftCache = new Map<string, { key: string; hash: string | null }>();
   private setCache = new Map<string, { key: string; set: PromptSet }>();
   /** A variant's checked text by file path, valid while the file's (mtime, size) and the frozen hash are unchanged. */
   private textCache = new Map<string, { key: string; text: string | null; hashOk: boolean; layout?: ReturnType<typeof layoutOf> }>();
   /** One /api/sessions row per session, valid while session.json and events.jsonl are unchanged. */
   private rowCache = new Map<string, { key: string; row: SessionRow | null }>();
   /** How many variant files were read and hashed (a poll that finds nothing changed adds none); for tests. */
-  readonly reads = { variants: 0 };
+  readonly reads = { variants: 0, drafts: 0 };
   /** The taste model and candidate vectors behind the duel the page asks (cached; loaded with async fs). */
   private taste = new TasteDuels(() => logError('taste model unavailable; using the default pairing', 'E_TASTE'));
   /** Taste loads so far (models fitted, candidate vectors computed); for tests. */
@@ -564,6 +569,29 @@ export class ReadingServer {
   }
 
   /**
+   * The existing line: the round-0 set's snapshot (a refine round's set records none, and the question does not change
+   * between rounds), with `stale` from the draft's hash now. The hash is remembered per (file, mtime, size), so a poll that
+   * finds the draft unchanged stats it instead of reading it. A missing or unreadable draft is stale.
+   */
+  private originalOf(root: string, setId: string): OriginalView | null {
+    const o: Original | undefined = this.setOf(root, setId, false)?.original;
+    if (!o) return null;
+    let hash: string | null = null;
+    try {
+      const file = join(root, o.source);
+      const key = statKey(file);
+      const hit = this.draftCache.get(file);
+      if (hit?.key === key) hash = hit.hash;
+      else {
+        this.reads.drafts++;
+        hash = draftHash(readFileSync(file, 'utf8'));
+        remember(this.draftCache, file, { key, hash });
+      }
+    } catch { hash = null; }
+    return { source: o.source, lines: originalLines(o), stale: hash !== o.draftHash };
+  }
+
+  /**
    * One candidate's text, checked against the hash frozen when the prediction was sealed. Never throws. The check is
    * remembered per (file, mtime, size, frozen hash), so a poll stats the file instead of reading and hashing it again;
    * `fresh` (the note check, before a write) skips the memory and looks at the file itself.
@@ -639,7 +667,7 @@ export class ReadingServer {
     const shown = [...plan.order, ...plan.sequence.filter(i => !plan.order.includes(i))];
     const { candidates: _hidden, ...publicState } = state;
     return {
-      session: { id: session.id, setId: session.setId, form: session.form, register: session.register, prompt: session.prompt, target: session.target, wpm: session.wpm, brief: this.briefOf(root, maps) },
+      session: { id: session.id, setId: session.setId, form: session.form, register: session.register, prompt: session.prompt, target: session.target, wpm: session.wpm, brief: this.briefOf(root, maps), original: this.originalOf(root, session.setId) },
       state: publicState,
       candidates: shown.map(make),
       order: plan.order,
