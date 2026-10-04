@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 
@@ -36,7 +36,23 @@ export type Rule = z.infer<typeof RuleSchema>;
 export type Reference = z.infer<typeof ReferenceSchema>;
 
 export const RULES: Rule[] = RulesFile.parse(JSON.parse(readFileSync(join(DIR, 'rules.json'), 'utf8'))).rules;
+/** The references that rules, lexicons and audit families cite (`craft/references.json`). */
 export const REFERENCES: Reference[] = ReferencesFile.parse(JSON.parse(readFileSync(join(DIR, 'references.json'), 'utf8'))).references;
+
+/**
+ * Sources only a craft guide cites: one `craft/guides/<family>.refs.json` fragment per guide, same shape as
+ * references.json. Kept apart from REFERENCES so adding a guide never edits a shared file; ids are unique across both.
+ */
+export interface GuideReferences { family: string; references: Reference[] }
+const GUIDES_DIR = join(DIR, 'guides');
+export const GUIDE_REFERENCES: GuideReferences[] = (existsSync(GUIDES_DIR) ? readdirSync(GUIDES_DIR) : [])
+  .filter(f => f.endsWith('.refs.json')).sort()
+  .map(f => ({
+    family: f.slice(0, -'.refs.json'.length),
+    references: ReferencesFile.parse(JSON.parse(readFileSync(join(GUIDES_DIR, f), 'utf8'))).references,
+  }));
+/** Every known reference id: rule references first, then each guide's own. */
+export const ALL_REFERENCES: Reference[] = [...REFERENCES, ...GUIDE_REFERENCES.flatMap(g => g.references)];
 
 export function rulesFor(form: string, register?: string): Rule[] {
   return RULES.filter(r =>

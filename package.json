@@ -35,7 +35,8 @@
     "typecheck": "tsc --noEmit",
     "setup": "node scripts/setup.js",
     "refs": "node scripts/build-references.mjs",
-    "refs:check": "node scripts/build-references.mjs --check"
+    "refs:check": "node scripts/build-references.mjs --check && node scripts/build-guides.mjs --check",
+    "guides": "node scripts/build-guides.mjs"
   },
   "license": "MIT",
   "dependencies": {

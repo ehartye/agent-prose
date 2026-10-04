@@ -1,6 +1,6 @@
 # References
 
-Generated from `craft/references.json` by `npm run refs`. Do not edit by hand.
+Generated from `craft/references.json` and `craft/guides/*.refs.json` by `npm run refs`. Do not edit by hand.
 
 | id | Source | Kind | Cited by |
 |---|---|---|---|
@@ -62,3 +62,23 @@ Generated from `craft/references.json` by `npm run refs`. Do not edit by hand.
 | yarn-saliency | Yarn Spinner. [Saliency](https://docs.yarnspinner.dev/write-yarn-scripts/advanced-scripting/saliency) | platform-doc | dialog.barks.variety |
 | youtube-clickbait | YouTube, 2024. [Strengthening enforcement against egregious clickbait on YouTube](https://blog.google/intl/en-in/products/platforms/strengthening-enforcement-against-egregious-clickbait-on-youtube/) | platform-doc | youtube.promise-delivery |
 | youtube-key-moments | YouTube Help. [Measure key moments for audience retention](https://support.google.com/youtube/answer/9314415) | platform-doc | youtube.promise-delivery |
+
+## Craft guide sources
+
+Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family>.refs.json`.
+
+### game-dialogue
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| freed-branching-1 | Alexander Freed, 2014. [Branching Conversation Systems and the Working Writer, Part 1: Introduction](https://www.gamedeveloper.com/design/branching-conversation-systems-and-the-working-writer-part-1-introduction) | practitioner | guide:game-dialogue |
+| freed-branching-2 | Alexander Freed, 2014. [Branching Conversation Systems and the Working Writer, Part 2: Design Considerations](https://www.gamedeveloper.com/design/branching-conversation-systems-and-the-working-writer-part-2-design-considerations) | practitioner | guide:game-dialogue |
+| freed-branching-3 | Alexander Freed, 2014. [Branching Conversation Systems and the Working Writer, Part 3: Building a Conversation Tree](https://www.gamedeveloper.com/design/branching-conversation-systems-and-the-working-writer-part-3-building-a-conversation-tree) | practitioner | guide:game-dialogue |
+| green-sasko-quest-design | Holly Green (reporting Paweł Sasko's GDC 2023 talk), 2023. [Key takeaways from the quest design of Cyberpunk 2077 and The Witcher 3](https://www.gamedeveloper.com/marketing/10-key-takeaways-from-the-quest-design-of-cyberpunk-2077-and-the-witcher-3) | practitioner | guide:game-dialogue |
+| hamilton-enemy-barks | Kirk Hamilton (interviewing Richard Dansky, Chris Dahlen and Nels Anderson), 2012. [Why Video Game Characters Say Such Ridiculous Things](https://kotaku.com/why-video-game-characters-say-such-ridiculous-things-5921878) | practitioner | guide:game-dialogue |
+| pingatore-fallout4-voice | Nicholas Pingatore, 2018. [Fallout 4: The Problem with Voiced Protagonists](https://www.gamedeveloper.com/design/fallout-4-the-problem-with-voiced-protagonists) | practitioner | guide:game-dialogue |
+| rennick-roberts-2021 | Stephanie Rennick and Seán Roberts, 2021. [Improving video game conversations with trope-informed design](https://gamestudies.org/2103/articles/rennick_roberts) | peer-reviewed | guide:game-dialogue |
+| short-bowls-of-oatmeal | Emily Short, 2016. [Bowls of Oatmeal and Text Generation](https://emshort.blog/2016/09/21/bowls-of-oatmeal-and-text-generation/) | practitioner | guide:game-dialogue |
+| short-dynamic-dialogue-2012 | Emily Short, 2012. [GDC 2012 Talk on Dynamic Dialogue](https://emshort.blog/2012/03/16/gdc-2012-talk-on-dynamic-dialogue/) | practitioner | guide:game-dialogue |
+| slabinski-8-principles | Mark Slabinski, 2013. [8 Key Principles of Writing Effective Game Dialogue](https://www.gamedeveloper.com/game-platforms/8-key-principles-of-writing-effective-game-dialogue) | practitioner | guide:game-dialogue |
+| szarkowska-two-or-three-lines | Agnieszka Szarkowska and Olivia Gerber-Morón, 2019. [Two or three lines: a mixed-methods study on subtitle processing and preferences](https://discovery.ucl.ac.uk/id/eprint/10054421/3/Szarkowska_Two%20or%20three%20lines_a%20mixed-methods%20study%20on%20subtitle%20processing%20and%20preferences_plain_FINAL.pdf) | peer-reviewed | guide:game-dialogue |
