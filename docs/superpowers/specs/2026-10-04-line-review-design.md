@@ -1,6 +1,6 @@
 # Line review (brief, existing line, strikes) — design
 
-Status: decided 2026-10-04 (see "Decisions"), ready to plan. Written against the 0.5.0 release. Builds on the owner loop (0.2.0 sets, sealed predictions, `prose/verdict@2`), the reading page (0.3.0) and the taste model (0.4.0). Five milestones, each independently shippable (see "Milestones"). Nothing here is implemented yet.
+Status: decided 2026-10-04 (see "Decisions"), ready to plan. Written against the 0.5.0 release. Builds on the owner loop (0.2.0 sets, sealed predictions, `prose/verdict@2`), the reading page (0.3.0) and the taste model (0.4.0). Five milestones, each independently shippable (see "Milestones"). Milestones 1 to 3 are implemented (M3 as built: see "Milestone 3 as built" below); 4 and 5 are not.
 
 ## Goal
 
@@ -91,7 +91,7 @@ A new pure module `src/strike/spans.ts` maps units to spans **without changing t
 | Fountain | one unit per block: scene, action, speech, parenthetical, transition, centered, lyric | `block.line` to the last line of its contiguous run (a line of exactly two spaces inside a speech continues it), never past the next block's start (notes and sections are blocks, so they bound it) | yes. A speech removed so that no dialogue or parenthetical remains under its cue also removes the cue line, listed in the plan as `kind: 'cue'` |
 | Markdown, prose | a sentence | not exact below the block, so the strike target is the **block** (paragraph, list item, step, quote, heading): `block.line` to the last line of its contiguous run, which also stops at a fence, rule or table line that follows without a blank line (the next block's start still bounds it). The page puts the control on the paragraph | yes, at block level (decided) |
 | Markdown, verse and lyric forms | one source line | `block.line + k` for the k-th non-blank line of a paragraph (labels and directions occupy lines but are not units; a list item or quote spanning lines is one unit over its lines) | yes |
-| Dialog YAML | one line of a node `variants` entry, a `choices` entry, or a bark `lines` entry; a node's main `text` | the YAML node range from the `yaml` document (`LineCounter` plus the scalar's `range`), widened to whole lines, block-style only | variants, choices and bark lines yes. A node's main `text`, a bark pool's last remaining line, and anything in flow style (`[a, b]`) are `strikable: false` with `why` ("a node needs its text; strike a variant, or rewrite it"). Striking every choice of a node is allowed (the node then continues via `next` or ends: parse and schema validity decide) |
+| Dialog YAML | one line of a node `variants` entry, a `choices` entry, or a bark `lines` entry; a node's main `text` | the YAML node range from the `yaml` document (`LineCounter` plus the scalar's `range`), widened to whole lines, block-style only | variants, choices and bark lines yes. A node's main `text`, a bark pool's last remaining line, and anything in flow style (`[a, b]`) are `strikable: false` with `why` ("a node needs its text; strike a variant, or rewrite it"). Striking every choice of a node is allowed (the node then continues via `next` or ends: parse and schema validity decide). A choice is removed whole (its `to:`, `condition:` and other keys go with its `text:`), and a list left with no entries loses its key line (`variants:`, `choices:`), listed in the plan as `kind: 'key'` |
 
 **Every span is verified, not trusted.** At strike time and again at apply time (principle 4) the module simulates removal on the normalised text and checks that the re-parse equals the old unit list minus the struck units and that, for dialog, the schema still parses. A span that fails (a markdown paragraph that swallowed a fence, a YAML scalar that is really a block scalar) is reported `strikable: false` with the reason; it never reaches a write. Blank-line hygiene: removing a span that sits between two blank lines also removes one adjacent blank line, so the file keeps single-blank separation; that blank line is listed in the plan as `kind: 'blank'`.
 
@@ -118,7 +118,7 @@ One directory per draft keeps lock contention to one draft and keeps the log sma
 |---|---|---|
 | `strike` | `id` (`s<n>`), `ref`, `start`, `end`, `text`, `speaker?`, `reason` (`wrong-direction`, `faulty-premise`, `not-worth-rewrite`), `note?` (1-500), `draftHash`, `eventId?` | the decision, the struck text, the draft it was made against |
 | `clear` | `strike`, `eventId?` | withdraws a pending strike (the page's per-line "Undo") |
-| `apply` | `id` (`a<n>`), `strikes[]`, `before`, `after` (draft hashes), `removed[]` = `{ start, end, raw, kind: 'unit'|'cue'|'blank', strike? }`, `digest`, `eventId?` | the removal, with the raw removed lines and the pre-apply line numbers they came from |
+| `apply` | `id` (`a<n>`), `strikes[]`, `before`, `after` (draft hashes), `removed[]` = `{ start, end, raw, kind: 'unit'|'cue'|'blank'|'key', strike? }`, `digest`, `eventId?` | the removal, with the raw removed lines and the pre-apply line numbers they came from |
 | `undo` | `apply`, `before`, `after`, `eventId?` | the restore |
 
 `foldStrikes(events, currentHash)` is pure and returns `{ pending, applied, history, problems }`:
@@ -210,6 +210,19 @@ Accessibility: buttons are real `button`s, the picker is a labelled group, the p
 - `set check` rejects a variant that **edits** an excluded line (reason `struck-line-edited`); a variant that leaves it alone is fine. The page marks an excluded line that appears in a variant with the `.struck` style, text only.
 
 `prose set pick`'s `next` hint gains a `warnings` entry when the source draft's current hash differs from the set's base hash ("the draft has changed since this set was made, so copying the variant over it would undo those changes, including any applied strikes"). That check ships in milestone 4, when apply makes the situation real.
+
+## Milestone 3 as built
+
+What differs from the text above, found while building it (the rest of the spec stands):
+
+- **The preview route ships with the record, apply does not.** `GET /api/session/<id>/strike/preview` is in M3 (the plan and its digest, computed in process, read only); the page does not call it yet. `src/strike/plan.ts` holds the pure removal planner (`simulateRemoval`, `planRemoval`) that M4's apply builds on: it is what decides `strikable` and verifies principle 4 at strike time.
+- **Strikability is verified, within a budget.** `strikable` comes from the static rules plus a simulated removal of each line. A draft with more than 150 strikable lines verifies the first 150 up front; the rest keep the static answer and are verified when `strike add` is asked for them (the CLI always verifies the line it strikes, together with every pending strike that still holds).
+- **`--line` also matches the whole entry a removal takes**, so line 12 (`to:`) names the choice whose `text:` is on line 11. The stored ref stays the unit's own (`11`).
+- **Removal kinds gain `key`** (above), and a bark pool's last remaining line is refused as a combination too (two strikes that would empty a pool).
+- **The pending bar has no Apply in M3.** It says how many lines are struck and that they stay in the draft until applied; stale strikes get an Undo. The Draft view and the bar are otherwise as specified.
+- **The notice says the link can mark lines struck, not delete them.** The `NOTICE` and `LOCAL_NOTICE` strings change in M3 (the link can record strikes) and say so plainly; the "delete lines" wording belongs to the milestone that adds apply.
+- **The strike log's rows for `apply` and `undo` are defined and folded now** (`src/strike/store.ts`), so M4 adds writers, not formats; nothing in M3 writes them.
+- **Variants carry `struck`** (unit indexes that are excluded lines, shown struck on the page): a payload field the spec only implied.
 
 ## Compatibility
 
