@@ -142,9 +142,51 @@
     return { rows: o.lines.map(l => (l.speaker ? l.speaker + ': ' : '') + l.text), note: o.stale ? 'The draft has changed since this set was made' : null };
   }
 
-  /** What is on screen: stage, round, event count, the brief and the existing line (an edit of either, or a stale draft, re-renders). */
+  /**
+   * The reasons a line can be struck for, in the order the picker offers them. `id` is what the server takes; `label` is
+   * what the owner reads. None is preselected: the owner says why.
+   */
+  const STRIKE_REASONS = [
+    { id: 'wrong-direction', label: 'Wrong direction' },
+    { id: 'faulty-premise', label: 'Faulty premise' },
+    { id: 'not-worth-rewrite', label: 'Not worth rewriting' },
+  ];
+  const MAX_NOTE = 500;
+  const reasonLabel = id => { const r = STRIKE_REASONS.find(x => x.id === id); return r ? r.label : String(id); };
+
+  /** The strike on a line (current ones only: a stale strike names a line of an older draft), or undefined. */
+  const strikeOn = (draft, ref) => (draft && Array.isArray(draft.strikes) ? draft.strikes.find(s => s.ref === ref && !s.stale) : undefined);
+  const staleStrikes = draft => (draft && Array.isArray(draft.strikes) ? draft.strikes.filter(s => s.stale) : []);
+
+  /**
+   * The pending bar's words: how many lines are struck and, when some were struck against an older draft, that they can
+   * only be undone. Null when nothing is struck. Nothing is removed from the draft by a strike, and the bar says so.
+   */
+  function pendingSummary(draft) {
+    const n = draft && Array.isArray(draft.strikes) ? draft.strikes.length : 0;
+    if (n === 0) return null;
+    const stale = staleStrikes(draft).length;
+    return {
+      count: n, stale,
+      text: n === 1 ? '1 line struck' : n + ' lines struck',
+      note: stale
+        ? 'The draft changed since ' + stale + ' of these ' + (stale === 1 ? 'was' : 'were') + ' struck. Undo ' + (stale === 1 ? 'it' : 'them') + ' and strike again.'
+        : 'Struck lines stay in the draft until your writer applies them.',
+    };
+  }
+
+  /** The body of a strike request, or null when the pick is not complete (no reason, a note that is too long). The draft path never goes to the server. */
+  function strikeBody(draft, pick, eventId) {
+    if (!draft || !pick || !STRIKE_REASONS.some(r => r.id === pick.reason)) return null;
+    const note = String(pick.note || '').trim();
+    if (note.length > MAX_NOTE) return null;
+    return { ref: pick.ref, reason: pick.reason, ...(note ? { note } : {}), draftHash: draft.hash, eventId };
+  }
+
+  /** What is on screen: stage, round, event count, the brief, the existing line (an edit of either, or a stale draft, re-renders) and the draft's rev (its strikes and hash). */
   const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events + '|' + (p.session && p.session.brief ? JSON.stringify([p.session.brief.character, p.session.brief.context, !!p.session.brief.confirmed]) : '')
-    + (p.session && p.session.original ? '|' + JSON.stringify([p.session.original.stale, p.session.original.lines.map(l => [l.speaker, l.text])]) : '');
+    + (p.session && p.session.original ? '|' + JSON.stringify([p.session.original.stale, p.session.original.lines.map(l => [l.speaker, l.text])]) : '')
+    + (p.draft ? '|' + p.draft.rev : '');
 
   /** True only when the browser has a speech synthesizer object and an utterance constructor (the property alone can be undefined). */
   const speechSupported = win => !!(win && win.speechSynthesis && typeof win.SpeechSynthesisUtterance === 'function');
@@ -153,7 +195,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, originalParts, signature, backoff, revealParts, speechSupported, SPEECH_IGNORED };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED };
     return;
   }
 
@@ -173,6 +215,7 @@
   const ui = {
     marks: {}, marksRound: -1, selected: null, noteDraft: '', rate: 1, directions: [], like: '', confirmShip: false,
     showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: true, originalOpen: true,
+    view: 'variants', pick: null,
   };
 
   const $ = id => document.getElementById(id);
@@ -292,7 +335,26 @@
       if (gate) { busy = false; setBusy(false); }
     }
   }
-  function setBusy(on) { for (const b of app.querySelectorAll('button[data-gate]')) b.disabled = on; }
+  function setBusy(on) { for (const b of app.querySelectorAll('button[data-gate]')) b.disabled = on || b.hasAttribute('data-hold'); }
+
+  /** Strike a line or take a strike back. Gated like a judgement; a 409 or 404 reloads the page state, as send() does. Returns true when the server took it. */
+  async function strikeSend(suffix, body) {
+    if (busy) return false;
+    busy = true; setBusy(true);
+    try {
+      const res = await post('/api/session/' + sessionId + '/strike' + suffix, JSON.stringify(body));
+      if (res.ok && res.body && res.body.state) { hideNotice(); showBanner(false); apply(res.body.state); return true; }
+      showProblem(res);
+      if (res.status === 409 || res.status === 404) await load();
+      return false;
+    } catch {
+      showBanner(true);
+      return false;
+    } finally {
+      busy = false; setBusy(false);
+    }
+  }
+  const clearStrike = id => strikeSend('/clear', { strike: id, eventId: newEventId(window.crypto) });
 
   // ---- read-aloud ----
 
@@ -455,6 +517,7 @@
     const units = c.units || [];
     const els = [];
     const noted = new Set(data.state.notes.filter(n => n.index === c.index).map(n => n.unit));
+    const struck = new Set(Array.isArray(c.struck) ? c.struck : []);
     const box = h('div', { class: 'reading' });
     const lines = c.layout === 'lines';
     if (lines) box.classList.add('lines');
@@ -463,9 +526,9 @@
       group.forEach((i, k) => {
         const selected = ui.selected && ui.selected.index === c.index && ui.selected.unit === i;
         const span = h('span', {
-          class: 'unit' + (noted.has(i) ? ' noted' : '') + (selected ? ' selected' : ''),
+          class: 'unit' + (noted.has(i) ? ' noted' : '') + (selected ? ' selected' : '') + (struck.has(i) ? ' struck' : ''),
           text: units[i], role: 'button', tabindex: '0',
-          'aria-label': noted.has(i) ? 'Sentence with a note: ' + units[i] : undefined,
+          'aria-label': noted.has(i) ? 'Sentence with a note: ' + units[i] : (struck.has(i) ? 'Struck line, kept as it was: ' + units[i] : undefined),
           on: {
             click: () => selectUnit(c.index, i),
             keydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectUnit(c.index, i); } },
@@ -676,6 +739,103 @@
     return out;
   }
 
+  // ---- the draft and its strikes ----
+
+  /** The picker under a line: why it should go (none preselected), an optional note, Strike and Cancel. */
+  function pickerFor(line) {
+    const pick = ui.pick;
+    const area = h('textarea', { rows: '2', maxlength: String(MAX_NOTE), 'aria-label': 'Why (optional)', placeholder: 'Why, in a few words (optional)', value: pick.note, on: { input: () => { pick.note = area.value; } } });
+    const go = btn('Strike', async () => {
+      const body = strikeBody(data.draft, pick, newEventId(window.crypto));
+      if (!body) return;
+      if (await strikeSend('', body)) { ui.pick = null; render(); }
+    }, 'primary', { 'data-gate': '1', 'data-hold': !pick.reason, disabled: !pick.reason });
+    const reasons = STRIKE_REASONS.map(r => btn(r.label, () => { pick.reason = r.id; render(); const again = app.querySelector('.picker [aria-checked="true"]'); if (again) again.focus(); },
+      pick.reason === r.id ? 'on' : '', { role: 'radio', 'aria-checked': String(pick.reason === r.id) }));
+    return h('div', { class: 'picker' },
+      h('div', { role: 'radiogroup', 'aria-label': 'Why strike this line', class: 'row grow' }, reasons),
+      area,
+      h('div', { class: 'row' }, go, btn('Cancel', () => { ui.pick = null; render(); }, 'link')));
+  }
+
+  function draftLine(line, draft) {
+    const strike = strikeOn(draft, line.ref);
+    const text = (line.speaker ? line.speaker + ': ' : '') + line.text;
+    const row = h('div', { class: 'draft-line' + (strike ? ' is-struck' : ''), 'data-ref': line.ref },
+      h('span', { class: 'line-ref', 'aria-hidden': 'true', text: line.ref }),
+      h('span', { class: 'line-text' + (strike ? ' struck' : ''), text }));
+    if (strike) {
+      row.appendChild(h('span', { class: 'sr-only', text: ' (struck)' }));
+      row.appendChild(h('div', { class: 'strike-meta' },
+        h('span', { class: 'chip', text: reasonLabel(strike.reason) }),
+        strike.note ? h('span', { class: 'strike-note', text: strike.note }) : null,
+        draft.editable ? btn('Undo', () => clearStrike(strike.id), 'link', { 'data-gate': '1', 'aria-label': 'Undo the strike on ' + line.ref }) : null));
+    } else if (!line.strikable) {
+      row.appendChild(h('span', { class: 'quiet why', text: line.why || 'This line cannot be struck.' }));
+    } else if (draft.editable) {
+      const open = ui.pick && ui.pick.ref === line.ref;
+      row.appendChild(btn('Strike', () => {
+        ui.pick = open ? null : { ref: line.ref, reason: null, note: '' };
+        render();
+        const first = app.querySelector('.picker [role="radio"]');
+        if (first) first.focus();
+      }, 'strike-btn', { 'aria-expanded': String(!!open), 'aria-label': 'Strike line ' + line.ref }));
+      if (open) row.appendChild(pickerFor(line));
+    }
+    return row;
+  }
+
+  function draftScreen() {
+    const draft = data.draft;
+    setTitle('The draft', draft ? draft.source : '');
+    if (!draft) return [h('p', { class: 'quiet', text: 'The draft is not available. It may have moved, been deleted, or no longer be readable.' })];
+    const out = [h('p', { class: 'quiet', text: draft.editable
+      ? 'Strike a line you want gone and say why. Striking only records it: nothing is removed from the draft.'
+      : 'This session is closed, so strikes can no longer change.' })];
+    const stale = staleStrikes(draft);
+    if (stale.length) {
+      out.push(h('section', { class: 'stale-strikes', 'aria-label': 'Struck against an older draft' },
+        h('h2', { text: 'Struck against an older draft' }),
+        h('p', { class: 'quiet', text: 'The draft has changed since these were struck, so they no longer hold. Undo them, then strike again.' }),
+        stale.map(st => h('div', { class: 'draft-line is-struck', 'data-ref': st.ref },
+          h('span', { class: 'line-ref', 'aria-hidden': 'true', text: st.ref }),
+          h('span', { class: 'line-text struck', text: (st.speaker ? st.speaker + ': ' : '') + st.text }),
+          h('div', { class: 'strike-meta' }, h('span', { class: 'chip', text: reasonLabel(st.reason) }),
+            st.note ? h('span', { class: 'strike-note', text: st.note }) : null,
+            draft.editable ? btn('Undo', () => clearStrike(st.id), 'link', { 'data-gate': '1', 'aria-label': 'Undo the strike on ' + st.ref }) : null)))));
+    }
+    if (!draft.lines.length) out.push(h('p', { class: 'quiet', text: 'This draft has no lines to strike.' }));
+    let block = null;
+    draft.lines.forEach((line, i) => {
+      if (i === 0 || line.break) { block = h('div', { class: 'draft-block' }); out.push(block); }
+      block.appendChild(draftLine(line, draft));
+    });
+    if (draft.truncated) out.push(h('p', { class: 'quiet', text: 'Only the first ' + draft.lines.length + ' lines are shown.' }));
+    return out;
+  }
+
+  /** Sticky at the bottom of every screen while lines are struck: how many, and what to do about stale ones. */
+  function pendingBar() {
+    const sum = data && data.draft ? pendingSummary(data.draft) : null;
+    if (!sum) return null;
+    const stale = staleStrikes(data.draft);
+    return h('div', { class: 'pendingbar', role: 'status' },
+      h('strong', { text: sum.text }),
+      h('span', { class: 'quiet', text: ' ' + sum.note }),
+      sum.stale && data.draft.editable ? btn(stale.length === 1 ? 'Undo it' : 'Undo them', async () => { for (const st of stale) { if (!(await clearStrike(st.id))) break; } }, 'link', { 'data-gate': '1' }) : null,
+      ui.view !== 'draft' ? btn('See the draft', () => { ui.view = 'draft'; render(); }, 'link') : null);
+  }
+
+  /** The switch between the variants and the draft, in the header: only when the session has a draft to show. */
+  function viewBar() {
+    const el = $('views');
+    el.textContent = '';
+    if (!data || !data.draft) { el.hidden = true; ui.view = 'variants'; return; }
+    el.hidden = false;
+    const tab = (view, text) => btn(text, () => { if (ui.view !== view) { ui.view = view; ui.pick = null; render(); } }, '', { 'aria-pressed': String(ui.view === view) });
+    el.append(tab('variants', 'Variants'), tab('draft', 'Draft'));
+  }
+
   function waitingScreen() {
     setTitle('Your writer is working on the next round', 'You can leave this page open. It updates by itself.');
     return [h('div', { class: 'center' }, h('span', { class: 'pulse', 'aria-hidden': 'true' }), h('p', { class: 'quiet', text: 'Waiting for new drafts...' }))];
@@ -710,16 +870,26 @@
     renderedSig = signature(data);
     const stage = data.state.stage;
     if (stage !== 'refine') ui.confirmShip = false;
-    app.className = stage === 'duel' ? 'wide' : '';
+    viewBar();
+    app.className = stage === 'duel' && !(ui.view === 'draft' && data.draft) ? 'wide' : '';
     let screen;
-    if (stage === 'lineup') screen = lineupScreen();
+    if (ui.view === 'draft' && data.draft) screen = draftScreen();
+    else if (stage === 'lineup') screen = lineupScreen();
     else if (stage === 'duel') screen = duelScreen();
     else if (stage === 'refine') screen = refineScreen();
     else if (stage === 'waiting') screen = waitingScreen();
     else if (stage === 'shipped') screen = revealScreen();
     else { setTitle('This session is closed', ''); screen = [h('p', { text: 'Thanks for reading. Your writer closed this session, so there is nothing more to do here.' })]; }
     const prompt = data.session.prompt && stage !== 'shipped' && stage !== 'abandoned' ? h('p', { class: 'quiet', text: data.session.prompt }) : null;
-    app.replaceChildren(...[prompt, ...screen].flat(2).filter(Boolean));
+    const items = [prompt, ...screen].flat(2).filter(Boolean);
+    const bar = pendingBar();
+    if (bar) {
+      // One sticky dock at the bottom: the pending bar above the screen's own action bar, so the two never overlap.
+      const at = items.findIndex(el => el.classList && el.classList.contains('actionbar'));
+      if (at >= 0) items.splice(at, 1, h('div', { class: 'dock' }, bar, items[at]));
+      else items.push(h('div', { class: 'dock' }, bar));
+    }
+    app.replaceChildren(...items);
     updatePlayState();
   }
 

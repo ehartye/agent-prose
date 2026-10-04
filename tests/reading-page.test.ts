@@ -270,3 +270,88 @@ describe('speech support', () => {
   });
 });
 
+
+describe('strikes: the pure helpers', () => {
+  const draft = (strikes: any[], over: any = {}) => ({ source: 't.md', hash: 'a'.repeat(64), rev: 'r1', editable: true, lines: [], strikes, applied: null, ...over });
+  const mk = (id: string, ref: string, stale = false) => ({ id, ref, reason: 'wrong-direction', text: 'x', at: 't', stale });
+
+  it('offers exactly the three reasons, in order, none preselected, with the words an owner reads', () => {
+    expect(r.STRIKE_REASONS).toEqual([
+      { id: 'wrong-direction', label: 'Wrong direction' }, { id: 'faulty-premise', label: 'Faulty premise' }, { id: 'not-worth-rewrite', label: 'Not worth rewriting' },
+    ]);
+    expect(r.reasonLabel('faulty-premise')).toBe('Faulty premise');
+    expect(r.reasonLabel('anything-else')).toBe('anything-else');
+  });
+
+  it('says how many lines are struck, and nothing when none are', () => {
+    expect(r.pendingSummary(draft([]))).toBeNull();
+    expect(r.pendingSummary(null)).toBeNull();
+    expect(r.pendingSummary(undefined)).toBeNull();
+    expect(r.pendingSummary(draft([mk('s1', '5')]))).toMatchObject({ count: 1, stale: 0, text: '1 line struck' });
+    expect(r.pendingSummary(draft([mk('s1', '5'), mk('s2', '7')])).text).toBe('2 lines struck');
+    expect(r.pendingSummary(draft([mk('s1', '5')])).note).toBe('Struck lines stay in the draft until your writer applies them.');
+  });
+
+  it('says the draft changed, and that the stale ones can only be undone', () => {
+    const one = r.pendingSummary(draft([mk('s1', '5', true), mk('s2', '7')]));
+    expect(one).toMatchObject({ count: 2, stale: 1, note: 'The draft changed since 1 of these was struck. Undo it and strike again.' });
+    expect(r.pendingSummary(draft([mk('s1', '5', true), mk('s2', '7', true)])).note).toBe('The draft changed since 2 of these were struck. Undo them and strike again.');
+  });
+
+  it('finds the current strike on a line and ignores a stale one', () => {
+    const d = draft([mk('s1', '5', true), mk('s2', '7')]);
+    expect(r.strikeOn(d, '7').id).toBe('s2');
+    expect(r.strikeOn(d, '5')).toBeUndefined();
+    expect(r.strikeOn(null, '5')).toBeUndefined();
+    expect(r.staleStrikes(d).map((s: any) => s.id)).toEqual(['s1']);
+    expect(r.staleStrikes(undefined)).toEqual([]);
+  });
+
+  it('builds a strike request only from a complete pick, with the hash the page saw and no path', () => {
+    const d = draft([]);
+    expect(r.strikeBody(d, { ref: '5', reason: null, note: '' }, 'e1')).toBeNull();
+    expect(r.strikeBody(d, { ref: '5', reason: 'boring', note: '' }, 'e1')).toBeNull();
+    expect(r.strikeBody(d, { ref: '5', reason: 'wrong-direction', note: 'x'.repeat(501) }, 'e1')).toBeNull();
+    expect(r.strikeBody(null, { ref: '5', reason: 'wrong-direction', note: '' }, 'e1')).toBeNull();
+    expect(r.strikeBody(d, { ref: '5', reason: 'wrong-direction', note: '   ' }, 'e1')).toEqual({ ref: '5', reason: 'wrong-direction', draftHash: 'a'.repeat(64), eventId: 'e1' });
+    expect(r.strikeBody(d, { ref: '5-6', reason: 'not-worth-rewrite', note: '  too sweet ' }, 'e2')).toEqual({ ref: '5-6', reason: 'not-worth-rewrite', note: 'too sweet', draftHash: 'a'.repeat(64), eventId: 'e2' });
+  });
+
+  it('re-renders when the draft rev changes, and not otherwise', () => {
+    const p = (rev?: string) => ({ state: { stage: 'lineup', round: 0, events: 3 }, session: { brief: null, original: null }, ...(rev ? { draft: { rev } } : {}) });
+    expect(r.signature(p('a'))).not.toBe(r.signature(p('b')));
+    expect(r.signature(p('a'))).toBe(r.signature(p('a')));
+    expect(r.signature(p())).not.toBe(r.signature(p('a')));
+  });
+});
+
+describe('strikes: the page source', () => {
+  it('sends strikes through the one request path, to the strike routes, and never to an apply route in this version', () => {
+    expect(js).toContain("'/api/session/' + sessionId + '/strike' + suffix");
+    expect(js).toContain("'/clear'");
+    expect(js).not.toMatch(/strike\/apply|strike\/undo/);
+    expect(js).not.toMatch(/Remove \d|Review and apply|can delete lines/);
+  });
+
+  it('uses real buttons, a labelled radio group for the reasons, and a status bar', () => {
+    expect(js).toContain("role: 'radiogroup'");
+    expect(js).toContain("role: 'radio'");
+    expect(js).toContain("role: 'status'");
+    expect(js).toContain("'aria-checked'");
+    expect(js).not.toMatch(/<(div|span)[^>]*onclick/i);
+  });
+
+  it('keeps the draft view text-only and the picker note capped at 500', () => {
+    expect(js).toContain("maxlength: String(MAX_NOTE)");
+    expect(js).toContain('const MAX_NOTE = 500');
+    expect(read('index.html')).toContain('id="views"');
+  });
+
+  it('styles a struck line with a line-through that is also muted, and keeps tap targets at 44 px', () => {
+    const css = read('style.css');
+    expect(css).toMatch(/\.struck, \.unit\.struck \{[^}]*text-decoration: line-through/);
+    expect(css).toMatch(/button \{[^}]*min-height: 44px/);
+    expect(css).toMatch(/\.dock \{[^}]*position: sticky;[^}]*bottom: 0/);
+    expect(css).toMatch(/\.dock \.actionbar \{[^}]*position: static/);
+  });
+});
