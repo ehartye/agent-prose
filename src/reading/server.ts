@@ -17,7 +17,7 @@ import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import { ProseError, type ErrorCode } from '../errors.ts';
 import { writeFileAtomic } from '../owner/fsutil.ts';
-import { EVENT_ID_RE, ID_RE, projectKey, proseHome, sessionDir, sessionsDir, setDir, strikeDir, validId } from '../owner/paths.ts';
+import { EVENT_ID_RE, ID_RE, projectKey, proseHome, queueDir, sessionDir, sessionsDir, setDir, strikeDir, validId } from '../owner/paths.ts';
 import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
 import { readPrediction, textHash } from '../owner/prediction.ts';
 import { draftHash, originalLines, type Original } from '../owner/original.ts';
@@ -29,6 +29,10 @@ import {
 import { TasteDuels, type DuelCandidateSource } from './taste.ts';
 import { layoutOf, type Layout, type UnitLayout } from './units.ts';
 import { buildCompare, unitCells, type Compare } from './compare.ts';
+import {
+  QueueSchema, appendQueueEventAsync, childInfoOf, currentItem, foldQueue, parseQueueEvents, rankedPicks,
+  type ChildInfo, type Queue, type QueueItem, type QueueState, type StoredQueueEvent,
+} from './queue.ts';
 import { parseDocument } from '../document.ts';
 import { strikeLines, type StrikeLine } from '../strike/lines.ts';
 import { removedView } from '../strike/apply.ts';
@@ -37,7 +41,7 @@ import { MAX_NOTE, STRIKE_REASONS, foldStrikes, parseStrikeLog, strikeKey, undoa
 
 export const DEFAULT_PORT = 47311;
 /** Bump when routes change: a running server of another API level is replaced, not reused. */
-export const SERVER_API = 4;
+export const SERVER_API = 5;
 const PROBE_MS = 1500;
 /** Connections the HTTP server accepts at once, and how long a client may take to send headers, a whole request, or sit idle. */
 const MAX_CONNECTIONS = 200;
@@ -53,6 +57,15 @@ export const MAX_EVENTS_PER_SESSION = 2000;
 /** Notes one variant can take. */
 export const MAX_NOTES_PER_VARIANT = 100;
 const ENGAGEMENT = new Set(['play', 'peek', 'note']);
+/** What a batch item's own event route accepts: nothing that judges. A pick only goes through Send. */
+const BATCH_EVENTS: ReadonlySet<string> = new Set(['play', 'peek']);
+/** What the page sends to stage a choice, skip an item, send the picks and finish the review: strict, every number bounded. */
+const ItemNo = z.number().int().min(1).max(50);
+const ChooseBody = z.strictObject({ item: ItemNo, variant: z.number().int().min(1).nullable(), passes: z.array(z.number().int().min(1)).max(6), eventId: z.string().regex(EVENT_ID_RE) });
+const SkipBody = z.strictObject({ item: ItemNo, eventId: z.string().regex(EVENT_ID_RE) });
+/** A send id: short enough that `<sendId>-<n>-l` is still a valid event id. */
+const SendBody = z.strictObject({ sendId: z.string().regex(EVENT_ID_RE).max(80), eventId: z.string().regex(EVENT_ID_RE).optional() });
+const FinishBody = z.strictObject({ eventId: z.string().regex(EVENT_ID_RE) });
 /** The request body cap for POST /event. */
 const MAX_BODY = 64 * 1024;
 /** What the page sends to strike a line, and to take a strike back: strict, every field checked before the CLI is asked. */
@@ -363,6 +376,9 @@ interface Where { setId: string; variant: number; round: number }
 
 interface Candidate { index: number; label: string; units?: string[]; layout?: Layout; breaks?: number[]; /** Unit indexes that are lines struck before this set was made (shown struck, text only). */ struck?: number[]; changed: boolean; hashOk: boolean; name?: string; direction?: string | null; angle?: string; note?: string }
 
+/** An item's child session as the rail and the queue routes read it. `session` is null for a child that is gone or is not an item of the queue. */
+interface ChildEntry { info: ChildInfo; session: Session | null; state: SessionState | null; /** The child's labelling order (A is the first). */ sequence: number[] }
+
 interface SessionRow { id: string; setId: string; form: string; stage: string; createdAt: string; project: string }
 
 /** The line(s) the set revises, as the owner sees them, and whether the draft has changed since. */
@@ -483,7 +499,7 @@ export interface ReadingServerOptions {
 }
 
 type Handler = (ctx: Ctx) => Promise<void> | void;
-interface Ctx { req: IncomingMessage; res: ServerResponse; match: RegExpExecArray; path: string }
+interface Ctx { req: IncomingMessage; res: ServerResponse; match: RegExpExecArray; path: string; /** A queue route names the project its item lives in: the session is looked up there and nowhere else. */ within?: string }
 /** The API route table: a path that matches no row is 404, a wrong method 405. */
 interface Route { method: 'GET' | 'POST'; re: RegExp; handler: Handler }
 
@@ -533,10 +549,16 @@ export class ReadingServer {
   private compareCache = new Map<string, Compare | null>();
   /** The base text of a set by file path, valid while the file's (mtime, size) are unchanged. */
   private baseCache = new Map<string, { key: string; text: string }>();
+  /** A queue's queue.json by path, valid while the file is unchanged; null for one that is not a valid queue. */
+  private queueCache = new Map<string, { key: string; queue: Queue | null }>();
+  /** A queue's log by directory, valid while events.jsonl is unchanged. */
+  private queueLogs = new Map<string, { key: string; events: StoredQueueEvent[] }>();
+  /** A queue item's child session, log and set by session directory, valid while session.json, events.jsonl and set.json are unchanged. */
+  private childCache = new Map<string, { key: string; entry: ChildEntry }>();
   /** One /api/sessions row per session, valid while session.json and events.jsonl are unchanged. */
   private rowCache = new Map<string, { key: string; row: SessionRow | null }>();
   /** How many variant files were read and hashed, drafts hashed for the existing line, strike logs parsed, and draft files parsed for the Draft view (a poll that finds nothing changed adds none); for tests. */
-  readonly reads = { variants: 0, drafts: 0, strikes: 0, lines: 0 };
+  readonly reads = { variants: 0, drafts: 0, strikes: 0, lines: 0, queues: 0 };
   /** The taste model and candidate vectors behind the duel the page asks (cached; loaded with async fs). */
   private taste = new TasteDuels(() => logError('taste model unavailable; using the default pairing', 'E_TASTE'));
   /** Taste loads so far (models fitted, candidate vectors computed); for tests. */
@@ -557,6 +579,20 @@ export class ReadingServer {
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/clear$/, handler: c => this.postStrike(c, 'clear') },
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/apply$/, handler: c => this.postStrike(c, 'apply') },
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/undo$/, handler: c => this.postStrike(c, 'undo') },
+      // A batch: the rail, an item (resolved through queue.json, never a session id or a path from the request), and the queue's own writes.
+      { method: 'GET', re: /^\/api\/queue\/([a-z0-9-]+)$/, handler: c => this.queueRail(c) },
+      { method: 'GET', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})$/, handler: async c => this.queueItem(c) },
+      { method: 'GET', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/reveal$/, handler: c => this.itemRoute(c, t => this.json(c.res, 200, this.reveal(t.id, t.root))) },
+      { method: 'GET', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/strike\/preview$/, handler: c => this.itemRoute(c, t => this.json(c.res, 200, this.strikePreview(t.id, t.root))) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/event$/, handler: c => this.itemRoute(c, t => this.postEvent(t.ctx, BATCH_EVENTS)) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/strike$/, handler: c => this.itemRoute(c, t => this.postStrike(t.ctx, 'add')) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/strike\/clear$/, handler: c => this.itemRoute(c, t => this.postStrike(t.ctx, 'clear')) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/strike\/apply$/, handler: c => this.itemRoute(c, t => this.postStrike(t.ctx, 'apply')) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/strike\/undo$/, handler: c => this.itemRoute(c, t => this.postStrike(t.ctx, 'undo')) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/choose$/, handler: c => this.postChoose(c) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/skip$/, handler: c => this.postSkip(c) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/send$/, handler: c => this.postSend(c) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/finish$/, handler: c => this.postFinish(c) },
     ];
   }
 
@@ -568,11 +604,11 @@ export class ReadingServer {
   }
 
   /** The project holding session `id`. An id that is not a valid id is "not found", like an unknown one. */
-  private findSession(id: string): string {
+  private findSession(id: string, within?: string): string {
     let valid = false;
     try { validId(id, 'Session id'); valid = ID_RE.test(id); } catch { /* not a session id */ }
     if (valid) {
-      for (const root of this.knownProjects()) {
+      for (const root of within !== undefined ? [within] : this.knownProjects()) {
         if (existsSync(join(sessionDir(root, id), 'session.json'))) return root;
       }
     }
@@ -697,10 +733,10 @@ export class ReadingServer {
    * The page payload with the duel chosen by the taste model when it is usable. The model and the shortlisted candidates'
    * vectors are awaited here (async fs, cached), then the synchronous payload is built; any failure leaves the old rule.
    */
-  private async payloadAsync(id: string): Promise<SessionPayload> {
+  private async payloadAsync(id: string, within?: string): Promise<SessionPayload> {
     let choose: PairChooser | null = null;
     try {
-      const root = this.findSession(id);
+      const root = this.findSession(id, within);
       const session = readSession(root, id);
       const events = readEvents(root, id);
       const state = foldSession(session, events);
@@ -716,11 +752,11 @@ export class ReadingServer {
         if (sources.length === state.shortlist.length) choose = await this.taste.chooser(root, this.setOf(root, session.setId, false), sources);
       }
     } catch { /* the payload below reports a missing session; anything else leaves the old rule */ }
-    return this.payload(id, choose ?? undefined);
+    return this.payload(id, choose ?? undefined, within);
   }
 
-  private payload(id: string, choose?: PairChooser): SessionPayload {
-    const root = this.findSession(id);
+  private payload(id: string, choose?: PairChooser, within?: string): SessionPayload {
+    const root = this.findSession(id, within);
     const session = readSession(root, id);
     const events = readEvents(root, id);
     const state = foldSession(session, events);
@@ -866,8 +902,8 @@ export class ReadingServer {
   }
 
   /** The removal the pending strikes would make, computed here and read only (no lock, nothing written). The page's apply review will use it in a later version. */
-  private strikePreview(id: string): unknown {
-    const root = this.findSession(id);
+  private strikePreview(id: string, within?: string): unknown {
+    const root = this.findSession(id, within);
     const session = readSession(root, id);
     const set = this.setOf(root, session.setId, false);
     const file = set ? this.draftFile(root, set.source) : null;
@@ -887,7 +923,7 @@ export class ReadingServer {
   /** Record or clear a strike, apply the strikes or undo the last apply: validated here, then the CLI does the write (locks, dedupe, stale, digest and hash rules live there; this server never edits a draft). */
   private async postStrike(c: Ctx, kind: 'add' | 'clear' | 'apply' | 'undo'): Promise<void> {
     const id = c.match[1];
-    const root = this.findSession(id);
+    const root = this.findSession(id, c.within);
     const text = await readBody(c.req, MAX_BODY);
     let raw: unknown;
     try { raw = JSON.parse(text); } catch { throw new ProseError('E_USAGE', 'the request body is not valid JSON', { hint: 'Send one JSON object' }); }
@@ -912,13 +948,13 @@ export class ReadingServer {
         : 'apply' in body ? ['strike', 'undo', file, '--apply', body.apply, `--event-id=${body.eventId}`, ...form, '--dir', root]
         : ['strike', 'clear', file, body.strike, `--event-id=${body.eventId}`, '--dir', root];
       const result = await run(argv, { cwd: root }) as { duplicate?: boolean };
-      return { ok: true, ...(result?.duplicate ? { duplicate: true } : {}), state: await this.payloadAsync(id) };
+      return { ok: true, ...(result?.duplicate ? { duplicate: true } : {}), state: await this.payloadAsync(id, root) };
     });
     this.json(c.res, 200, out);
   }
 
-  private reveal(id: string): unknown {
-    const root = this.findSession(id);
+  private reveal(id: string, within?: string): unknown {
+    const root = this.findSession(id, within);
     const state = foldSession(readSession(root, id), readEvents(root, id));
     const reveal = state.shipped !== null ? readReveal(root, id) : null;
     if (reveal === null) throw new ProseError('E_NOT_FOUND', 'not shipped yet', { hint: 'The reveal appears once the session is shipped' });
@@ -935,13 +971,17 @@ export class ReadingServer {
     return run;
   }
 
-  private async postEvent(c: Ctx): Promise<void> {
+  private async postEvent(c: Ctx, only?: ReadonlySet<string>): Promise<void> {
     const id = c.match[1];
-    const root = this.findSession(id);
+    const root = this.findSession(id, c.within);
     const text = await readBody(c.req, MAX_BODY);
     let raw: unknown;
     try { raw = JSON.parse(text); } catch { throw new ProseError('E_USAGE', 'the request body is not valid JSON', { hint: 'Send one JSON event object' }); }
     const type = (raw as { type?: unknown } | null)?.type;
+    // A batch item takes engagement only: a pick goes through Send, never through the item's own event route.
+    if (only && !(typeof type === 'string' && only.has(type)) && typeof type === 'string' && EventSchema.options.some(o => o.shape.type.value === type)) {
+      throw withStatus(new ProseError('E_SERVER', `a batch item takes only ${[...only].join(' and ')} here: choose a draft and press Send picks`, { hint: 'To judge the set in full, open it as its own session' }), 403);
+    }
     if (type === 'round' || (typeof type === 'string' && !CLIENT_EVENTS.has(type) && EventSchema.options.some(o => o.shape.type.value === type))) {
       throw withStatus(new ProseError('E_SERVER', 'the reading page may only send play, lineup, duel, note, peek, refine, ship and abandon'), 403);
     }
@@ -965,7 +1005,7 @@ export class ReadingServer {
     const session = readSession(root, id);
     const events = readEvents(root, id);
     const eventId = (event as { eventId?: string }).eventId;
-    if (eventId !== undefined && events.some(e => e.type === event.type && (e as { eventId?: string }).eventId === eventId)) return { ok: true, duplicate: true, state: await this.payloadAsync(id) };
+    if (eventId !== undefined && events.some(e => e.type === event.type && (e as { eventId?: string }).eventId === eventId)) return { ok: true, duplicate: true, state: await this.payloadAsync(id, root) };
     const state = foldSession(session, events);
     if (ENGAGEMENT.has(event.type) && events.length >= MAX_EVENTS_PER_SESSION) throw withStatus(new ProseError('E_SERVER', 'session is full', { hint: 'Ship, refine or open a new session' }), 429);
     if (event.type === 'note' && state.notes.filter(n => n.index === event.index).length >= MAX_NOTES_PER_VARIANT) {
@@ -1001,7 +1041,7 @@ export class ReadingServer {
       default: break;
     }
     await appendEventAsync(root, id, checked);
-    return { ok: true, state: await this.payloadAsync(id) };
+    return { ok: true, state: await this.payloadAsync(id, root) };
   }
 
   /** The reveal the page gets after the ship: the CLI's own reveal for the champion's set, or the plain statement that there was none. */
@@ -1025,6 +1065,317 @@ export class ReadingServer {
     if (unit >= count) throw new ProseError('E_SCHEMA', `unit ${unit} is not in variant ${index}`, { hint: `It has ${count} units, numbered from 0` });
   }
 
+  // ---- batch review: a queue over ordinary child sessions ----
+
+  /**
+   * The queue `id` and the project holding it. An id that is not a valid id, or a queue.json that is not a valid queue of that
+   * id, is "not found". Only registered projects are looked in.
+   */
+  private findQueue(id: string): { root: string; queue: Queue } {
+    let valid = false;
+    try { validId(id, 'Queue id'); valid = ID_RE.test(id); } catch { /* not a queue id */ }
+    if (valid) {
+      for (const root of this.knownProjects()) {
+        const queue = this.queueOf(root, id);
+        if (queue) return { root, queue };
+      }
+    }
+    throw new ProseError('E_NOT_FOUND', 'no such queue', { hint: 'The link may be for a queue that was closed' });
+  }
+
+  private queueOf(root: string, id: string): Queue | null {
+    const file = join(queueDir(root, id), 'queue.json');
+    let key: string;
+    try { key = statKey(file); } catch { return null; }
+    const hit = this.queueCache.get(file);
+    if (hit?.key === key) return hit.queue;
+    let queue: Queue | null = null;
+    try {
+      const parsed = QueueSchema.safeParse(JSON.parse(readFileSync(file, 'utf8')));
+      queue = parsed.success && parsed.data.id === id ? parsed.data : null;
+    } catch { queue = null; }
+    remember(this.queueCache, file, { key, queue }, 200);
+    return queue;
+  }
+
+  private queueEvents(root: string, id: string): StoredQueueEvent[] {
+    const dir = queueDir(root, id);
+    const log = join(dir, 'events.jsonl');
+    let key = 'none';
+    try { key = statKey(log); } catch { /* no log yet */ }
+    const hit = this.queueLogs.get(dir);
+    if (hit?.key === key) return hit.events;
+    let events: StoredQueueEvent[] = [];
+    try { events = parseQueueEvents(readFileSync(log, 'utf8')).events; } catch { /* absent or unreadable: nothing staged */ }
+    remember(this.queueLogs, dir, { key, events }, 200);
+    return events;
+  }
+
+  /** One item's child session and set, read again only when one of their files changed. A child that is not an item of this queue is missing. */
+  private childEntry(root: string, queueId: string, item: QueueItem): ChildEntry {
+    const stat = (f: string) => { try { return statKey(f); } catch { return '-'; } };
+    let key: string;
+    try {
+      const dir = sessionDir(root, item.sessionId);
+      key = [stat(join(dir, 'session.json')), stat(join(dir, 'events.jsonl')), stat(join(setDir(root, item.setId), 'set.json'))].join('|');
+    } catch { return this.missingChild(null); }
+    const cacheKey = `${root}\0${item.sessionId}`;
+    const hit = this.childCache.get(cacheKey);
+    if (hit?.key === key) return hit.entry;
+    this.reads.queues++;
+    let entry: ChildEntry;
+    const set = this.setOf(root, item.setId, false);
+    try {
+      const session = readSession(root, item.sessionId);
+      if (session.queue !== queueId || session.setId !== item.setId) entry = this.missingChild(set);
+      else {
+        const events = readEvents(root, item.sessionId);
+        const { info, state } = childInfoOf(session, events, set);
+        entry = { info, session, state, sequence: displayPlan(session, state, events).sequence };
+      }
+    } catch { entry = this.missingChild(set); }
+    remember(this.childCache, cacheKey, { key, entry }, 400);
+    return entry;
+  }
+
+  private missingChild(set: PromptSet | null): ChildEntry {
+    return { info: { stage: 'abandoned', shipped: null, shippedAt: null, pickedElsewhere: set?.picked ?? null, pickedAt: set?.pickedAt ?? null, missing: true }, session: null, state: null, sequence: [] };
+  }
+
+  /** The queue folded with its children as they are now. */
+  private railState(root: string, queue: Queue): { state: QueueState; entries: ChildEntry[] } {
+    const entries = queue.items.map(i => this.childEntry(root, queue.id, i));
+    const children: Record<number, ChildInfo> = {};
+    queue.items.forEach((i, k) => { children[i.n] = entries[k].info; });
+    return { state: foldQueue(queue, this.queueEvents(root, queue.id), children), entries };
+  }
+
+  /** The rail: one small row per item and the counts. No draft text and nothing sealed (a prediction is never read here). */
+  private railPayload(root: string, queue: Queue) {
+    const { state, entries } = this.railState(root, queue);
+    const label = (k: number, v: number | null): string | null => {
+      if (v === null) return null;
+      const at = entries[k].sequence.indexOf(v);
+      return at < 0 ? null : labelOf(at);
+    };
+    return {
+      queue: { id: queue.id, prompt: queue.prompt, total: queue.items.length, counts: state.counts, stage: state.stage, cursor: rankedPicks(state).length },
+      items: queue.items.map((q, k) => {
+        const s = state.items[k];
+        return {
+          n: q.n, who: q.who, where: q.where, form: q.form, status: s.status,
+          picked: s.status === 'sent' ? label(k, s.sentVariant) : s.status === 'picked' ? label(k, s.choice.variant) : null,
+          ...(s.via === 'cli' ? { via: 'cli' } : {}), ...(s.message ? { message: s.message } : {}),
+        };
+      }),
+      order: state.order,
+      current: currentItem(state),
+    };
+  }
+
+  private queueRail(c: Ctx): void {
+    const { root, queue } = this.findQueue(c.match[1]);
+    this.json(c.res, 200, this.railPayload(root, queue));
+  }
+
+  /** An item of a queue by its number: a plain 1 or 2 digit number that the queue holds. Never a session id from the request. */
+  private resolveItem(c: Ctx): { root: string; queue: Queue; item: QueueItem; entry: ChildEntry } {
+    const { root, queue } = this.findQueue(c.match[1]);
+    const n = Number(c.match[2]);
+    const item = String(n) === c.match[2] ? queue.items.find(i => i.n === n) : undefined;
+    if (!item) throw new ProseError('E_NOT_FOUND', 'no such item', { hint: 'The queue has no item with that number' });
+    const entry = this.childEntry(root, queue.id, item);
+    if (!entry.session) throw new ProseError('E_NOT_FOUND', 'this item is not available', { hint: 'The set or its session may have been deleted' });
+    return { root, queue, item, entry };
+  }
+
+  /** Run a session handler for an item's child, looked up in the queue's own project only. */
+  private itemRoute(c: Ctx, fn: (t: { id: string; root: string; ctx: Ctx }) => Promise<void> | void): Promise<void> | void {
+    const t = this.resolveItem(c);
+    const match = Object.assign([c.match[0], t.item.sessionId], { index: 0, input: c.match[0] }) as unknown as RegExpExecArray;
+    return fn({ id: t.item.sessionId, root: t.root, ctx: { ...c, match, within: t.root } });
+  }
+
+  /** The item as the page reads it: the session payload of its child, and where the queue stands on it. */
+  private async itemPayload(root: string, queue: Queue, n: number): Promise<SessionPayload & { queue: Record<string, unknown> }> {
+    const item = queue.items.find(i => i.n === n)!;
+    const payload = await this.payloadAsync(item.sessionId, root);
+    const { state } = this.railState(root, queue);
+    const s = state.items[n - 1];
+    return {
+      ...payload,
+      queue: { n, stage: state.stage, status: s.status, choice: s.choice, sentVariant: s.sentVariant, ...(s.via ? { via: s.via } : {}), ...(s.message ? { message: s.message } : {}) },
+    };
+  }
+
+  private async queueItem(c: Ctx): Promise<void> {
+    const t = this.resolveItem(c);
+    this.json(c.res, 200, await this.itemPayload(t.root, t.queue, t.item.n));
+  }
+
+  /** The body of a queue POST: valid JSON, then the strict schema. */
+  private async queueBody<T extends z.ZodType>(c: Ctx, schema: T): Promise<z.infer<T>> {
+    const text = await readBody(c.req, MAX_BODY);
+    let raw: unknown;
+    try { raw = JSON.parse(text); } catch { throw new ProseError('E_USAGE', 'the request body is not valid JSON', { hint: 'Send one JSON object' }); }
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new ProseError('E_SCHEMA', `Invalid request: ${issue.path.length ? `${issue.path.join('.')}: ` : ''}${issue.message}`.slice(0, 200), { hint: 'See the request shapes the page sends' });
+    }
+    return parsed.data;
+  }
+
+  private needOpen(state: QueueState): void {
+    if (state.stage === 'open') return;
+    throw new ProseError('E_CONFLICT', state.stage === 'done' ? 'every item is already sent' : `the review is ${state.stage}, so nothing more can be chosen or sent`, { hint: 'Ask your writer to open the sets that are left: prose reading open --pending' });
+  }
+
+  /** Staged choices and skips apply to an item that is still undecided; a sent or ended one is settled. */
+  private needUndecided(state: QueueState, n: number): void {
+    const status = state.items[n - 1].status;
+    if (status === 'sent') throw new ProseError('E_CONFLICT', 'this item is already sent', { hint: 'A pick cannot be changed once sent' });
+    if (status === 'ended') throw new ProseError('E_CONFLICT', 'this item is closed', { hint: 'Ask your writer to open it again: prose reading open --pending' });
+  }
+
+  /** The reply to a queue write: the item as the page shows it, and the rail. */
+  private async queueReply(root: string, queue: Queue, n: number, extra: Record<string, unknown> = {}) {
+    return { ok: true, ...extra, state: await this.itemPayload(root, queue, n), rail: this.railPayload(root, queue) };
+  }
+
+  private async postChoose(c: Ctx): Promise<void> {
+    const { root, queue } = this.findQueue(c.match[1]);
+    const body = await this.queueBody(c, ChooseBody);
+    if (!queue.items.some(i => i.n === body.item)) throw new ProseError('E_SCHEMA', `item ${body.item} is not in this queue`, { hint: `The queue has items 1 to ${queue.items.length}` });
+    const out = await this.serial(queue.id, async () => {
+      const { state, entries } = this.railState(root, queue);
+      this.needOpen(state);
+      this.needUndecided(state, body.item);
+      const entry = entries[body.item - 1];
+      if (!entry.session || !entry.state || entry.state.stage !== 'lineup') throw new ProseError('E_CONFLICT', 'this item can no longer take a choice', { hint: 'Open the set as its own session, or ask your writer to open it again' });
+      const shown = new Set(entry.state.candidates.map(x => x.index));
+      const passes = [...new Set(body.passes)].filter(p => p !== body.variant);
+      for (const v of [...(body.variant !== null ? [body.variant] : []), ...passes]) {
+        if (!shown.has(v)) throw new ProseError('E_SCHEMA', `variant ${v} is not in this set`, { hint: `The drafts are ${[...shown].join(', ')}` });
+      }
+      if (body.variant !== null) {
+        // Before it is staged, the file is looked at itself: a draft that changed after sealing cannot be chosen (the CLI would refuse the pick).
+        const cand = entry.state.candidates.find(x => x.index === body.variant)!;
+        const frozen = frozenHash(root, entry.session, roundMaps(entry.session, []), cand);
+        if (!this.variantText(root, entry.session.setId, variantOf(cand), frozen, true).hashOk) {
+          throw new ProseError('E_CONFLICT', `draft ${body.variant} changed after it was sealed, so it cannot be chosen`, { hint: 'Ask your writer to restore it' });
+        }
+      }
+      const { duplicate } = await appendQueueEventAsync(root, queue.id, { type: 'choose', item: body.item, variant: body.variant, passes, eventId: body.eventId });
+      return this.queueReply(root, queue, body.item, duplicate ? { duplicate: true } : {});
+    });
+    this.json(c.res, 200, out);
+  }
+
+  private async postSkip(c: Ctx): Promise<void> {
+    const { root, queue } = this.findQueue(c.match[1]);
+    const body = await this.queueBody(c, SkipBody);
+    if (!queue.items.some(i => i.n === body.item)) throw new ProseError('E_SCHEMA', `item ${body.item} is not in this queue`, { hint: `The queue has items 1 to ${queue.items.length}` });
+    const out = await this.serial(queue.id, async () => {
+      const { state } = this.railState(root, queue);
+      this.needOpen(state);
+      this.needUndecided(state, body.item);
+      const { duplicate } = await appendQueueEventAsync(root, queue.id, { type: 'skip', item: body.item, eventId: body.eventId });
+      return this.queueReply(root, queue, body.item, duplicate ? { duplicate: true } : {});
+    });
+    this.json(c.res, 200, out);
+  }
+
+  /** What the owner reads for an item that could not be sent: the CLI's own words, paths taken out, short enough for the log. */
+  private blockedMessage(e: unknown): string {
+    if (e instanceof ProseError) return this.scrubPaths(`${e.message}${e.hint ? `. ${e.hint}` : ''}`).slice(0, 300);
+    logError((e as Error)?.message ?? String(e));
+    return 'Something went wrong sending this one; the server log has the detail';
+  }
+
+  /**
+   * Send one chosen item: the lineup event (the kept draft and the passes) and then the ship, which runs `set pick` first, so
+   * the pick rows, the reveal and the taste model get exactly what a single-set ship gives them. Every step is idempotent by event id and by
+   * the child's state, so a retry (or a crash halfway) finishes the job. A failure blocks only this item, with its message.
+   */
+  private async sendItem(root: string, queue: Queue, n: number, variant: number, passes: number[], sendId: string): Promise<{ n: number; status: 'sent' | 'blocked'; message?: string }> {
+    const item = queue.items.find(i => i.n === n)!;
+    const id = item.sessionId;
+    const blocked = async (message: string) => {
+      try { await appendQueueEventAsync(root, queue.id, { type: 'blocked', item: n, message: message.slice(0, 300) }); } catch (e) { logError(`could not record a blocked item: ${(e as Error)?.message}`); }
+      return { n, status: 'blocked' as const, message };
+    };
+    try {
+      const session = readSession(root, id);
+      if (session.queue !== queue.id) return await blocked('This item is not part of this queue');
+      const events = readEvents(root, id);
+      const state = foldSession(session, events);
+      if (state.shipped !== null) return state.shipped === variant ? { n, status: 'sent' } : await blocked('This set was picked elsewhere, with another draft');
+      const set = this.setOf(root, item.setId, true);
+      if (!set) return await blocked('This set is no longer available');
+      if (set.picked !== undefined) return await blocked(`This set was already picked outside this page (draft ${set.picked})`);
+      const cand = state.candidates.find(x => x.index === variant);
+      if (!cand) return await blocked('That draft is not in this set');
+      const maps = roundMaps(session, events);
+      if (!this.variantText(root, item.setId, variantOf(cand), frozenHash(root, session, maps, cand), true).hashOk) {
+        return await blocked(`Draft ${variant} changed after it was sealed, so it cannot be picked. Ask your writer to restore it`);
+      }
+      if (state.stage === 'lineup') {
+        const plan = displayPlan(session, state, events);
+        await this.serial(id, () => this.applyEvent(root, id, { type: 'lineup', kept: [variant], duds: passes.filter(p => p !== variant), order: plan.order, eventId: `${sendId}-${n}-l` }));
+      } else if (!(state.stage === 'refine' || state.stage === 'duel') || !state.shortlist.includes(variant)) {
+        return await blocked('This item was partly sent for another draft. Open the set as its own session to finish it');
+      }
+      await this.serial(id, () => this.applyEvent(root, id, { type: 'ship', champion: variant, eventId: `${sendId}-${n}-s` }));
+      return { n, status: 'sent' };
+    } catch (e) {
+      return await blocked(this.blockedMessage(e));
+    }
+  }
+
+  private async postSend(c: Ctx): Promise<void> {
+    const { root, queue } = this.findQueue(c.match[1]);
+    const body = await this.queueBody(c, SendBody);
+    const out = await this.serial(queue.id, async () => {
+      const { state } = this.railState(root, queue);
+      const todo = state.order.filter(n => { const s = state.items[n - 1]; return (s.status === 'picked' || s.status === 'blocked') && s.choice.variant !== null; });
+      const earlier = this.queueEvents(root, queue.id).find(e => e.type === 'send' && e.sendId === body.sendId);
+      if (todo.length === 0 && earlier && earlier.type === 'send') {
+        // a retry of a send that already finished: nothing to redo, the same answer
+        const results = earlier.items.map(n => ({ n, status: state.items[n - 1]?.status === 'sent' ? 'sent' : 'blocked', ...(state.items[n - 1]?.message ? { message: state.items[n - 1].message } : {}) }));
+        return this.queueReply(root, queue, earlier.items[0] ?? 1, { duplicate: true, results });
+      }
+      this.needOpen(state);
+      if (todo.length === 0) throw new ProseError('E_CONFLICT', 'nothing is chosen to send', { hint: 'Keep a draft in an item, then press Send picks' });
+      await appendQueueEventAsync(root, queue.id, { type: 'send', sendId: body.sendId, items: todo });
+      const results: Array<{ n: number; status: 'sent' | 'blocked'; message?: string }> = [];
+      for (const n of todo) {
+        const choice = state.items[n - 1].choice;
+        results.push(await this.sendItem(root, queue, n, choice.variant!, choice.passes, body.sendId));
+      }
+      return this.queueReply(root, queue, todo[0], { results });
+    });
+    this.json(c.res, 200, out);
+  }
+
+  /** Finish the review: record it, then abandon every child that was not sent (idempotent; a retry sweeps again). Staged choices that were never sent are dropped; the sets stay unpicked and sealed. */
+  private async postFinish(c: Ctx): Promise<void> {
+    const { root, queue } = this.findQueue(c.match[1]);
+    const body = await this.queueBody(c, FinishBody);
+    const out = await this.serial(queue.id, async () => {
+      const before = this.railState(root, queue).state;
+      if (before.stage !== 'finished' && before.stage !== 'closed') await appendQueueEventAsync(root, queue.id, { type: 'finish', eventId: body.eventId });
+      const { entries } = this.railState(root, queue);
+      for (const [k, entry] of entries.entries()) {
+        if (!entry.state || entry.state.stage === 'shipped' || entry.state.stage === 'abandoned') continue;
+        const id = queue.items[k].sessionId;
+        try { await this.serial(id, () => appendEventAsync(root, id, { type: 'abandon' })); } catch { /* it finished meanwhile */ }
+      }
+      return { ok: true, rail: this.railPayload(root, queue) };
+    });
+    this.json(c.res, 200, out);
+  }
+
   // ---- HTTP ----
 
   private json(res: ServerResponse, status: number, body: unknown): void {
@@ -1046,15 +1397,19 @@ export class ReadingServer {
 
   /** An error as the page gets it: the code, message and hint, with project and home paths scrubbed out. */
   private errorBody(e: ProseError): { error: { code: ErrorCode; message: string; hint?: string } } {
+    const scrub = (text: string) => this.scrubPaths(text);
+    return { error: { code: e.code, message: scrub(e.message), ...(e.hint !== undefined ? { hint: scrub(e.hint) } : {}) } };
+  }
+
+  /** Text with the project and home paths taken out. */
+  private scrubPaths(text: string): string {
     const roots = [...this.knownProjects(), proseHome()].flatMap(r => [r, r.replaceAll('\\', '/')]);
     const joined = roots.join('\0');
     if (this.scrubMemo?.roots !== joined) {
       const escape = (r: string) => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       this.scrubMemo = { roots: joined, re: new RegExp(roots.map(escape).join('|'), process.platform === 'win32' ? 'gi' : 'g') };
     }
-    const re = this.scrubMemo.re;
-    const scrub = (text: string) => text.replace(re, '<path>');
-    return { error: { code: e.code, message: scrub(e.message), ...(e.hint !== undefined ? { hint: scrub(e.hint) } : {}) } };
+    return text.replace(this.scrubMemo.re, '<path>');
   }
 
   private async route(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -1080,7 +1435,7 @@ export class ReadingServer {
       return this.asset(res, path);
     }
     if (!path.startsWith('/api/')) {
-      const key: PageKey | null = path === '/' || /^\/s\/[a-z0-9-]+$/.test(path) ? 'index' : path === '/app.js' ? 'app' : path === '/style.css' ? 'style' : null;
+      const key: PageKey | null = path === '/' || /^\/(?:s|q)\/[a-z0-9-]+$/.test(path) ? 'index' : path === '/app.js' ? 'app' : path === '/style.css' ? 'style' : null;
       if (!key) throw NOT_FOUND();
       if (method !== 'GET') throw methodNotAllowed();
       return this.page(res, key);
@@ -1176,3 +1531,4 @@ export class ReadingServer {
 }
 
 export const sessionUrl = (info: Pick<ServerInfo, 'url' | 'token'>, id: string) => `${info.url}/s/${id}?t=${info.token}`;
+export const queueUrl = (info: Pick<ServerInfo, 'url' | 'token'>, id: string) => `${info.url}/q/${id}?t=${info.token}`;

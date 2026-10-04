@@ -275,6 +275,72 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1
 .plan-text { margin: 0.4rem 0; font-family: var(--script); font-size: 0.98rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .plan-actions { margin-bottom: 2rem; }
 
+/* ---- batch review: the rail (the approved mock), the item bar, the panels and the dock ---- */
+.desk.batch { display: grid; grid-template-columns: 17rem minmax(0, 1fr); min-height: 100vh; align-items: start; }
+.work { min-width: 0; }
+.rail { border-right: 1px solid var(--rule); padding: 1.1rem 1rem 6rem; position: sticky; top: 0; height: 100vh; overflow: auto; }
+.rail[hidden] { display: none; }
+.rail-title { font: 700 0.78rem var(--script); letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 0.2rem; line-height: 1.3; }
+.rail .count { color: var(--graphite); font-size: 0.9rem; margin: 0 0 1rem; }
+.queue { list-style: none; margin: 0; padding: 0; }
+.qitem {
+  display: grid; grid-template-columns: 1.5rem 1fr; gap: 0.6rem; align-items: start; width: 100%; text-align: left;
+  min-height: 44px; padding: 0.55rem 0.5rem; background: none; border: 0; border-radius: 6px; font-weight: 400;
+}
+.qitem:hover { background: var(--sheet); }
+.qitem[aria-current="true"] { background: var(--sheet); box-shadow: inset 4px 0 0 var(--blue), 0 0 0 1px var(--rule); }
+.qitem .who { font: 700 0.8rem var(--script); letter-spacing: 0.04em; display: block; overflow-wrap: anywhere; }
+.qitem .where { color: var(--graphite); font-size: 0.85rem; display: block; overflow-wrap: anywhere; }
+.qitem .qstatus { color: var(--graphite); font-size: 0.8rem; display: block; overflow-wrap: anywhere; }
+/* the mark: hollow = waiting, filled with the letter = picked, ink = sent, a red slash = skipped; each also has its words beside it */
+.state { width: 1.15rem; height: 1.15rem; margin-top: 0.15rem; border-radius: 50%; border: 2px solid var(--graphite); position: relative; flex: none; }
+.state.picked { border-color: var(--blue); background: var(--blue); }
+.state.picked::after { content: attr(data-l); position: absolute; inset: 0; display: grid; place-items: center; font: 700 0.62rem var(--script); color: var(--sheet); }
+.state.sent { border-color: var(--ink); background: var(--ink); }
+.state.skipped { border-color: var(--red); }
+.state.skipped::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--red); transform: translateX(-50%) rotate(40deg); }
+.state.blocked { border-color: var(--red); }
+.state.blocked::after { content: '!'; position: absolute; inset: 0; display: grid; place-items: center; font: 700 0.72rem var(--script); color: var(--red); }
+.state.ended { border-style: dashed; }
+.pager { display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; align-items: center; margin-top: 0.7rem; }
+.pager .quiet { font-size: 0.85rem; }
+
+.itembar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.2rem 0 0.7rem; }
+.itembar .own { margin-left: auto; min-height: 44px; display: inline-flex; align-items: center; }
+.blocked-msg { border: 1.5px solid var(--red); border-radius: 4px; padding: 0.5rem 0.8rem; margin: 0.4rem 0; }
+
+.panel { background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 4px; padding: 0.4rem 1rem 0.6rem; margin: 0.6rem 0 1rem; }
+.panel h2 { margin: 0.6rem 0 0.4rem; }
+.panel h2:focus { outline: 3px solid var(--blue); outline-offset: 3px; }
+.review { margin: 0.4rem 0; padding-left: 1.2rem; font-family: var(--script); font-size: 0.95rem; max-width: 80ch; overflow-wrap: anywhere; }
+.review li { margin: 0.25rem 0; }
+.keys { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.3rem 1.2rem; margin: 0.4rem 0 0.8rem; }
+.keys dt { font: 700 0.9rem var(--script); }
+.keys dd { margin: 0; }
+
+.batchbar .tally { flex: 1 1 16rem; color: var(--graphite); }
+.batchbar.over .tally { color: var(--ink); font-weight: 700; }
+.batchbar button { flex: 0 1 auto; }
+
+@media (max-width: 899px) {
+  .desk.batch { display: block; }
+  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 0.8rem 1rem; }
+  /* the rail is a strip across the top: one chip per item, scrolled sideways inside the strip, not the page */
+  .queue { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.3rem; }
+  .queue li { flex: none; }
+  .qitem { width: auto; min-width: 9.5rem; max-width: 14rem; border: 1px solid var(--rule); }
+  .rail .count { margin-bottom: 0.6rem; }
+  .itembar .own { margin-left: 0; }
+  .batchbar [data-key="keys"] { display: none; }
+}
+@media (forced-colors: active) {
+  .panel, .rail, .qitem[aria-current="true"], .blocked-msg { border-color: CanvasText; }
+  .state, .state.picked, .state.sent { border-color: CanvasText; }
+  .state.picked, .state.sent { background: CanvasText; }
+  .state.picked::after, .state.sent::after { color: Canvas; }
+  .state.skipped::after { background: CanvasText; }
+}
+
 /* ---- the licence line ---- */
 .site-foot { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem 1.5rem; color: var(--graphite); font-size: 0.85rem; }
 .site-foot a { display: inline-flex; align-items: center; min-height: 44px; }

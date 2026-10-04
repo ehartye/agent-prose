@@ -4,7 +4,7 @@
 // `"kind": "strikes"`: then <setId> is a strike folder key (the draft's strike lock).
 import { appendFileSync } from 'node:fs';
 import { withDirLock, withSetLock } from '../src/owner/fsutil.ts';
-import { sessionDir, strikeDir } from '../src/owner/paths.ts';
+import { queueDir, sessionDir, strikeDir } from '../src/owner/paths.ts';
 
 const [project, id, name, holdMs, beatMs, log, optionsJson] = process.argv.slice(2);
 const sleep = (/** @type {number} */ ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -22,6 +22,7 @@ try {
     note('exit');
   };
   if (kind === 'session') withDirLock(sessionDir(project, id), { noun: 'session', id, project }, hold, lockOptions);
+  else if (kind === 'queue') withDirLock(queueDir(project, id), { noun: 'queue', id, project }, hold, lockOptions);
   else if (kind === 'strikes') withDirLock(strikeDir(project, id), { noun: 'strikes', id, project }, hold, lockOptions);
   else withSetLock(project, id, hold, lockOptions);
 } catch (e) {

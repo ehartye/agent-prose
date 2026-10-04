@@ -5,22 +5,22 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
-import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
 import type { Io } from '../io.ts';
 import { needProject } from '../project.ts';
-import { resolveSettings } from '../settings.ts';
 import { checkSet } from '../owner/check.ts';
 import { withDirLockAsync } from '../owner/fsutil.ts';
 import { newId, proseHome, sessionDir, sessionsDir } from '../owner/paths.ts';
-import { predictionProblem } from '../owner/pick.ts';
-import { readPrediction, textHash, variantHash } from '../owner/prediction.ts';
+import { textHash, variantHash } from '../owner/prediction.ts';
 import { isStale, originalLines } from '../owner/original.ts';
-import { basePath, readSet, variantPath } from '../owner/sets.ts';
+import { readSet, variantPath } from '../owner/sets.ts';
 import {
   ReadingServer, SERVER_API, displayPlan, frozenHash, labelOf, probe, rankAddresses, isStopped, readServerInfo, recordStopped, registerProject, roundMaps,
-  serverAction, serverLogFile, sessionUrl, stoppedInfo, writeServerInfo, type ServerInfo,
+  queueUrl, serverAction, serverLogFile, sessionUrl, stoppedInfo, writeServerInfo, type ServerInfo,
 } from '../reading/server.ts';
+import { MAX_QUEUE_ITEMS, queueExists } from '../reading/queue.ts';
+import { batchError, parseSetList, pendingSets, planBatch, planOpen, type OpenPlan } from '../reading/open.ts';
+import { closeQueue, createQueue, listQueues, queueStatus, waitForQueue } from './reading-queue.ts';
 import {
   appendEvent, foldSession, openSession, readEvents, readReveal, readSession, variantOf,
   type Session, type SessionState, type StoredEvent,
@@ -34,8 +34,8 @@ const WAIT_STEP_MS = 200;
 const ACTIONABLE = new Set(['refine', 'ship', 'abandon']);
 
 /** Said on every serve and every open: what the link exposes. */
-export const LOCAL_NOTICE = 'This server listens on this machine only (127.0.0.1): nothing else on the network can reach the link. Whoever opens the link can also delete lines from those drafts (strike them, then apply; the page asks you to confirm the exact text, and an undo puts them back).';
-export const NOTICE = 'Anyone on this network who has the link can read the drafts in the projects registered with this server, and delete lines from them (strike them, then apply; the page asks to confirm the exact text, and an undo puts them back). Use --local to keep it on this machine.';
+export const LOCAL_NOTICE = 'This server listens on this machine only (127.0.0.1): nothing else on the network can reach the link. Whoever opens the link can also delete lines from those drafts (strike them, then apply; the page asks you to confirm the exact text, and an undo puts them back), and can record picks for the sets it names (a pick cannot be changed afterwards).';
+export const NOTICE = 'Anyone on this network who has the link can read the drafts in the projects registered with this server, and delete lines from them (strike them, then apply; the page asks to confirm the exact text, and an undo puts them back), and can record picks for the sets it names (a pick cannot be changed afterwards). Use --local to keep it on this machine.';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -138,9 +138,9 @@ const port = (text: string): number => {
   return n;
 };
 
-const seconds = (text: string): number => {
+const seconds = (text: string, flag = '--timeout'): number => {
   const n = Number(text);
-  if (!text.trim() || !Number.isFinite(n) || n < 0) throw new ProseError('E_USAGE', '--timeout must be a number of seconds, 0 or more', { hint: `Got "${text}"` });
+  if (!text.trim() || !Number.isFinite(n) || n < 0) throw new ProseError('E_USAGE', `${flag} must be a number of seconds, 0 or more`, { hint: `Got "${text}"` });
   return n;
 };
 
@@ -268,62 +268,98 @@ export function registerReadingCommands(program: Command, io: Io): void {
   const reading = program.command('reading').description('The reading page: open a session for the owner, wait for their request, answer with a new round');
 
   reading.command('open')
-    .description("Open a set on the reading page: freezes what the owner will be shown, registers the project, prints the link")
-    .requiredOption('--set <id>', 'set id')
+    .description("Open a set (--set), several (--sets a,b,c) or every set waiting for a pick (--pending) on the reading page: freezes what the owner will be shown, registers the project, prints the link")
+    .option('--set <id>', 'set id: one session, as ever')
+    .option('--sets <ids>', `comma-separated set ids (at most ${MAX_QUEUE_ITEMS}): one batch, one page, a queue over ordinary sessions; the owner chooses a variant per set and sends the picks together`)
+    .option('--pending', 'a batch of every set with a sealed prediction and no pick (oldest first, not already open on the page)')
+    .option('--limit <n>', `with --pending: at most this many sets (1-${MAX_QUEUE_ITEMS}, default ${MAX_QUEUE_ITEMS})`)
     .option('--local', 'bind 127.0.0.1 only: nothing else on the network can reach it (without it a running server is reused as it is)')
     .option('--no-predict', 'open without a sealed prediction (recorded in the session)')
     .option('--prompt <text>', 'what the owner is reading for, shown on the page')
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
-    .action(async (opts: { set: string; predict: boolean; local?: boolean; prompt?: string; dir?: string }) => {
+    .action(async (opts: { set?: string; sets?: string; pending?: boolean; limit?: string; predict: boolean; local?: boolean; prompt?: string; dir?: string }) => {
+      const modes = [opts.set !== undefined, opts.sets !== undefined, opts.pending === true].filter(Boolean).length;
+      if (modes !== 1) throw new ProseError('E_USAGE', 'Say which sets to open: exactly one of --set <id>, --sets a,b,c or --pending', { hint: 'prose reading open --set <id>' });
+      if (opts.limit !== undefined && !opts.pending) throw new ProseError('E_USAGE', '--limit goes with --pending', { hint: 'prose reading open --pending --limit 20' });
+      if (opts.pending && !opts.predict) throw new ProseError('E_USAGE', '--pending opens sets that have a sealed prediction; --no-predict is for --sets', { hint: 'Seal predictions first, or name the sets: prose reading open --sets a,b --no-predict' });
       const project = projectOf(opts);
-      const set = readSet(project, opts.set);
-      const check = checkSet(project, set);
-      if (!check.ok) throw new ProseError('E_USAGE', `Set ${set.id} has fewer than two surviving variants, so there is nothing to put on the page`, { hint: check.next });
-      let prediction = readPrediction(project, set.id, set);
-      if (prediction) {
-        const broken = predictionProblem(project, set, prediction);
-        if (broken) {
-          if (opts.predict) throw new ProseError('E_CONFLICT', broken.message, { hint: `Restore the file, or open without a guess: prose reading open --set ${set.id} --no-predict` });
-          prediction = null; // a tampered prediction proves nothing: ignored, as set pick ignores it
-        }
-      }
-      if (!prediction && opts.predict) {
-        throw new ProseError('E_PREDICTION_REQUIRED', `Seal a prediction before opening ${set.id} for the owner`, {
-          hint: `prose predict --set ${set.id} --pick <n> --shortlist <n,n> --why "..." (or open with --no-predict to skip the guess)`,
-        });
-      }
-      const shown = prediction ? prediction.shown : check.keep;
-      const hashes = prediction ? prediction.hashes : Object.fromEntries(shown.map(i => [String(i), variantHash(project, set, i)]));
-      // The draft the set was made from sets the register, the words per minute and any declared length (as measure reads them).
-      const doc = loadDocument(basePath(project, set), { form: set.form });
-      const settings = resolveSettings(doc, project);
-      const t = settings.target;
-      const target = t && (t.minutes !== undefined || t.words !== undefined) ? { ...(t.minutes !== undefined ? { minutes: t.minutes } : {}), ...(t.words !== undefined ? { words: t.words } : {}) } : null;
 
+      if (opts.set !== undefined) {
+        const plan = planOpen(project, readSet(project, opts.set), opts.predict);
+        const { info } = await ensureServer(opts.local ? { local: true } : {});
+        registerProject(project);
+        const session = openSession(project, {
+          id: newId(plan.set.id.slice(0, 40).replace(/-+$/, '')),
+          setId: plan.set.id, form: plan.set.form, register: plan.register, prompt: opts.prompt ?? '',
+          shown: plan.shown, hashes: plan.hashes, target: plan.target, wpm: plan.wpm, predicted: plan.prediction !== null,
+          candidates: plan.shown.map(i => ({ index: i, name: `v${i}`, direction: plan.set.variants.find(v => v.index === i)?.direction ?? null, round: 0 })),
+        });
+        io.emit({
+          id: session.id, url: sessionUrl(info, session.id),
+          ipUrls: isLocal(info) ? [] : rankAddresses().map(a => ({ url: sessionUrl({ url: `http://${a.address}:${info.port}`, token: info.token }, session.id), via: a.label })),
+          wait: `prose reading wait --id ${session.id}`, predicted: session.predicted, notice: noticeOf(info),
+        });
+        return;
+      }
+
+      // A batch: every set is checked first and nothing is created unless all pass (--sets), or the ready ones are taken (--pending).
+      let plans: OpenPlan[];
+      let skipped: Array<{ set: string; reason: string }> = [];
+      let remaining = 0;
+      if (opts.sets !== undefined) {
+        const ids = parseSetList(opts.sets);
+        const r = planBatch(project, ids, opts.predict);
+        if (r.failures.length) throw batchError(r.failures, ids.length);
+        plans = r.plans;
+      } else {
+        const limit = opts.limit === undefined ? MAX_QUEUE_ITEMS : Number(opts.limit);
+        if (opts.limit !== undefined && (!/^\d+$/.test(opts.limit.trim()) || limit < 1 || limit > MAX_QUEUE_ITEMS)) {
+          throw new ProseError('E_USAGE', `--limit must be a whole number from 1 to ${MAX_QUEUE_ITEMS}`, { hint: `Got "${opts.limit}"` });
+        }
+        const r = pendingSets(project, limit);
+        if (r.plans.length === 0) {
+          throw new ProseError('E_USAGE', 'Nothing is waiting for a pick', {
+            hint: 'A set waits once it has a sealed prediction and no pick: prose predict --set <id> --pick <n> --why "..."',
+            ...(r.skipped.length ? { details: { skipped: r.skipped } } : {}),
+          });
+        }
+        plans = r.plans; skipped = r.skipped; remaining = r.remaining;
+      }
       const { info } = await ensureServer(opts.local ? { local: true } : {});
       registerProject(project);
-      const session = openSession(project, {
-        id: newId(set.id.slice(0, 40).replace(/-+$/, '')),
-        setId: set.id, form: set.form, register: doc.register ?? null, prompt: opts.prompt ?? '',
-        shown, hashes, target, wpm: settings.wpm, predicted: prediction !== null,
-        candidates: shown.map(i => ({ index: i, name: `v${i}`, direction: set.variants.find(v => v.index === i)?.direction ?? null, round: 0 })),
-      });
+      const queue = createQueue(project, plans, opts.prompt ?? '');
       io.emit({
-        id: session.id, url: sessionUrl(info, session.id),
-        ipUrls: isLocal(info) ? [] : rankAddresses().map(a => ({ url: sessionUrl({ url: `http://${a.address}:${info.port}`, token: info.token }, session.id), via: a.label })),
-        wait: `prose reading wait --id ${session.id}`, predicted: session.predicted, notice: noticeOf(info),
+        id: queue.id, kind: 'queue', url: queueUrl(info, queue.id),
+        ipUrls: isLocal(info) ? [] : rankAddresses().map(a => ({ url: queueUrl({ url: `http://${a.address}:${info.port}`, token: info.token }, queue.id), via: a.label })),
+        items: queue.items.map(i => ({ n: i.n, set: i.setId, session: i.sessionId, who: i.who, where: i.where, predicted: i.predicted })),
+        skipped, remaining,
+        wait: `prose reading wait --id ${queue.id} --since 0`, predicted: queue.items.every(i => i.predicted), notice: noticeOf(info),
       });
     });
 
   reading.command('wait')
-    .description('Block until the owner asks to refine, ships or abandons; prints the request (champion, directions, notes) and what to do next')
-    .requiredOption('--id <id>', 'session id')
+    .description('Block until the owner asks to refine, ships or abandons (a session), or until their picks arrive (a batch: --id <queue id>, then --since <cursor> from the last answer); prints the request or the picks and what to do next')
+    .requiredOption('--id <id>', 'session id, or queue id for a batch')
+    .option('--since <n>', 'a batch: picks already delivered (the cursor the last wait printed; default 0)')
+    .option('--settle <seconds>', "a batch: wait this long after the last pick so one Send's picks come back together", '1.5')
     .option('--timeout <seconds>', 'give up after this long (exit 0 with timeout: true)', '600')
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
-    .action(async (opts: { id: string; timeout: string; dir?: string }) => {
+    .action(async (opts: { id: string; since?: string; settle: string; timeout: string; dir?: string }) => {
       const project = projectOf(opts);
-      readSession(project, opts.id);
       const limit = seconds(opts.timeout) * 1000;
+      if (queueExists(project, opts.id)) {
+        const since = opts.since === undefined ? 0 : Number(opts.since);
+        if (opts.since !== undefined && (!/^\d+$/.test(opts.since.trim()) || !Number.isSafeInteger(since))) throw new ProseError('E_USAGE', '--since must be a whole number (the cursor of the last wait)', { hint: `Got "${opts.since}"` });
+        const settleMs = seconds(opts.settle, '--settle') * 1000;
+        io.emit(await waitForQueue(project, opts.id, { since, timeoutMs: limit, settleMs }));
+        return;
+      }
+      if (opts.since !== undefined) throw new ProseError('E_USAGE', '--since goes with a queue id (a batch); a session has no cursor', { hint: 'prose reading wait --id <session id>' });
+      try { readSession(project, opts.id); }
+      catch (e) {
+        if (e instanceof ProseError && e.code === 'E_NOT_FOUND') throw new ProseError('E_NOT_FOUND', `No session or queue ${opts.id} in ${project}`, { hint: 'prose reading list shows the sessions and queues' });
+        throw e;
+      }
       const file = join(sessionDir(project, opts.id), 'events.jsonl');
       const end = Date.now() + limit;
       let seen = '';
@@ -352,6 +388,9 @@ export function registerReadingCommands(program: Command, io: Io): void {
     .action((opts: { id: string; set: string; dir?: string }) => {
       const project = projectOf(opts);
       const l = load(project, opts.id);
+      if (l.session.queue !== undefined) {
+        throw new ProseError('E_USAGE', `Session ${opts.id} is an item of batch ${l.session.queue}, and a batch item has no rounds`, { hint: `Open the set as its own session: prose reading open --set ${l.session.setId}` });
+      }
       if (l.state.stage !== 'waiting') {
         throw new ProseError('E_CONFLICT', `Session ${opts.id} is in the ${l.state.stage} stage, not waiting for a round`, {
           hint: l.state.stage === 'shipped' || l.state.stage === 'abandoned' ? 'Open a new session with prose reading open' : `A round answers a refine request: prose reading wait --id ${opts.id}`,
@@ -381,14 +420,16 @@ export function registerReadingCommands(program: Command, io: Io): void {
     });
 
   reading.command('status')
-    .description('A session: stage, round, candidates, duels, notes, the champion and, once shipped, the reveal of your sealed prediction')
-    .requiredOption('--id <id>', 'session id')
+    .description('A session: stage, round, candidates, duels, notes, the champion and, once shipped, the reveal of your sealed prediction; for a batch (--id <queue id>): each set and, for sent ones only, the pick and its reveal')
+    .requiredOption('--id <id>', 'session id, or queue id for a batch')
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
     .action((opts: { id: string; dir?: string }) => {
-      const l = load(projectOf(opts), opts.id);
+      const project = projectOf(opts);
+      if (queueExists(project, opts.id)) { io.emit(queueStatus(project, opts.id)); return; }
+      const l = load(project, opts.id);
       const { state, session } = l;
       io.emit({
-        id: session.id, setId: session.setId, stage: state.stage, round: state.round, predicted: session.predicted ?? true,
+        id: session.id, setId: session.setId, ...(session.queue !== undefined ? { queue: session.queue } : {}), stage: state.stage, round: state.round, predicted: session.predicted ?? true,
         champion: state.champion, candidates: briefCandidates(l), duels: state.duels, notes: state.notes.length,
         pendingRefine: state.pendingRefine, shipped: state.shipped,
         reveal: state.shipped !== null ? readReveal(l.project, session.id) : null,
@@ -396,7 +437,7 @@ export function registerReadingCommands(program: Command, io: Io): void {
     });
 
   reading.command('list')
-    .description('The reading sessions of a project, newest first')
+    .description('The reading sessions of a project, newest first, and its batch queues (a queue\'s items are listed under it, not as sessions)')
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
     .action((opts: { dir?: string }) => {
       const project = projectOf(opts);
@@ -406,20 +447,24 @@ export function registerReadingCommands(program: Command, io: Io): void {
         for (const id of readdirSync(sessionsDir(project))) {
           try {
             const l = load(project, id);
+            if (l.session.queue !== undefined) continue;
             sessions.push({ id, setId: l.session.setId, stage: l.state.stage, round: l.state.round, createdAt: l.session.createdAt });
           } catch (e) { problems.push({ id, error: e instanceof ProseError ? e.message : String(e) }); }
         }
       }
       sessions.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      io.emit({ project, sessions, ...(problems.length ? { problems } : {}) });
+      const batches = listQueues(project);
+      io.emit({ project, sessions, queues: batches.queues, ...(problems.length || batches.problems.length ? { problems: [...problems, ...batches.problems] } : {}) });
     });
 
   reading.command('close')
-    .description('Abandon a session that is still open; does nothing to one already shipped or abandoned')
-    .requiredOption('--id <id>', 'session id')
+    .description('Abandon a session that is still open (does nothing to one already shipped or abandoned); for a batch (--id <queue id>) abandon every item not yet sent and close the queue: picks already sent stay')
+    .requiredOption('--id <id>', 'session id, or queue id for a batch')
     .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
     .action((opts: { id: string; dir?: string }) => {
-      const l = load(projectOf(opts), opts.id);
+      const project = projectOf(opts);
+      if (queueExists(project, opts.id)) { io.emit(closeQueue(project, opts.id)); return; }
+      const l = load(project, opts.id);
       if (l.state.stage === 'shipped' || l.state.stage === 'abandoned') { io.emit({ id: opts.id, closed: false, stage: l.state.stage }); return; }
       appendEvent(l.project, opts.id, { type: 'abandon' });
       io.emit({ id: opts.id, closed: true, stage: 'abandoned' });

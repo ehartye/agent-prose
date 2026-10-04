@@ -9,8 +9,11 @@
 <script src="/app.js" defer></script>
 </head>
 <body>
+<div id="desk" class="desk">
+<nav id="rail" class="rail" aria-label="Review queue" hidden></nav>
+<div class="work">
 <header class="site-head">
-<h1 id="title">Reading</h1>
+<h1 id="title" tabindex="-1">Reading</h1>
 <p id="subtitle" class="sub"></p>
 </header>
 <nav id="views" class="views" aria-label="What to look at" hidden></nav>
@@ -20,6 +23,9 @@
 <main id="app">
 <p class="quiet">Loading...</p>
 </main>
+</div>
+</div>
+<div id="live" class="sr-only" role="status" aria-live="polite"></div>
 <noscript><p class="quiet">This page needs JavaScript to show your drafts.</p></noscript>
 </body>
 </html>

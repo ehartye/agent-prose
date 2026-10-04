@@ -7,8 +7,8 @@ const skillsDir = join(root, 'skills');
 const skills = readdirSync(skillsDir);
 
 describe('skills', () => {
-  it('ships the thirteen skills', () => {
-    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-review', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-strike', 'prose-voice']);
+  it('ships the fourteen skills', () => {
+    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-review', 'prose-review-batch', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-strike', 'prose-voice']);
   });
 
   for (const s of skills) {
@@ -44,6 +44,25 @@ describe('prose-review reading page', () => {
     const fm = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
     expect(fm.match(/^description: (.*)$/m)?.[1]).not.toMatch(/prose (set|predict|reading)/);
     expect(fm.match(/^when_to_use: (.*)$/m)?.[1]).toMatch(/phone or laptop/);
+  });
+});
+
+describe('prose-review-batch', () => {
+  const raw = (skill: string) => readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8').replaceAll('\r\n', '\n');
+  const flat = (skill: string) => raw(skill).replace(/\s+/g, ' ');
+  it('says how to open, wait with the cursor, what done means, and what not to do', () => {
+    const text = flat('prose-review-batch');
+    for (const needle of ['prose reading open --sets a,b,c --local', 'prose reading open --pending', 'at most 50', 'BOTH links', 'prose reading wait --id <queue id> --since <cursor>', 'pass back the `cursor`', 'all-picked', 'finished', 'closed', 'Picks cannot be changed once sent', 'A skipped or waiting item never ends the batch', 'quick pick', 'no duel and no refine round', "Do not read a set's `prediction.json`", 'stay sealed', 'prose reading open --set <id>', 'exposure notice']) {
+      expect(text, needle).toContain(needle);
+    }
+  });
+  it('is pointed at from the review, dialog and script skills', () => {
+    for (const s of ['prose-review', 'prose-dialog', 'prose-script']) expect(flat(s), s).toContain('prose-review-batch');
+    expect(flat('prose-review')).toContain('Keep marks the ones worth a duel');
+  });
+  it('keeps its listing text under the limit', () => {
+    const fm = raw('prose-review-batch').match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+    expect((fm.match(/^description: (.*)$/m)?.[1] ?? '').length + (fm.match(/^when_to_use: (.*)$/m)?.[1] ?? '').length).toBeLessThan(1536);
   });
 });
 
