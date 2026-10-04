@@ -182,7 +182,6 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | poets-org-hymn | Academy of American Poets (Hirsch, A Poet's Glossary). [Hymn (Glossary of Poetic Terms)](https://poets.org/glossary/hymn) | review | guide:song |
 | proto-2013 | Proto, 2013. [Prominence matching in English songs: a historical perspective](https://revistas.uned.es/index.php/signa/article/download/6345/6078) | peer-reviewed | guide:song |
 | rodriguez-vazquez-folk-song | Rodríguez Vázquez. [The metrics of folk song: text-setting in Spanish and English](https://revistas.uned.es/index.php/rhythmica/article/download/13136/12114) | peer-reviewed | guide:song |
-| wikipedia-ballad-stanza | Wikipedia contributors. [Ballad stanza](https://en.wikipedia.org/wiki/Ballad_stanza) | practitioner | guide:song |
 | wikipedia-metre-hymn | Wikipedia contributors. [Metre (hymn)](https://en.wikipedia.org/wiki/Metre_(hymn)) | practitioner | guide:song |
 
 ### speeches

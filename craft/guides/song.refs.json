@@ -1,21 +1,140 @@
 {
   "schema": "prose/references@1",
   "references": [
-    { "id": "pattison-prosody", "authors": "Pat Pattison (Berklee Online)", "year": 2022, "title": "Prosody in Music and Songwriting", "url": "https://online.berklee.edu/takenote/prosody-in-music-and-songwriting/", "kind": "practitioner", "note": "Teacher's article, one opinion with illustrative examples: prosody means every element supporting the central message; stable against unstable meaning; perfect, family and assonance rhyme. Not evidence." },
-    { "id": "pattison-romantic", "authors": "Pat Pattison (Berklee Online)", "year": 2024, "title": "The Best (and Worst) Romantic Song Lyrics", "url": "https://online.berklee.edu/takenote/best-and-worst-romantic-song-lyrics/", "kind": "practitioner", "note": "Teacher's reading of two songs: sense-bound language, line counts as feeling, an AABA form, and a pronoun switch he dislikes. Preferences are opinion." },
-    { "id": "chase-direct-address", "authors": "Erin Chase (Berklee Online)", "year": null, "title": "Direct Address in Songwriting: Writing Lyrics That Feel Like Conversations", "url": "https://online.berklee.edu/takenote/direct-address-in-songwriting-writing-lyrics-that-feel-like-conversations/", "kind": "practitioner", "note": "Course excerpt: lyrics between an I and a you, with gains, limits and four kinds of you. Craft vocabulary with song examples; no test of effect." },
-    { "id": "fine-ginsborg-2014", "authors": "Philip A. Fine and Jane Ginsborg", "year": 2014, "title": "Making myself understood: perceived factors affecting the intelligibility of sung text", "url": "https://www.frontiersin.org/articles/10.3389/fpsyg.2014.00809/full", "kind": "peer-reviewed", "note": "Survey of 143 musicians: 43 factors in four groups. Perceptions, not listener tests; gives no rule on open vowels, consonant clusters or breath." },
-    { "id": "proto-2013", "authors": "Proto", "year": 2013, "title": "Prominence matching in English songs: a historical perspective", "url": "https://revistas.uned.es/index.php/signa/article/download/6345/6078", "kind": "peer-reviewed", "note": "Linguistics article on stress-to-beat matching in English text-setting, with a survey of about 90 songs from the 13th century to Shakespeare. Reports Dell and Halle, Halle and Lerdahl and Hayes and Kaun second-hand; descriptive, not a listener experiment, and no syllables-per-beat figure." },
-    { "id": "rodriguez-vazquez-folk-song", "authors": "Rodríguez Vázquez", "year": null, "title": "The metrics of folk song: text-setting in Spanish and English", "url": "https://revistas.uned.es/index.php/rhythmica/article/download/13136/12114", "kind": "peer-reviewed", "note": "Argument from two folk songs, one Spanish and one English, that English speech, verse and musical rhythm agree. Two songs and the stress-timed against syllable-timed typology; no corpus or experiment." },
-    { "id": "parada-cabaleiro-2024", "authors": "Emilia Parada-Cabaleiro, Maximilian Mayerl, Stefan Brandl, Marcin Skowron, Markus Schedl, Elisabeth Lex and Eva Zangerle", "year": 2024, "title": "Song lyrics have become simpler and more repetitive over the last five decades", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10978890/", "kind": "peer-reviewed", "note": "353,320 English lyrics from a user-edited site, 1970 to 2020: repeated-line ratio and chorus share rose in five genres. A trend in what exists, not a measure of quality; the abstract's wording says complexity decreased while the results show repetition increased." },
-    { "id": "liikkanen-jakubowski-2020", "authors": "Lassi A. Liikkanen and Kelly Jakubowski", "year": 2020, "title": "Involuntary musical imagery as a component of ordinary music cognition: a review of empirical evidence", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7704448/", "kind": "review", "note": "Review of earworm studies. The chorus and lyrics figures (90% and 83%) are second-hand through the review; it calls hit song science results meager. About listening, not about writing." },
-    { "id": "nunes-2015", "authors": "Joseph C. Nunes, Andrea Ordanini and Francesca Valsesia", "year": 2015, "title": "The power of repetition: repetitive lyrics in a song increase processing fluency and drive market success", "url": "https://myscp.onlinelibrary.wiley.com/doi/10.1016/j.jcps.2014.12.004", "kind": "peer-reviewed", "note": "Abstract only: lab and chart studies of lexical repetition and fluency, with Billboard Hot 100 data 1958 to 2012. No sample sizes or effect sizes captured; chart data are observational." },
-    { "id": "nobile-2022", "authors": "Drew Nobile", "year": 2022, "title": "Teleology in Verse-Prechorus-Chorus Form", "url": "https://mtosmt.org/issues/mto.22.28.3/mto.22.28.3.nobile.html", "kind": "peer-reviewed", "note": "Music-theory history of the prechorus in songs from 1965 to 2020: it builds toward an arrival at the chorus. About harmony, texture and form, not lyric lines per section." },
-    { "id": "wikipedia-metre-hymn", "authors": "Wikipedia contributors", "year": null, "title": "Metre (hymn)", "url": "https://en.wikipedia.org/wiki/Metre_(hymn)", "kind": "practitioner", "note": "Weak evidence: an encyclopedia article, the only full set of hymn meter definitions read (Common, Long, Short, doubled, numbered). No allowed kind fits an encyclopedia, so the nearest is practitioner." },
-    { "id": "hymnary-azmon", "authors": "Hymnary.org", "year": null, "title": "Tune: AZMON", "url": "https://hymnary.org/tune/azmon_glaser", "kind": "platform-doc", "note": "One hymnal-database record: meter 8.6.8.6 with a link to more tunes of that meter, and the same tune recorded as 8686, CM and CMD. Not a definition of meter." },
-    { "id": "poets-org-hymn", "authors": "Academy of American Poets (Hirsch, A Poet's Glossary)", "year": null, "title": "Hymn (Glossary of Poetic Terms)", "url": "https://poets.org/glossary/hymn", "kind": "review", "note": "Glossary entry: the hymnal stanza, or common measure, is traditionally the same as the ballad stanza with stricter rhythms and rhymes. No syllable counts and no rule on matching texts to tunes." },
-    { "id": "wikipedia-ballad-stanza", "authors": "Wikipedia contributors", "year": null, "title": "Ballad stanza", "url": "https://en.wikipedia.org/wiki/Ballad_stanza", "kind": "practitioner", "note": "Weak evidence: a short encyclopedia article giving the ballad stanza as four lines, iambic tetrameter then trimeter, rhymed ABCB. The nearest kind is practitioner." },
-    { "id": "hirjee-brown-2010", "authors": "Hussein Hirjee and Daniel Brown", "year": 2010, "title": "Using automated rhyme detection to characterize rhyming style in rap music", "url": "https://kb.osu.edu/handle/1811/48548", "kind": "peer-reviewed", "note": "Abstract only and about rap: imperfect and internal rhymes modelled statistically. No figures and nothing on pop or hymn lyrics." },
-    { "id": "copyright-office-fair-use-faq", "authors": "US Copyright Office", "year": null, "title": "Fair Use (FAQ)", "url": "https://www.copyright.gov/help/faq/faq-fairuse.html", "kind": "standard", "note": "Official general information, United States only and not legal advice: no legal rule permits a set number of words or notes, fair use depends on all the circumstances, and permission is recommended in cases of doubt." }
+    {
+      "id": "pattison-prosody",
+      "authors": "Pat Pattison (Berklee Online)",
+      "year": 2022,
+      "title": "Prosody in Music and Songwriting",
+      "url": "https://online.berklee.edu/takenote/prosody-in-music-and-songwriting/",
+      "kind": "practitioner",
+      "note": "Teacher's article, one opinion with illustrative examples: prosody means every element supporting the central message; stable against unstable meaning; perfect, family and assonance rhyme. Not evidence."
+    },
+    {
+      "id": "pattison-romantic",
+      "authors": "Pat Pattison (Berklee Online)",
+      "year": 2024,
+      "title": "The Best (and Worst) Romantic Song Lyrics",
+      "url": "https://online.berklee.edu/takenote/best-and-worst-romantic-song-lyrics/",
+      "kind": "practitioner",
+      "note": "Teacher's reading of two songs: sense-bound language, line counts as feeling, an AABA form, and a pronoun switch he dislikes. Preferences are opinion."
+    },
+    {
+      "id": "chase-direct-address",
+      "authors": "Erin Chase (Berklee Online)",
+      "year": null,
+      "title": "Direct Address in Songwriting: Writing Lyrics That Feel Like Conversations",
+      "url": "https://online.berklee.edu/takenote/direct-address-in-songwriting-writing-lyrics-that-feel-like-conversations/",
+      "kind": "practitioner",
+      "note": "Course excerpt: lyrics between an I and a you, with gains, limits and four kinds of you. Craft vocabulary with song examples; no test of effect."
+    },
+    {
+      "id": "fine-ginsborg-2014",
+      "authors": "Philip A. Fine and Jane Ginsborg",
+      "year": 2014,
+      "title": "Making myself understood: perceived factors affecting the intelligibility of sung text",
+      "url": "https://www.frontiersin.org/articles/10.3389/fpsyg.2014.00809/full",
+      "kind": "peer-reviewed",
+      "note": "Survey of 143 musicians: 43 factors in four groups. Perceptions, not listener tests; gives no rule on open vowels, consonant clusters or breath."
+    },
+    {
+      "id": "proto-2013",
+      "authors": "Proto",
+      "year": 2013,
+      "title": "Prominence matching in English songs: a historical perspective",
+      "url": "https://revistas.uned.es/index.php/signa/article/download/6345/6078",
+      "kind": "peer-reviewed",
+      "note": "Linguistics article on stress-to-beat matching in English text-setting, with a survey of about 90 songs from the 13th century to Shakespeare. Reports Dell and Halle, Halle and Lerdahl and Hayes and Kaun second-hand; descriptive, not a listener experiment, and no syllables-per-beat figure."
+    },
+    {
+      "id": "rodriguez-vazquez-folk-song",
+      "authors": "Rodríguez Vázquez",
+      "year": null,
+      "title": "The metrics of folk song: text-setting in Spanish and English",
+      "url": "https://revistas.uned.es/index.php/rhythmica/article/download/13136/12114",
+      "kind": "peer-reviewed",
+      "note": "Argument from two folk songs, one Spanish and one English, that English speech, verse and musical rhythm agree. Two songs and the stress-timed against syllable-timed typology; no corpus or experiment."
+    },
+    {
+      "id": "parada-cabaleiro-2024",
+      "authors": "Emilia Parada-Cabaleiro, Maximilian Mayerl, Stefan Brandl, Marcin Skowron, Markus Schedl, Elisabeth Lex and Eva Zangerle",
+      "year": 2024,
+      "title": "Song lyrics have become simpler and more repetitive over the last five decades",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10978890/",
+      "kind": "peer-reviewed",
+      "note": "353,320 English lyrics from a user-edited site, 1970 to 2020: repeated-line ratio and chorus share rose in five genres. A trend in what exists, not a measure of quality; the abstract's wording says complexity decreased while the results show repetition increased."
+    },
+    {
+      "id": "liikkanen-jakubowski-2020",
+      "authors": "Lassi A. Liikkanen and Kelly Jakubowski",
+      "year": 2020,
+      "title": "Involuntary musical imagery as a component of ordinary music cognition: a review of empirical evidence",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7704448/",
+      "kind": "review",
+      "note": "Review of earworm studies. The chorus and lyrics figures (90% and 83%) are second-hand through the review; it calls hit song science results meager. About listening, not about writing."
+    },
+    {
+      "id": "nunes-2015",
+      "authors": "Joseph C. Nunes, Andrea Ordanini and Francesca Valsesia",
+      "year": 2015,
+      "title": "The power of repetition: repetitive lyrics in a song increase processing fluency and drive market success",
+      "url": "https://myscp.onlinelibrary.wiley.com/doi/10.1016/j.jcps.2014.12.004",
+      "kind": "peer-reviewed",
+      "note": "Abstract only: lab and chart studies of lexical repetition and fluency, with Billboard Hot 100 data 1958 to 2012. No sample sizes or effect sizes captured; chart data are observational."
+    },
+    {
+      "id": "nobile-2022",
+      "authors": "Drew Nobile",
+      "year": 2022,
+      "title": "Teleology in Verse-Prechorus-Chorus Form",
+      "url": "https://mtosmt.org/issues/mto.22.28.3/mto.22.28.3.nobile.html",
+      "kind": "peer-reviewed",
+      "note": "Music-theory history of the prechorus in songs from 1965 to 2020: it builds toward an arrival at the chorus. About harmony, texture and form, not lyric lines per section."
+    },
+    {
+      "id": "wikipedia-metre-hymn",
+      "authors": "Wikipedia contributors",
+      "year": null,
+      "title": "Metre (hymn)",
+      "url": "https://en.wikipedia.org/wiki/Metre_(hymn)",
+      "kind": "practitioner",
+      "note": "Weak evidence: an encyclopedia article, the only full set of hymn meter definitions read (Common, Long, Short, doubled, numbered). No allowed kind fits an encyclopedia, so the nearest is practitioner."
+    },
+    {
+      "id": "hymnary-azmon",
+      "authors": "Hymnary.org",
+      "year": null,
+      "title": "Tune: AZMON",
+      "url": "https://hymnary.org/tune/azmon_glaser",
+      "kind": "platform-doc",
+      "note": "One hymnal-database record: meter 8.6.8.6 with a link to more tunes of that meter, and the same tune recorded as 8686, CM and CMD. Not a definition of meter."
+    },
+    {
+      "id": "poets-org-hymn",
+      "authors": "Academy of American Poets (Hirsch, A Poet's Glossary)",
+      "year": null,
+      "title": "Hymn (Glossary of Poetic Terms)",
+      "url": "https://poets.org/glossary/hymn",
+      "kind": "review",
+      "note": "Glossary entry: the hymnal stanza, or common measure, is traditionally the same as the ballad stanza with stricter rhythms and rhymes. No syllable counts and no rule on matching texts to tunes."
+    },
+    {
+      "id": "hirjee-brown-2010",
+      "authors": "Hussein Hirjee and Daniel Brown",
+      "year": 2010,
+      "title": "Using automated rhyme detection to characterize rhyming style in rap music",
+      "url": "https://kb.osu.edu/handle/1811/48548",
+      "kind": "peer-reviewed",
+      "note": "Abstract only and about rap: imperfect and internal rhymes modelled statistically. No figures and nothing on pop or hymn lyrics."
+    },
+    {
+      "id": "copyright-office-fair-use-faq",
+      "authors": "US Copyright Office",
+      "year": null,
+      "title": "Fair Use (FAQ)",
+      "url": "https://www.copyright.gov/help/faq/faq-fairuse.html",
+      "kind": "standard",
+      "note": "Official general information, United States only and not legal advice: no legal rule permits a set number of words or notes, fair use depends on all the circumstances, and permission is recommended in cases of doubt."
+    }
   ]
 }
