@@ -8,6 +8,13 @@ when_to_use: Use when asked for an abstract, paper section, research summary, re
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 
+## Craft guide
+
+Craft guide: `prose guide formal-prose --text --section <name>` prints one section of the reference guide for
+academic and professional prose. Read the section you need, not all of it: `anatomy` before writing an abstract,
+a paper section, a grant aims page, a memo, a summary, a status update or an email; `failures` and `revise` when a
+draft is being fixed; `rules` for what lint checks. Run `prose guide` to list every guide.
+
 ## Set up the file
 
 Write `<name>.md` with frontmatter `form: academic` or `form: professional`, plus

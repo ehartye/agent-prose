@@ -67,6 +67,33 @@ Generated from `craft/references.json` and `craft/guides/*.refs.json` by `npm ru
 
 Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family>.refs.json`.
 
+### formal-prose
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| digitalgov-writing-understanding | Digital.gov (US General Services Administration), 2025. [Writing for understanding](https://digital.gov/guides/plain-language/writing) | style-guide | guide:formal-prose |
+| fiorillo-confabulated-references | Luca Fiorillo, 2026. [Confabulated references in the age of AI: contamination of the biomedical scientific literature](https://www.explorationpub.com/Journals/em/Article/1001385) | review | guide:formal-prose |
+| gopen-swan-1990 | George D. Gopen and Judith A. Swan, 1990. [The Science of Scientific Writing (American Scientist, reprint)](https://cseweb.ucsd.edu/~swanson/papers/science-of-writing.pdf) | practitioner | guide:formal-prose |
+| hartley-2014 | James Hartley, 2014. [Current findings from research on structured abstracts: an update](https://pmc.ncbi.nlm.nih.gov/articles/PMC4076121/) | review | guide:formal-prose |
+| icmje-manuscript | International Committee of Medical Journal Editors. [Preparing a Manuscript for Submission to a Medical Journal](https://www.icmje.org/recommendations/browse/manuscript-preparation/preparing-for-submission.html) | standard | guide:formal-prose |
+| kojima-popiel-2023 | Takako Kojima and Helena A. Popiel, 2023. [Effective use of hedging in scientific manuscripts: advice to non-native English-speaking researchers](https://pmc.ncbi.nlm.nih.gov/articles/PMC10151619/) | practitioner | guide:formal-prose |
+| mensh-kording-2017 | Brett Mensh and Konrad Kording, 2017. [Ten simple rules for structuring papers](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005619) | practitioner | guide:formal-prose |
+| niaid-research-plan | National Institute of Allergy and Infectious Diseases (NIH), 2025. [Write your research plan](https://www.niaid.nih.gov/grants-contracts/write-research-plan) | style-guide | guide:formal-prose |
+| niaid-specific-aims | National Institute of Allergy and Infectious Diseases (NIH), 2023. [Draft specific aims](https://www.niaid.nih.gov/grants-contracts/draft-specific-aims) | style-guide | guide:formal-prose |
+| pautasso-2013 | Marco Pautasso, 2013. [Ten simple rules for writing a literature review](https://pmc.ncbi.nlm.nih.gov/articles/PMC3715443/) | practitioner | guide:formal-prose |
+| purdue-memo-audience | Purdue Online Writing Lab. [Audience and purpose (memos)](https://owl.purdue.edu/owl/subject_specific_writing/professional_technical_writing/memos/audience_and_purpose.html) | practitioner | guide:formal-prose |
+| purdue-memo-parts | Purdue Online Writing Lab. [Parts of a memo](https://owl.purdue.edu/owl/subject_specific_writing/professional_technical_writing/memos/parts_of_a_memo.html) | practitioner | guide:formal-prose |
+| sollaci-pereira-2004 | Luciana B. Sollaci and Mauricio G. Pereira, 2004. [The introduction, methods, results, and discussion (IMRAD) structure: a fifty-year survey](https://pmc.ncbi.nlm.nih.gov/articles/PMC442179/) | peer-reviewed | guide:formal-prose |
+| stricker-2020 | Stricker, Chasiotis, Kerwer and Gunther, 2020. [Scientific abstracts and plain language summaries in psychology: a comparison based on readability indices](https://pmc.ncbi.nlm.nih.gov/articles/PMC7117690/) | peer-reviewed | guide:formal-prose |
+| unc-abstracts | UNC Writing Center. [Abstracts](https://writingcenter.unc.edu/tips-and-tools/abstracts/) | practitioner | guide:formal-prose |
+| unc-argument | UNC Writing Center. [Argument](https://writingcenter.unc.edu/tips-and-tools/argument/) | practitioner | guide:formal-prose |
+| unc-business-writing | UNC Writing Center. [Business writing](https://writingcenter.unc.edu/tips-and-tools/business-writing/) | practitioner | guide:formal-prose |
+| unc-grant-proposals | UNC Writing Center. [Grant proposals (or give me the money!)](https://writingcenter.unc.edu/tips-and-tools/grant-proposals-or-give-me-the-money/) | practitioner | guide:formal-prose |
+| unc-literature-reviews | UNC Writing Center. [Literature reviews](https://writingcenter.unc.edu/tips-and-tools/literature-reviews/) | practitioner | guide:formal-prose |
+| writing-commons-executive-summary | Writing Commons. [Executive summary](https://writingcommons.org/section/genre/executive-summary/) | practitioner | guide:formal-prose |
+| writing-commons-progress-reports | Writing Commons. [Progress reports](https://writingcommons.org/section/genre/progress-reports/) | practitioner | guide:formal-prose |
+| writing-commons-proposals | Writing Commons. [Proposals](https://writingcommons.org/section/genre/proposals/) | practitioner | guide:formal-prose |
+
 ### game-dialogue
 
 | id | Source | Kind | Cited by |
