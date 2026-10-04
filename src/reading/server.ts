@@ -21,13 +21,14 @@ import { EVENT_ID_RE, ID_RE, projectKey, proseHome, sessionDir, sessionsDir, set
 import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
 import { readPrediction, textHash } from '../owner/prediction.ts';
 import { draftHash, originalLines, type Original } from '../owner/original.ts';
-import { briefView, readSet, variantPath, type PromptSet } from '../owner/sets.ts';
+import { basePath, briefView, readSet, variantPath, type PromptSet } from '../owner/sets.ts';
 import {
   CLIENT_EVENTS, EventSchema, appendEventAsync, checkTransition, foldSession, nextPair, readEvents, readReveal, readSession, variantOf, writeRevealAsync,
   type PairChooser, type Session, type SessionCandidate, type SessionEvent, type SessionState, type StoredEvent,
 } from './session.ts';
 import { TasteDuels, type DuelCandidateSource } from './taste.ts';
 import { layoutOf, type Layout, type UnitLayout } from './units.ts';
+import { buildCompare, unitCells, type Compare } from './compare.ts';
 import { parseDocument } from '../document.ts';
 import { strikeLines, type StrikeLine } from '../strike/lines.ts';
 import { removedView } from '../strike/apply.ts';
@@ -400,6 +401,8 @@ export interface SessionPayload {
   reveal: { shipped: boolean };
   /** The round-0 set's draft with its strikes, or null when it cannot be shown (missing, outside the project, unreadable). */
   draft: DraftView | null;
+  /** The lineup as aligned rows (the base text against each shown variant, keyed by candidate index), or null outside the lineup stage or when the variants cannot be compared (the page then shows cards). */
+  compare: Compare | null;
 }
 
 /**
@@ -526,6 +529,10 @@ export class ReadingServer {
   private strikeLogs = new Map<string, { key: string; events: StrikeEvent[] }>();
   /** A variant's checked text by file path, valid while the file's (mtime, size) and the frozen hash are unchanged. */
   private textCache = new Map<string, { key: string; text: string | null; hashOk: boolean; layout?: ReturnType<typeof layoutOf>; struck?: number[] }>();
+  /** The aligned compare rows by (set, base file, shown variants and their frozen hashes), valid while the key is unchanged; null is remembered too. */
+  private compareCache = new Map<string, Compare | null>();
+  /** The base text of a set by file path, valid while the file's (mtime, size) are unchanged. */
+  private baseCache = new Map<string, { key: string; text: string }>();
   /** One /api/sessions row per session, valid while session.json and events.jsonl are unchanged. */
   private rowCache = new Map<string, { key: string; row: SessionRow | null }>();
   /** How many variant files were read and hashed, drafts hashed for the existing line, strike logs parsed, and draft files parsed for the Draft view (a poll that finds nothing changed adds none); for tests. */
@@ -745,7 +752,48 @@ export class ReadingServer {
       directions: KNOWN_DIRECTIONS,
       reveal: { shipped: state.shipped !== null },
       draft: this.draftView(root, session, state, maps),
+      compare: state.stage === 'lineup' ? this.compareOf(root, session, state, plan.order, maps) : null,
     };
+  }
+
+  /**
+   * The lineup as rows: the round-0 set's base text (the draft as the set froze it) against each shown variant, aligned by
+   * unit with a word diff in every changed cell (see compare.ts). Null when the base cannot be read or any shown variant
+   * changed after sealing (the page shows cards, where that rule has its words), and when the texts are too big to align.
+   * Remembered by the files' stat keys and the frozen hashes, so a poll that finds nothing changed does no alignment.
+   */
+  private compareOf(root: string, session: Session, state: SessionState, order: number[], maps: ReturnType<typeof roundMaps>): Compare | null {
+    try {
+      const set = this.setOf(root, session.setId, false);
+      if (!set || order.length === 0) return null;
+      const file = basePath(root, set);
+      const baseKey = statKey(file);
+      const parts: string[] = [];
+      const shown: Array<{ key: string; text: string; set: PromptSet; struck: number[] }> = [];
+      for (const index of order) {
+        const c = state.candidates.find(x => x.index === index);
+        if (!c) return null;
+        const frozen = frozenHash(root, session, maps, c);
+        const v = this.variantText(root, maps.roundSet.get(c.round) ?? session.setId, variantOf(c), frozen);
+        if (!v.hashOk || v.text === null || !v.set) return null;
+        parts.push(`${index}:${frozen}`);
+        shown.push({ key: String(index), text: v.text, set: v.set, struck: v.struck });
+      }
+      const key = `${file}|${baseKey}|${set.format}|${set.form}|${set.original ? 1 : 0}|${parts.join(',')}`;
+      if (this.compareCache.has(key)) return this.compareCache.get(key) ?? null;
+      let baseText = this.baseCache.get(file);
+      if (baseText?.key !== baseKey) {
+        baseText = { key: baseKey, text: readFileSync(file, 'utf8').replace(/^﻿/, '').replace(/\r\n?/g, '\n') };
+        remember(this.baseCache, file, baseText);
+      }
+      const compare = buildCompare(
+        unitCells(baseText.text, set.format, set.form),
+        shown.map(x => ({ key: x.key, cells: unitCells(x.text, x.set.format, x.set.form), struck: x.struck })),
+        set.original !== undefined, this.struckUnits(baseText.text, set),
+      );
+      remember(this.compareCache, key, compare, 100);
+      return compare;
+    } catch { return null; }
   }
 
   // ---- the draft and its strikes ----

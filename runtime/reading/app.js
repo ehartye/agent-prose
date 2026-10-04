@@ -223,6 +223,128 @@
     + (p.session && p.session.original ? '|' + JSON.stringify([p.session.original.stale, p.session.original.lines.map(l => [l.speaker, l.text])]) : '')
     + (p.draft ? '|' + p.draft.rev : '');
 
+  // ---- the compare grid: pure helpers (the server sends the aligned rows and the word ops; the page only folds and renders) ----
+
+  /** Variants shown side by side at once: three beside a Current column, four without. */
+  const compareLimit = hasCurrent => (hasCurrent ? 3 : 4);
+
+  /**
+   * The variants on screen, as keys in display order. `recent` is the owner's picks, oldest first (null: nothing chosen yet, so
+   * the first ones in display order). Never more than `limit`; the most recently chosen win.
+   */
+  function shownKeys(allKeys, recent, limit) {
+    const want = (recent || []).filter(k => allKeys.includes(k));
+    const picked = want.length ? want.slice(-limit) : allKeys.slice(0, limit);
+    return allKeys.filter(k => picked.includes(k));
+  }
+
+  /** The picks after the owner presses `key`: a shown one is hidden (never the last one), a hidden one is shown and, at the limit, the least recently chosen goes. */
+  function togglePicked(allKeys, recent, key, limit) {
+    const now = shownKeys(allKeys, recent, limit);
+    if (now.includes(key)) return now.length > 1 ? now.filter(k => k !== key) : now;
+    return [...now, key].slice(-limit);
+  }
+
+  const normCell = c => (c ? (c.speaker || '') + '\u0000' + String(c.text).replace(/\s+/g, ' ').trim() : null);
+
+  /** True when the row reads the same in every visible column (and in Current, when it is shown): such rows fold. A line that was struck before the set was made, an added line and a removed line never fold. */
+  function rowIsSame(row, keys, hasCurrent) {
+    if (row.base === null || !row.cur || row.cur.struck) return false;
+    const cur = normCell(row.cur);
+    const seen = hasCurrent ? [cur] : [];
+    for (const k of keys) {
+      const cell = row.cells ? row.cells[k] : undefined;
+      if (cell === undefined) seen.push(cur);
+      else if (cell === null || cell.struck) return false;
+      else seen.push(normCell(cell));
+    }
+    return seen.every(x => x === seen[0]);
+  }
+
+  /** An insertion row (a line only some variants add) matters only when a visible variant has a line on it. */
+  const rowShown = (row, keys) => row.base !== null || keys.some(k => row.cells && row.cells[k]);
+
+  /** The rows as segments: a plain row, or one fold for each run of rows that are the same in every visible column. */
+  function foldSegments(rows, keys, hasCurrent) {
+    const out = [];
+    for (const row of rows) {
+      if (rowIsSame(row, keys, hasCurrent)) {
+        const last = out[out.length - 1];
+        if (last && last.fold) last.rows.push(row); else out.push({ fold: true, rows: [row], id: row.base });
+      } else out.push({ fold: false, row });
+    }
+    return out;
+  }
+
+  /** Where a fold of rows begins and ends, in words: "Overseer, line 3 - Overseer, line 5". */
+  function foldLabel(rows) {
+    const at = r => (r.cur.speaker ? r.cur.speaker + ', ' : '') + 'line ' + (r.base + 1);
+    const n = rows.length;
+    return { text: n + (n === 1 ? ' line unchanged' : ' lines unchanged'), where: n === 1 ? at(rows[0]) : at(rows[0]) + ' - ' + at(rows[n - 1]) };
+  }
+
+  /** For each row, the unit index of the variant's line on it (-1 when it has none): lines run in order, so it is a running count. */
+  function unitMap(rows, key) {
+    let n = 0;
+    return rows.map(r => { const c = r.cells ? r.cells[key] : undefined; if (c === null) return -1; return n++; });
+  }
+
+  const tokenCount = s => String(s).trim().split(/\s+/).filter(Boolean).length;
+
+  /** How many of a variant's words are new against the base: every word of an added line (with its speaker), and the `+` words of a changed one. */
+  function newWords(rows, key) {
+    let n = 0;
+    for (const r of rows) {
+      const c = r.cells ? r.cells[key] : undefined;
+      if (!c) continue;
+      if (c.ops) n += c.ops.reduce((t, op) => t + (op[0] === '+' ? tokenCount(op[1]) : 0), 0);
+      else if (r.base === null) n += tokenCount((c.speaker || '') + ' ' + c.text);
+    }
+    return n;
+  }
+
+  /**
+   * The Current cell's words as runs. A word every visible variant cut is `all` (struck solid); one only some cut is `some`
+   * (struck dashed, with the letters of who cut it); the rest are plain. `visible` is [{ label, cell }]: a missing cell is
+   * "unchanged", null is "this variant has no such line" (every word cut). A cell whose ops do not describe this text cuts nothing.
+   */
+  function curRuns(text, visible) {
+    const toks = String(text).trim().split(/\s+/).filter(Boolean);
+    const cutBy = toks.map(() => []);
+    for (const v of visible) {
+      if (v.cell === null) { cutBy.forEach(a => a.push(v.label)); continue; }
+      if (!v.cell || !v.cell.ops) continue;
+      let i = 0;
+      const mine = [];
+      for (const op of v.cell.ops) {
+        if (op[0] === '+') continue;
+        const n = tokenCount(op[1]);
+        if (op[0] === '-') for (let j = 0; j < n; j++) mine.push(i + j);
+        i += n;
+      }
+      if (i === toks.length) mine.forEach(j => cutBy[j].push(v.label));
+    }
+    const runs = [];
+    toks.forEach((t, i) => {
+      const by = cutBy[i];
+      const cut = by.length === 0 ? null : by.length === visible.length ? 'all' : 'some';
+      const last = runs[runs.length - 1];
+      if (last && last.cut === cut && last.by.join() === by.join()) last.text += ' ' + t;
+      else runs.push({ text: t, cut, by });
+    });
+    return runs.map((r, i) => ({ ...r, text: i < runs.length - 1 ? r.text + ' ' : r.text }));
+  }
+
+  /** What a variant cell shows: plain runs and new runs (the cut words are only ever shown struck on the Current line). */
+  function cellRuns(cell, isNewLine) {
+    if (!cell) return [];
+    if (cell.ops) return cell.ops.filter(op => op[0] !== '-').map(op => ({ text: op[1], fresh: op[0] === '+' }));
+    return [{ text: cell.text, fresh: !!isNewLine }];
+  }
+
+  /** A column's state words, never only a mark: Your pick from last round / Kept / Passed. */
+  const stateWord = state => (state === 'keep' ? 'Kept' : state === 'pass' ? 'Passed' : '');
+
   /** True only when the browser has a speech synthesizer object and an utterance constructor (the property alone can be undefined). */
   const speechSupported = win => !!(win && win.speechSynthesis && typeof win.SpeechSynthesisUtterance === 'function');
 
@@ -230,7 +352,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, compareLimit, shownKeys, togglePicked, rowIsSame, rowShown, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord };
     return;
   }
 
@@ -251,6 +373,7 @@
     marks: {}, marksRound: -1, selected: null, noteDraft: '', rate: 1, directions: [], like: '', confirmShip: false,
     showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: false, originalOpen: true,
     view: 'variants', pick: null, plan: null,
+    cmp: { recent: null, phone: null, open: new Set() }, drawn: {},
   };
 
   const $ = id => document.getElementById(id);
@@ -275,7 +398,7 @@
     }
     return el;
   }
-  const btn = (text, onClick, cls, extra) => h('button', { type: 'button', class: cls || '', text, on: { click: onClick }, ...(extra || {}) });
+  const btn = (text, onClick, cls, extra, ...kids) => h('button', { type: 'button', class: cls || '', text, on: { click: onClick }, ...(extra || {}) }, ...kids);
 
   // ---- transport ----
 
@@ -462,7 +585,7 @@
   const unitsOf = index => { const c = data && data.candidates.find(x => x.index === index); return (c && c.units) || []; };
 
   function highlight(index, i) {
-    for (const els of unitEls.values()) for (const el of els) el.classList.remove('speaking');
+    for (const els of unitEls.values()) for (const el of els) if (el) el.classList.remove('speaking');
     const el = i >= 0 && unitEls.get(index) && unitEls.get(index)[i];
     if (!el) return;
     el.classList.add('speaking');
@@ -727,22 +850,175 @@
     return el;
   }
 
+  // ---- the compare grid (the lineup): the current line and the variants as aligned columns ----
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  /** An SVG element, made with createElementNS: no markup is parsed, and the CSP needs no inline style (the paths are drawn by a class). */
+  function svg(tag, attrs, ...kids) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, String(v));
+    for (const kid of kids) el.appendChild(kid);
+    return el;
+  }
+  const CIRCLE = 'M20 3C9 3 2 11 3 21c1 10 9 17 19 16 11-1 16-9 15-19C36 9 28 2 18 4c-3 .6-5 1.600-7 3';
+  const SLASH = 'M4 36L36 4';
+  /** The pencil marks: a circle (kept) and a slash (passed), decorative; the state is also in words. */
+  const pencil = kind => svg('svg', { viewBox: '0 0 40 40', 'aria-hidden': 'true', focusable: 'false' }, svg('path', { class: kind, pathLength: '1', d: kind === 'circle' ? CIRCLE : SLASH }));
+  const sr = text => h('span', { class: 'sr-only', text });
+  const phoneQuery = window.matchMedia ? window.matchMedia('(max-width: 899px)') : null;
+  const isPhone = () => !!(phoneQuery && phoneQuery.matches);
+  if (phoneQuery) phoneQuery.addEventListener('change', () => { if (data && !fatal) render(); });
+
+  /** The Current cell's words: struck solid when every visible variant cut them, dashed when only some did. */
+  function curNodes(cell, visible, same) {
+    const runs = same ? [{ text: cell.text, cut: null, by: [] }] : curRuns(cell.text, visible);
+    return runs.map(run => {
+      if (!run.cut) return run.text;
+      if (run.cut === 'all') return h('del', { class: 'cut' }, sr('cut: '), run.text, sr(' end cut'));
+      const who = 'cut in ' + run.by.join(', ');
+      return h('del', { class: 'cut some', title: who }, sr(who + ': '), run.text, sr(' end cut'));
+    });
+  }
+  /** A variant cell's words: the new ones marked, nothing else. */
+  const varNodes = (cell, isNewLine) => cellRuns(cell, isNewLine).map(run => (run.fresh ? h('ins', null, sr('added: '), run.text, sr(' end added')) : run.text));
+
+  function compareView(shown, pinned) {
+    const cmp = data.compare;
+    const hasCur = cmp.hasCurrent;
+    const phone = isPhone();
+    const allKeys = shown.map(c => String(c.index));
+    const limit = phone ? 1 : compareLimit(hasCur);
+    const keys = phone ? [allKeys.includes(ui.cmp.phone) ? ui.cmp.phone : allKeys[0]] : shownKeys(allKeys, ui.cmp.recent, limit);
+    const colOf = k => shown.find(c => String(c.index) === k);
+    const cols = keys.map(colOf);
+    const stateOf = c => (c.index === pinned ? null : ui.marks[c.index] || null);
+    const rowIndex = new Map(cmp.rows.map((row, i) => [row, i]));
+    const maps = new Map(keys.map(k => [k, unitMap(cmp.rows, k)]));
+    const noted = new Map(cols.map(c => [c.index, new Set(data.state.notes.filter(n => n.index === c.index).map(n => n.unit))]));
+    const who = label => (phone ? h('span', { class: 'who', text: label }) : null);
+    cols.forEach(c => unitEls.set(c.index, []));
+
+    const curCell = row => {
+      const cell = row.cur;
+      if (!cell) return h('div', { class: 'cell cur gone', role: 'cell' }, who('Current'), h('span', { class: 'gone-text', text: 'No line here' }));
+      const visible = keys.map(k => ({ label: colOf(k).label, cell: row.cells ? row.cells[k] : undefined }));
+      return h('div', { class: 'cell cur', role: 'cell' }, who('Current'),
+        cell.speaker ? h('span', { class: 'sp', text: cell.speaker }) : null,
+        h('span', { class: cell.struck ? 'struck' : '' }, curNodes(cell, visible, !!row.same)));
+    };
+    const varCell = (row, i, c) => {
+      const key = String(c.index);
+      const state = stateOf(c);
+      const cls = 'cell var' + (state === 'pass' ? ' passed' : '') + (state === 'keep' ? ' kept' : '');
+      const cell = row.cells ? row.cells[key] : undefined;
+      const src = cell === undefined ? row.cur : cell;
+      if (!src) return h('div', { class: cls + ' gone', role: 'cell' }, who('Draft ' + c.label), h('span', { class: 'gone-text', text: 'Line removed' }));
+      const unit = maps.get(key)[i];
+      const plain = row.same || cell === undefined;
+      const selected = ui.selected && ui.selected.index === c.index && ui.selected.unit === unit;
+      const isNoted = noted.get(c.index).has(unit);
+      const span = h('span', {
+        class: 'unit' + (isNoted ? ' noted' : '') + (selected ? ' selected' : '') + (src.struck ? ' struck' : ''), role: 'button', tabindex: '0',
+        'aria-label': isNoted ? 'Line with a note: ' + src.text : (src.struck ? 'Struck line, kept as it was: ' + src.text : undefined),
+        on: { click: () => selectUnit(c.index, unit), keydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectUnit(c.index, unit); } } },
+      }, plain ? src.text : varNodes(src, row.base === null));
+      unitEls.get(c.index)[unit] = span;
+      return h('div', { class: cls, role: 'cell', 'data-unit': String(unit) }, who('Draft ' + c.label), src.speaker ? h('span', { class: 'sp', text: src.speaker }) : null, span);
+    };
+
+    const dataRows = row => {
+      const i = rowIndex.get(row);
+      const out = [h('div', { class: 'gr', role: 'row' },
+        h('div', { class: 'ln', role: 'rowheader' }, phone ? (row.base === null ? 'Added line' : 'Line ' + (row.base + 1)) : (row.base === null ? '+' : String(row.base + 1)), row.base === null && !phone ? sr(' added line') : null),
+        hasCur ? curCell(row) : null, cols.map(c => varCell(row, i, c)))];
+      const sel = ui.selected && cols.find(c => c.index === ui.selected.index);
+      if (sel && maps.get(String(sel.index))[i] === ui.selected.unit) {
+        out.push(h('div', { class: 'gr noterow', role: 'row' }, h('div', { class: 'ln', role: 'rowheader' }, sr('Note')), h('div', { class: 'notecell', role: 'cell' }, noteBox(sel))));
+      }
+      return out;
+    };
+
+    const segs = foldSegments(cmp.rows.filter(row => rowShown(row, keys)), keys, hasCur);
+    const body = [];
+    segs.forEach(seg => {
+      if (!seg.fold) { body.push(...dataRows(seg.row)); return; }
+      const open = ui.cmp.open.has(seg.id);
+      const lab = foldLabel(seg.rows);
+      const a = seg.rows[0].base + 1, z = seg.rows[seg.rows.length - 1].base + 1;
+      body.push(h('div', { class: 'gr foldrow', role: 'row' },
+        h('div', { class: 'ln', role: 'rowheader', text: a === z ? String(a) : a + '-' + z }),
+        h('div', { class: 'fold', role: 'cell' },
+          btn(lab.text + ': ' + lab.where, () => { if (open) ui.cmp.open.delete(seg.id); else ui.cmp.open.add(seg.id); render(); }, 'foldbtn', { 'aria-expanded': String(open), 'data-key': 'fold-' + seg.id }))));
+      if (open) seg.rows.forEach(row => body.push(...dataRows(row)));
+    });
+
+    const colHead = c => {
+      const st = stateOf(c);
+      const fresh = !!st && (ui.drawn[c.index] || '') !== st;
+      ui.drawn[c.index] = st || '';
+      const word = c.index === pinned ? 'Your pick from last round' : stateWord(st);
+      const play$ = btn('Play', () => (speech.index === c.index ? stopSpeech() : play(c.index, 0)), 'small', { hidden: !speechOn(), 'data-key': 'play-' + c.index, 'aria-label': 'Play draft ' + c.label });
+      const pause$ = btn('Pause', togglePause, 'small', { hidden: true, 'data-key': 'pause-' + c.index, 'aria-label': 'Pause draft ' + c.label });
+      controlEls.set(c.index, { play: play$, pause: pause$ });
+      return h('div', { class: 'colhead' + (st ? ' is-' + st : '') + (fresh ? ' draw' : ''), role: 'columnheader', 'data-state': st === 'keep' ? 'kept' : st === 'pass' ? 'passed' : undefined },
+        h('span', { class: 'badge' }, sr('Draft '), c.label, pencil('circle'), pencil('slash')),
+        h('span', { class: 'state-word', text: word }),
+        h('span', { class: 'head-actions' }, play$, pause$));
+    };
+    const head = h('div', { class: 'gr headrow', role: 'row' },
+      h('div', { class: 'ln', role: 'columnheader' }, sr('Line')),
+      hasCur && !phone ? h('div', { class: 'colhead cur', role: 'columnheader', text: 'Current' }) : null, cols.map(colHead));
+
+    const footCell = c => {
+      const st = stateOf(c);
+      const kept = st === 'keep', passed = st === 'pass';
+      const n = newWords(cmp.rows, String(c.index));
+      const actions = c.index === pinned ? null : h('div', { class: 'acts' },
+        btn(kept ? 'Kept' : 'Keep', () => { ui.marks[c.index] = kept ? null : 'keep'; render(); }, kept ? 'on' : '', { 'aria-pressed': String(kept), 'data-key': 'keep-' + c.index, 'aria-label': (kept ? 'Kept' : 'Keep') + ' draft ' + c.label }),
+        btn(passed ? 'Passed' : 'Pass', () => { ui.marks[c.index] = passed ? null : 'pass'; render(); }, passed ? 'off' : '', { 'aria-pressed': String(passed), 'data-key': 'pass-' + c.index, 'aria-label': (passed ? 'Passed' : 'Pass') + ' draft ' + c.label }));
+      return h('div', { class: 'foot' + (passed ? ' passed' : ''), role: 'cell' },
+        timingBlock(c), h('p', { class: 'newcount', text: n + ' of ' + wordCount(c.units || []) + ' words new' }),
+        changeBlock(c), notesList(c), actions);
+    };
+    const baseUnits = cmp.rows.filter(row => row.base !== null).map(row => (row.cur.speaker ? row.cur.speaker + ': ' : '') + row.cur.text);
+    const foot = h('div', { class: 'gr footrow', role: 'row' },
+      h('div', { class: 'ln', role: 'rowheader' }, sr('Measured, and your choice')),
+      hasCur && !phone ? h('div', { class: 'foot', role: 'cell' }, timingBlock({ index: 'cur', units: baseUnits })) : null, cols.map(footCell));
+
+    // above the grid: the chooser (a phone shows one draft at a time; a wide screen, when there are more drafts than fit), and expand or fold all
+    const bar = [];
+    if (phone) {
+      bar.push(h('div', { class: 'pair', role: 'group', 'aria-label': hasCur ? 'Compare the current line with' : 'Show draft' },
+        shown.map(c => {
+          const st = stateOf(c);
+          return btn(c.label, () => { ui.cmp.phone = String(c.index); render(); }, 'pill', { 'aria-pressed': String(String(c.index) === keys[0]), 'data-key': 'show-' + c.index }, st ? sr(st === 'keep' ? ', kept' : ', passed') : null);
+        })));
+    } else if (allKeys.length > limit) {
+      bar.push(h('div', { class: 'showpick' },
+        h('div', { class: 'pair', role: 'group', 'aria-label': 'Show in the comparison' },
+          shown.map(c => btn(c.label, () => { ui.cmp.recent = togglePicked(allKeys, ui.cmp.recent, String(c.index), limit); render(); }, 'pill', { 'aria-pressed': String(keys.includes(String(c.index))), 'data-key': 'pick-' + c.index }))),
+        h('span', { class: 'quiet', role: 'status', text: keys.map(k => colOf(k).label).join(' ') + ' shown' })));
+    }
+    const folds = segs.filter(x => x.fold);
+    if (folds.length) {
+      const all = folds.every(f => ui.cmp.open.has(f.id));
+      bar.push(btn(all ? 'Fold all' : 'Expand all', () => { if (all) folds.forEach(f => ui.cmp.open.delete(f.id)); else folds.forEach(f => ui.cmp.open.add(f.id)); render(); }, 'small expand', { 'data-key': 'expand-all' }));
+    }
+    const stale = data.session.original && data.session.original.stale ? h('p', { class: 'quiet original-note', text: 'The draft has changed since this set was made' }) : null;
+    return [stale, bar.length ? h('div', { class: 'cmpbar' }, bar) : null,
+      h('section', { class: 'sheet grid n' + (cols.length + (hasCur && !phone ? 1 : 0)) + (phone ? ' phone' : ''), role: 'table', 'aria-label': hasCur ? 'The current line and the drafts, side by side' : 'The drafts, side by side' }, head, body, foot),
+      rateControl()];
+  }
+
   function lineupScreen() {
     const s = data.state;
     const pinned = s.round > 0 && s.champion !== null && s.lineup.includes(s.champion) ? s.champion : null;
     const shown = data.candidates.filter(c => s.lineup.includes(c.index));
-    if (ui.marksRound !== s.round) { ui.marks = {}; ui.marksRound = s.round; }
+    if (ui.marksRound !== s.round) { ui.marks = {}; ui.marksRound = s.round; ui.drawn = {}; ui.cmp = { recent: null, phone: null, open: new Set() }; }
     const choosable = c => !(c.changed || !c.hashOk || !c.units) && c.index !== pinned;
     const marked = shown.filter(c => choosable(c) && ui.marks[c.index] === 'keep').length;
     const open = shown.filter(c => choosable(c) && ui.marks[c.index] !== 'pass' && ui.marks[c.index] !== 'keep').length;
     setTitle(s.round === 0 ? 'Read each draft' : 'Round ' + (s.round + 1) + ': the new drafts', lineupHint(s.round, (shown[0] || {}).layout));
-    const cards = shown.map(c => {
-      const mark = which => () => { ui.marks[c.index] = ui.marks[c.index] === which ? null : which; render(); };
-      const actions = c.index === pinned ? null : h('div', { class: 'row grow' },
-        btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', mark('keep'), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep') }),
-        btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', mark('pass'), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass') }));
-      return card(c, { tag: c.index === pinned ? 'Your pick from last round' : null, actions, state: c.index === pinned ? null : ui.marks[c.index] });
-    });
     const ready = marked > 0 || (s.round > 0 && open === 0);
     const go = btn('Continue', async () => {
       const kept = shown.filter(c => choosable(c) && ui.marks[c.index] === 'keep').map(c => c.index);
@@ -750,8 +1026,17 @@
       const broken = shown.filter(c => !choosable(c) && c.index !== pinned).map(c => c.index);
       await send({ type: 'lineup', kept, duds: [...duds, ...broken], order: shown.map(c => c.index) });
     }, 'primary', { disabled: !ready, 'data-gate': '1' });
-    return [briefBlock(), originalBlock(), rateControl(), cards, h('div', { class: 'actionbar' }, go,
-      h('span', { class: 'quiet', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }))];
+    const dock = h('div', { class: 'actionbar' }, go, h('span', { class: 'quiet', role: 'status', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }));
+    // Side by side when the server aligned the drafts (every one readable); otherwise the stack of cards as before.
+    if (data.compare && shown.length > 0 && shown.every(c => !c.changed && c.hashOk && c.units)) return [briefBlock(), compareView(shown, pinned), dock];
+    const cards = shown.map(c => {
+      const mark = which => () => { ui.marks[c.index] = ui.marks[c.index] === which ? null : which; render(); };
+      const actions = c.index === pinned ? null : h('div', { class: 'row grow' },
+        btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', mark('keep'), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep') }),
+        btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', mark('pass'), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass') }));
+      return card(c, { tag: c.index === pinned ? 'Your pick from last round' : null, actions, state: c.index === pinned ? null : ui.marks[c.index] });
+    });
+    return [briefBlock(), originalBlock(), rateControl(), cards, dock];
   }
 
   function duelPosition(pair) {
@@ -986,6 +1271,7 @@
 
   function render() {
     if (!data) return;
+    const focused = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-key') : null;
     stopSpeech();
     unitEls.clear(); controlEls.clear(); timingEls.clear();
     renderedSig = signature(data);
@@ -1014,6 +1300,11 @@
     }
     app.replaceChildren(...items);
     updatePlayState();
+    if (focused) {
+      // The screen was rebuilt: put the focus back on the same control (found by its stable key), so a keyboard user keeps their place.
+      const again = Array.prototype.find.call(app.querySelectorAll('[data-key]'), el => el.getAttribute('data-key') === focused);
+      if (again && !again.disabled && !again.hidden) again.focus({ preventScroll: true });
+    }
     if (ui.plan && ui.plan.plan && !ui.plan.focused) { ui.plan.focused = true; const t = app.querySelector('.plan-title'); if (t) t.focus(); }
   }
 

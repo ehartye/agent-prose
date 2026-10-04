@@ -125,9 +125,81 @@ button.link:hover { background: none; }
 .rate { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin: 0.75rem 0; }
 .rate input { flex: 1 1 8rem; min-height: 44px; accent-color: var(--blue); }
 
-.duel-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-@media (min-width: 900px) { .duel-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+.duel-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; box-shadow: 0 1px 0 var(--rule), 0 14px 28px -22px rgba(0, 0, 0, 0.45); margin: 0.6rem 0 1rem; }
+.duel-grid .card { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: none; }
+.duel-grid .card + .card { border-top: 1px solid var(--rule); }
+@media (min-width: 900px) { .duel-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .duel-grid .card + .card { border-top: 0; border-left: 1px solid var(--rule); } }
 .progress { color: var(--graphite); }
+
+/* ---- the compare grid: the current line and the drafts as aligned columns ---- */
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; box-shadow: 0 1px 0 var(--rule), 0 14px 28px -22px rgba(0, 0, 0, 0.45); margin: 0.6rem 0 1rem; }
+.gr { display: grid; grid-template-columns: 3.3rem minmax(0, 1fr); }
+.n2 .gr { grid-template-columns: 3.3rem repeat(2, minmax(0, 1fr)); }
+.n3 .gr { grid-template-columns: 3.3rem repeat(3, minmax(0, 1fr)); }
+.n4 .gr { grid-template-columns: 3.3rem repeat(4, minmax(0, 1fr)); }
+.gr > * { padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--rule); min-width: 0; }
+.gr > .ln { color: var(--graphite); font: 0.72rem var(--script); text-align: right; padding-inline: 0.4rem; border-right: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+.colhead, .cell, .foot { border-left: 1px solid var(--rule); }
+.colhead { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.colhead.cur { color: var(--graphite); font: 0.78rem var(--script); letter-spacing: 0.14em; text-transform: uppercase; }
+.head-actions { margin-left: auto; display: flex; gap: 0.4rem; }
+.colhead .state-word { font: 700 0.78rem var(--script); letter-spacing: 0.14em; text-transform: uppercase; }
+.colhead.is-keep .state-word { color: var(--blue); }
+.colhead.is-pass .state-word { color: var(--red); }
+
+/* the pencil marks: a circle on a kept draft's letter, a slash on a passed one; drawn once, in a class, never by a timer */
+.badge { position: relative; width: 2.3rem; height: 2.3rem; display: grid; place-items: center; font: 700 1.05rem var(--script); color: var(--ink); }
+.badge svg { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); overflow: visible; pointer-events: none; }
+.badge path { fill: none; stroke-linecap: round; stroke-width: 2.4; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0; }
+.badge .circle { stroke: var(--blue); }
+.badge .slash { stroke: var(--red); }
+.colhead.is-keep .circle, .colhead.is-pass .slash { opacity: 1; stroke-dashoffset: 0; }
+.colhead.draw.is-keep .circle, .colhead.draw.is-pass .slash { stroke-dashoffset: 1; animation: draw 0.42s cubic-bezier(0.4, 0.1, 0.2, 1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.cell { font-family: var(--script); font-size: 0.98rem; line-height: 1.55; overflow-wrap: anywhere; }
+.cell.cur { color: var(--graphite); }
+.cell.passed { color: var(--graphite); }
+.cell .sp, .cell .who { display: block; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--graphite); margin-bottom: 0.15rem; }
+.cell ins { text-decoration: none; background: linear-gradient(transparent 62%, var(--mark) 62%); color: var(--ink); }
+.cell del { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 2px; }
+.cell del.some { text-decoration-style: dashed; }
+.cell .unit { display: inline; }
+.gone-text { color: var(--graphite); font-style: italic; }
+.noterow .notecell { grid-column: 2 / -1; border-left: 1px solid var(--rule); }
+.noterow .notecell .notebox { margin: 0; }
+
+/* a run of rows that read the same in every column, folded into one 44 px bar */
+.foldrow .fold { grid-column: 2 / -1; border-left: 1px solid var(--rule); padding: 0.1rem 0.9rem; display: flex; align-items: center; }
+.foldrow .foldbtn { min-height: 44px; border: 0; background: none; color: var(--graphite); font-weight: 400; font-size: 0.9rem; text-align: left; text-decoration: underline dotted; text-underline-offset: 4px; padding-inline: 0.2rem; }
+.fold button { min-height: 44px; }
+.foldrow .foldbtn:hover { background: none; color: var(--ink); }
+
+.foot { display: flex; flex-direction: column; gap: 0.15rem; border-bottom: 0 !important; }
+.footrow > * { border-bottom: 0; }
+.foot.passed { color: var(--graphite); }
+.foot .timing { margin: 0.1rem 0; }
+.newcount { margin: 0.1rem 0 0.4rem; font-size: 0.9rem; color: var(--graphite); }
+.foot .acts { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.6rem; }
+.foot .acts button { flex: 1 1 0; }
+.foot .row { margin: 0.2rem 0; }
+button.small { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
+
+.cmpbar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin: 0.5rem 0; }
+.showpick { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: center; }
+.pair { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+button.pill { min-width: 44px; min-height: 44px; border-radius: 22px; border-color: var(--graphite); padding: 0 0.7rem; font: 700 1rem var(--script); }
+
+/* a phone: the current line above the one draft chosen with the pills; no other column is in the layout */
+.grid.phone .gr { grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
+.grid.phone .gr > * { border-left: 0; border-bottom: 0; }
+.grid.phone .gr > .ln { text-align: left; border-right: 0; padding: 0.5rem 0.9rem 0; }
+.grid.phone .headrow > .ln, .grid.phone .footrow > .ln, .grid.phone .foldrow > .ln { display: none; }
+.grid.phone .foldrow .fold, .grid.phone .noterow .notecell { grid-column: 1; }
+.grid.phone .cell { padding-block: 0.4rem; }
+.grid.phone .cell .unit { display: block; padding-block: 0.4rem; }
+.grid.phone .cell.cur + .cell { border-top: 1px dashed var(--rule); }
+.grid.phone .footrow { border-bottom: 0; }
 
 /* ---- the dock: the bar of actions, fixed to the bottom of the work area ---- */
 .actionbar {
@@ -216,10 +288,15 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .pulse { opacity: 1; }
+  .colhead .badge path { animation: none !important; stroke-dashoffset: 0 !important; }
 }
 /* Forced colours: rules and edges map to the system text colour, so nothing depends on the palette. */
 @media (forced-colors: active) {
   .card, .draft-block, .plan-row, .notice, .banner, .confirm, .picker, .notebox, .change, .brief, .original, .actionbar, .dock { border-color: CanvasText; }
   .unit.speaking { outline: 2px solid CanvasText; }
   .struck, .unit.struck { text-decoration-color: CanvasText; }
+  .cell ins { background: none; text-decoration: underline; }
+  .cell del { text-decoration-color: CanvasText; }
+  .sheet, .gr > *, .colhead, .cell, .foot, .duel-grid { border-color: CanvasText; }
+  .badge path { stroke: CanvasText; }
 }

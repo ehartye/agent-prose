@@ -27,7 +27,9 @@ describe('the reading page: static safety', () => {
       ['inline handler', /[\s"'<]on[a-z]+\s*=/i], ['setAttribute style', /setAttribute\s*\(\s*['"]style['"]/],
       ['third-party URL', /(https?:)?\/\/[a-z0-9-]+\.[a-z]{2,}/i], ['dynamic import', /importScripts|\bimport\s*\(/],
     ];
-    for (const f of files) for (const [name, re] of banned) expect(re.test(read(f)), `${f}: ${name}`).toBe(false);
+    // The SVG namespace is an identifier, not a request: createElementNS needs it, and it is the one URL-shaped string the page may hold.
+    const scan = (f: string) => read(f).replaceAll('http://www.w3.org/2000/svg', '');
+    for (const f of files) for (const [name, re] of banned) expect(re.test(scan(f)), `${f}: ${name}`).toBe(false);
   });
 
   it('only fetches relative /api paths', () => {
