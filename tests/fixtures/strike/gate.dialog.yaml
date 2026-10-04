@@ -1,0 +1,36 @@
+form: quest-dialog
+start: gate
+nodes:
+  - id: gate
+    speaker: GUARD
+    text: Halt. State your business.
+    variants:
+      - Stop right there.
+      - Hold it, traveller.
+    choices:
+      - text: I'm here to trade.
+        to: trade
+      - text: Just passing through.
+        to: passing
+        condition: has_pass
+  - id: trade
+    speaker: GUARD
+    text: Market's that way.
+    end: true
+  - id: passing
+    speaker: GUARD
+    text: Go on, then.
+    variants: [Move along., Off you go.]
+    end: true
+barks:
+  - pool: guard-idle
+    speaker: GUARD
+    context: idle
+    lines:
+      - Quiet night on the wall.
+      - Quiet night on the wall again.
+  - pool: guard-alarm
+    speaker: GUARD
+    context: alarm
+    lines:
+      - To arms!

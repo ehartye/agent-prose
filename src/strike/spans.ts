@@ -46,27 +46,67 @@ function runEnd(lines: string[], start: number, limit: number, stop: (line: stri
 
 const FENCE_OR_RULE = /^\s*(?:```|~~~|-{3,}\s*$|\*{3,}\s*$|_{3,}\s*$|\|)/;
 
-/** The YAML scalar ranges of a dialog draft, in the order parseDialog emits blocks, as [startLine, endLine]. */
-function dialogRanges(source: string, blocks: Block[]): Array<[number, number]> | null {
+/** One dialog unit's place in the YAML: its scalar's lines, the whole list entry it belongs to, and the list around it. */
+export interface DialogEntry {
+  /** The scalar's lines: what the page and a ref mean. */
+  scalar: [number, number];
+  /** The whole entry a removal takes: a variant or bark line (its own lines), or a choice with its `to:` and `condition:`. Null when it is not a plain block-style list entry. */
+  item: [number, number] | null;
+  role: 'text' | 'variant' | 'choice' | 'bark';
+  /** The list the entry sits in (null for a node's main text), how many entries it holds, and the line of its key (`variants:`), when it has one. */
+  seq: { id: string; count: number; keyLine: number | null } | null;
+  flow: boolean;
+}
+
+/** The YAML places of a dialog draft's units, in the order parseDialog emits blocks. Null when the draft is not what parseDialog read. */
+export function dialogEntries(source: string, blocks: Block[]): DialogEntry[] | null {
   const lc = new LineCounter();
+  const lines = source.split('\n');
   const doc = parseDocument(source, { lineCounter: lc, prettyErrors: false });
   const data = doc.toJS() as { nodes?: Array<{ variants?: unknown[]; choices?: unknown[] }>; barks?: Array<{ lines?: unknown[] }> };
-  const out: Array<[number, number]> = [];
-  const add = (path: (string | number)[]) => {
-    const node = doc.getIn(path, true);
-    if (!isNode(node) || !node.range) { out.push([0, 0]); return; }
+  const out: DialogEntry[] = [];
+  const span = (node: { range?: [number, number, number] | null }): [number, number] | null => {
+    if (!node.range) return null;
     const start = lc.linePos(node.range[0]).line;
     let e = node.range[1];
     while (e > node.range[0] && /\s/.test(source[e - 1])) e--;
-    out.push([start, Math.max(start, lc.linePos(Math.max(node.range[0], e - 1)).line)]);
+    return [start, Math.max(start, lc.linePos(Math.max(node.range[0], e - 1)).line)];
+  };
+  /** Widen a list entry's range to whole lines, only when nothing but its dash comes before it on its first line. */
+  const wholeEntry = (node: { range?: [number, number, number] | null }): [number, number] | null => {
+    const r = span(node);
+    if (!r || !node.range) return null;
+    const col = lc.linePos(node.range[0]).col;
+    if (/^\s*-\s+$/.test((lines[r[0] - 1] ?? '').slice(0, col - 1))) return r;
+    if (col - 1 === (lines[r[0] - 1] ?? '').search(/\S/) && /^\s*-\s*$/.test(lines[r[0] - 2] ?? '')) return [r[0] - 1, r[1]];
+    return null;
+  };
+  const add = (path: (string | number)[], role: DialogEntry['role'], seq: DialogEntry['seq'], itemPath?: (string | number)[]) => {
+    const node = doc.getIn(path, true);
+    const scalar = isNode(node) ? span(node) : null;
+    if (!isNode(node) || !scalar) { out.push({ scalar: [0, 0], item: null, role, seq, flow: false }); return; }
+    const itemNode = itemPath ? doc.getIn(itemPath, true) : node;
+    const flow = seq !== null && ((doc.getIn(path.slice(0, -(itemPath ? 2 : 1)), true) as { flow?: boolean } | undefined)?.flow === true
+      || (isNode(itemNode) && (itemNode as { flow?: boolean }).flow === true));
+    out.push({ scalar, item: !flow && isNode(itemNode) ? wholeEntry(itemNode) : null, role, seq, flow });
+  };
+  const keyLine = (mapPath: (string | number)[], key: string): number | null => {
+    const map = doc.getIn(mapPath, true) as { items?: Array<{ key?: { value?: unknown; range?: [number, number, number] } }> } | undefined;
+    const pair = map?.items?.find(p => p.key?.value === key);
+    return pair?.key?.range ? lc.linePos(pair.key.range[0]).line : null;
   };
   (data.nodes ?? []).forEach((n, ni) => {
-    add(['nodes', ni, 'text']);
-    (n.variants ?? []).forEach((_, k) => add(['nodes', ni, 'variants', k]));
-    (n.choices ?? []).forEach((_, ci) => add(['nodes', ni, 'choices', ci, 'text']));
+    add(['nodes', ni, 'text'], 'text', null);
+    const vs = { id: `n${ni}.variants`, count: (n.variants ?? []).length, keyLine: keyLine(['nodes', ni], 'variants') };
+    (n.variants ?? []).forEach((_, k) => add(['nodes', ni, 'variants', k], 'variant', vs));
+    const cs = { id: `n${ni}.choices`, count: (n.choices ?? []).length, keyLine: keyLine(['nodes', ni], 'choices') };
+    (n.choices ?? []).forEach((_, ci) => add(['nodes', ni, 'choices', ci, 'text'], 'choice', cs, ['nodes', ni, 'choices', ci]));
   });
-  (data.barks ?? []).forEach((b, bi) => (b.lines ?? []).forEach((_, li) => add(['barks', bi, 'lines', li])));
-  return out.length === blocks.length && out.every(r => r[0] > 0) ? out : null;
+  (data.barks ?? []).forEach((b, bi) => {
+    const ls = { id: `b${bi}.lines`, count: (b.lines ?? []).length, keyLine: keyLine(['barks', bi], 'lines') };
+    (b.lines ?? []).forEach((_, li) => add(['barks', bi, 'lines', li], 'bark', ls));
+  });
+  return out.length === blocks.length && out.every(r => r.scalar[0] > 0) ? out : null;
 }
 
 /**
@@ -79,13 +119,13 @@ export function unitSpans(text: string, format: Format, form?: string): UnitSpan
   const { entries, all } = blockUnits(source, format, form);
   const starts = all.map(b => b.line).sort((a, b) => a - b);
   const nextStart = (b: Block): number => starts.find(s => s > b.line) ?? lines.length + 1;
-  const ranges = format === 'dialog' ? dialogRanges(source, all) : null;
+  const ranges = format === 'dialog' ? dialogEntries(source, all) : null;
   const out: UnitSpan[] = [];
   for (const { block, units } of entries) {
     let start = block.line;
     let end = start;
     const limit = nextStart(block) - 1;
-    if (ranges) [start, end] = ranges[all.indexOf(block)];
+    if (ranges) [start, end] = ranges[all.indexOf(block)].scalar;
     else if (format === 'markdown') end = runEnd(lines, start, limit, l => FENCE_OR_RULE.test(l), false);
     else if (format === 'fountain') end = runEnd(lines, start, limit, () => false, true);
     const prefix = speakerPrefix(block);
