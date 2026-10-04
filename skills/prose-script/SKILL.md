@@ -40,6 +40,10 @@ conventions; [references/youtube.md](references/youtube.md) for segments, hooks 
 
 ## YouTube
 
+Craft guide: `prose guide youtube --text --section <name>` prints one section of the reference guide for YouTube
+scripts. Read the section you need, not all of it: `anatomy` before writing a script, `length` for pace and
+`youtube.segment.pace`, `failures` and `revise` when a draft is being fixed, `rules` for what lint checks.
+
 - Write timestamped segments (`## 0:00–0:08`). Keep `VISUAL:` / `B-ROLL:` lines separate from
   spoken lines; prefix narration with `VO:` if it helps.
 - The first 30 seconds confirm the title and thumbnail promise; deliver the first real payoff
