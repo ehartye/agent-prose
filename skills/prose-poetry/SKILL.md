@@ -8,6 +8,14 @@ when_to_use: Use when asked for a poem, sonnet, haiku, limerick, villanelle, ses
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 
+## Craft guide
+
+Craft guide: `prose guide verse --text --section <name>` prints one section of the reference guide for free verse, haiku,
+limericks, ballads, sonnets, villanelles and sestinas. Read the section you need, not all of it: `anatomy` before
+choosing or writing a form (the shared craft first, then each form), `length` before promising a count, `good` for
+worked examples, `failures` and `revise` when a poem is being fixed, `rules` for what lint checks. Run `prose guide` to
+list every guide.
+
 ## Set up the file
 
 Write `<name>.md` with frontmatter naming the form:
