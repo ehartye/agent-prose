@@ -8,6 +8,13 @@ when_to_use: Use when asked for song lyrics, a chorus, verse or bridge, a lullab
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 
+## Craft guide
+
+Craft guide: `prose guide song --text --section <name>` prints one section of the reference guide for song lyrics.
+Read the section you need, not all of it: `anatomy` before writing (sections, repetition, stress and the beat, hymn
+meters, rhyme, singability, quoting), `good` for worked examples, `failures` and `revise` when a draft is being fixed,
+`rules` for what lint checks. Run `prose guide` to list every guide.
+
 ## Set up the file
 
 Write `<name>.md`. Put tempo and the singing frame in the frontmatter, never in the lyrics:

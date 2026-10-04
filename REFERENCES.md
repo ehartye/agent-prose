@@ -164,6 +164,27 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | wgf-primer-1 | Writers Guild Foundation (Lauren O'Connor), 2020. [Formatting Your Spec Script While Social Distancing: A Primer, Part 1](https://www.wgfoundation.org/blog/2020/3/19/formatting-your-spec-script-while-social-distancing-a-primer-part-1) | practitioner | guide:screen-stage |
 | wgf-serialized-drama | Writers Guild Foundation (Lauren O'Connor), 2021. [TV Format Fundamentals: Serialized Drama](https://www.wgfoundation.org/blog/2021/11/17/serialized-drama) | practitioner | guide:screen-stage |
 
+### song
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| chase-direct-address | Erin Chase (Berklee Online). [Direct Address in Songwriting: Writing Lyrics That Feel Like Conversations](https://online.berklee.edu/takenote/direct-address-in-songwriting-writing-lyrics-that-feel-like-conversations/) | practitioner | guide:song |
+| copyright-office-fair-use-faq | US Copyright Office. [Fair Use (FAQ)](https://www.copyright.gov/help/faq/faq-fairuse.html) | standard | guide:song |
+| fine-ginsborg-2014 | Philip A. Fine and Jane Ginsborg, 2014. [Making myself understood: perceived factors affecting the intelligibility of sung text](https://www.frontiersin.org/articles/10.3389/fpsyg.2014.00809/full) | peer-reviewed | guide:song |
+| hirjee-brown-2010 | Hussein Hirjee and Daniel Brown, 2010. [Using automated rhyme detection to characterize rhyming style in rap music](https://kb.osu.edu/handle/1811/48548) | peer-reviewed | guide:song |
+| hymnary-azmon | Hymnary.org. [Tune: AZMON](https://hymnary.org/tune/azmon_glaser) | platform-doc | guide:song |
+| liikkanen-jakubowski-2020 | Lassi A. Liikkanen and Kelly Jakubowski, 2020. [Involuntary musical imagery as a component of ordinary music cognition: a review of empirical evidence](https://pmc.ncbi.nlm.nih.gov/articles/PMC7704448/) | review | guide:song |
+| nobile-2022 | Drew Nobile, 2022. [Teleology in Verse-Prechorus-Chorus Form](https://mtosmt.org/issues/mto.22.28.3/mto.22.28.3.nobile.html) | peer-reviewed | guide:song |
+| nunes-2015 | Joseph C. Nunes, Andrea Ordanini and Francesca Valsesia, 2015. [The power of repetition: repetitive lyrics in a song increase processing fluency and drive market success](https://myscp.onlinelibrary.wiley.com/doi/10.1016/j.jcps.2014.12.004) | peer-reviewed | guide:song |
+| parada-cabaleiro-2024 | Emilia Parada-Cabaleiro, Maximilian Mayerl, Stefan Brandl, Marcin Skowron, Markus Schedl, Elisabeth Lex and Eva Zangerle, 2024. [Song lyrics have become simpler and more repetitive over the last five decades](https://pmc.ncbi.nlm.nih.gov/articles/PMC10978890/) | peer-reviewed | guide:song |
+| pattison-prosody | Pat Pattison (Berklee Online), 2022. [Prosody in Music and Songwriting](https://online.berklee.edu/takenote/prosody-in-music-and-songwriting/) | practitioner | guide:song |
+| pattison-romantic | Pat Pattison (Berklee Online), 2024. [The Best (and Worst) Romantic Song Lyrics](https://online.berklee.edu/takenote/best-and-worst-romantic-song-lyrics/) | practitioner | guide:song |
+| poets-org-hymn | Academy of American Poets (Hirsch, A Poet's Glossary). [Hymn (Glossary of Poetic Terms)](https://poets.org/glossary/hymn) | review | guide:song |
+| proto-2013 | Proto, 2013. [Prominence matching in English songs: a historical perspective](https://revistas.uned.es/index.php/signa/article/download/6345/6078) | peer-reviewed | guide:song |
+| rodriguez-vazquez-folk-song | Rodríguez Vázquez. [The metrics of folk song: text-setting in Spanish and English](https://revistas.uned.es/index.php/rhythmica/article/download/13136/12114) | peer-reviewed | guide:song |
+| wikipedia-ballad-stanza | Wikipedia contributors. [Ballad stanza](https://en.wikipedia.org/wiki/Ballad_stanza) | practitioner | guide:song |
+| wikipedia-metre-hymn | Wikipedia contributors. [Metre (hymn)](https://en.wikipedia.org/wiki/Metre_(hymn)) | practitioner | guide:song |
+
 ### speeches
 
 | id | Source | Kind | Cited by |
