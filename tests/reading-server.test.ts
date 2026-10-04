@@ -361,8 +361,8 @@ describe('GET /api/session/<id>', () => {
     const r = await api(info, '/api/session/read-1');
     expect(r.status).toBe(200);
     expect(Object.keys(r.body).sort()).toEqual(['candidates', 'compare', 'directions', 'draft', 'order', 'pair', 'reveal', 'session', 'state']);
-    expect(r.body.session).toEqual({ id: 'read-1', setId: 'demo', form: 'speech-small', register: 'plain', prompt: 'the bridge speech', target: { minutes: 3 }, wpm: 150, brief: null, original: null });
-    expect(r.body.reveal).toEqual({ shipped: false });
+    expect(r.body.session).toEqual({ id: 'read-1', setId: 'demo', form: 'speech-small', register: 'plain', prompt: 'the bridge speech', target: { minutes: 3 }, wpm: 150, brief: null, original: null, lastFeedback: null });
+    expect(r.body.reveal).toEqual({ shipped: false, sentBack: false });
     expect(r.body.state).toMatchObject({ stage: 'lineup', round: 0, lineup: [1, 2, 3], peeked: [] });
     expect(r.body.state.candidates).toBeUndefined();
     expect(r.body.candidates).toHaveLength(3);
@@ -458,7 +458,7 @@ describe('GET /api/session/<id>/reveal', () => {
     r = await api(info, '/api/session/read-1/reveal');
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ prediction: { pick: 2, why: 'SEALED-REASON' }, matched: false });
-    expect((await api(info, '/api/session/read-1')).body.reveal).toEqual({ shipped: true });
+    expect((await api(info, '/api/session/read-1')).body.reveal).toEqual({ shipped: true, sentBack: false });
   });
 
   it('is 404 when the session shipped but the reveal is not written yet', async () => {

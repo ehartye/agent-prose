@@ -104,9 +104,25 @@
     return out;
   }
 
-  /** The paragraphs of the reveal, in order: only real text (a missing part is left out, never shown as "null"). */
+  /**
+   * The paragraphs of the reveal, in order: only real text (a missing part is left out, never shown as "null").
+   * A set the owner sent back has no pick to compare: the guess is shown, labelled so, and never counted as a hit or a miss.
+   */
   function revealParts(r, labelFor, sameSet, mine) {
     const a = r.prediction;
+    if (r.outcome === 'none') {
+      const head = { cls: 'nopick', text: 'No pick to compare' };
+      if (!a) return [head, { text: mine }, { text: r.note || 'Your writer did not seal a guess for this one, so there is nothing to show.' }];
+      const nm = i => (sameSet ? labelFor(i) : 'variant ' + i);
+      const more = a.shortlist && a.shortlist.length ? ', with ' + a.shortlist.map(nm).join(' and ') + ' as other possibilities' : '';
+      return [
+        head, { text: mine },
+        { text: 'Before you looked, your writer guessed you would choose ' + nm(a.pick) + more + '.' },
+        a.why ? { cls: 'why', text: a.why } : null,
+        { cls: 'quiet', text: 'That guess is not scored: sending a set back counts as neither a hit nor a miss.' },
+        a.sealValid === false ? { cls: 'quiet', text: 'The seal on that guess does not check out, so treat it as unverified.' } : null,
+      ].filter(Boolean);
+    }
     if (!a) return [{ text: mine }, { text: r.note || 'Your writer did not seal a guess for this one, so there is nothing to compare.' }];
     const name = i => (sameSet ? labelFor(i) : 'variant ' + i);
     const others = a.shortlist && a.shortlist.length ? ', with ' + a.shortlist.map(name).join(' and ') + ' as other possibilities' : '';
@@ -222,7 +238,9 @@
   const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events + '|' + (p.session && p.session.brief ? JSON.stringify([p.session.brief.character, p.session.brief.context, !!p.session.brief.confirmed]) : '')
     + (p.session && p.session.original ? '|' + JSON.stringify([p.session.original.stale, p.session.original.lines.map(l => [l.speaker, l.text])]) : '')
     + (p.draft ? '|' + p.draft.rev : '')
-    + (p.queue ? '|' + JSON.stringify([p.queue.status, p.queue.stage, p.queue.choice, p.queue.message || '', p.queue.sentVariant]) : '');
+    + (p.session && p.session.lastFeedback ? '|' + JSON.stringify(p.session.lastFeedback) : '')
+    + (p.state.sentBack ? '|' + JSON.stringify(p.state.sentBack) : '')
+    + (p.queue ? '|' + JSON.stringify([p.queue.status, p.queue.stage, p.queue.choice, p.queue.back || null, p.queue.message || '', p.queue.sentVariant]) : '');
 
   // ---- the compare grid: pure helpers (the server sends the aligned rows and the word ops; the page only folds and renders) ----
 
@@ -343,6 +361,42 @@
     return [{ text: cell.text, fresh: !!isNewLine }];
   }
 
+  // ---- "None of these": the owner rejects every draft and says why (pure helpers) ----
+
+  /** The reasons, in the order the panel offers them: what the server takes (`id`, a fixed list) and what the owner reads. */
+  const NONE_REASONS = [
+    { id: 'wrong-direction', label: 'Wrong direction' },
+    { id: 'not-their-voice', label: "Doesn't sound like them" },
+    { id: 'too-similar', label: 'Too similar to each other' },
+    { id: 'misses-the-point', label: 'Misses the point of the scene' },
+    { id: 'too-long', label: 'Too long' },
+    { id: 'too-short', label: 'Too short' },
+    { id: 'premise-wrong', label: 'The premise is wrong' },
+    { id: 'other', label: 'Other' },
+  ];
+  const MAX_NONE_NOTE = 1000;
+  const noneReasonLabel = id => { const r = NONE_REASONS.find(x => x.id === id); return r ? r.label : String(id); };
+  /** Toggle one reason; the chosen ones stay in the panel's order. */
+  const toggleReason = (reasons, id) => NONE_REASONS.map(r => r.id).filter(r => (r === id ? !reasons.includes(id) : reasons.includes(r)));
+  const noteLength = note => String(note || '').trim().length;
+  /** Send back needs at least one reason or a note, and a note within the limit (counted after trimming, as the server does). */
+  const noneReady = d => (d.reasons.length > 0 || noteLength(d.note) > 0) && noteLength(d.note) <= MAX_NONE_NOTE;
+  const noneHelp = d => (noteLength(d.note) > MAX_NONE_NOTE ? 'The note is ' + (noteLength(d.note) - MAX_NONE_NOTE) + (noteLength(d.note) - MAX_NONE_NOTE === 1 ? ' character' : ' characters') + ' too long.'
+    : d.reasons.length || noteLength(d.note) ? '' : 'Choose a reason or write a note to send this back.');
+  const premiseHint = d => d.reasons.includes('premise-wrong');
+  /** The drafts the "closest" question offers: the ones on offer in this lineup (a pinned champion of an earlier round is another set's). */
+  function noneOptions(p) {
+    const s = p.state;
+    const pinned = s.round > 0 && s.champion !== null ? s.champion : null;
+    return p.candidates.filter(c => s.lineup.includes(c.index) && c.index !== pinned).map(c => ({ index: c.index, label: c.label }));
+  }
+  /** The request body for a send-back: the closest draft (null: none came close), the reasons, and the trimmed note when there is one. */
+  const noneBody = d => ({ closest: d.closest, reasons: d.reasons.slice(), ...(noteLength(d.note) ? { note: String(d.note).trim() } : {}) });
+  /** What the owner said, as one line: the reasons in words, then the note. */
+  const noneSummary = b => [...(b.reasons || []).map(noneReasonLabel), ...(b.note ? [b.note] : [])].join(', ');
+  /** The line above the new variants of a set made after a send-back: what the owner said last time. Display only. */
+  const lastFeedbackText = fb => (fb ? 'Sent back last time: ' + [...(fb.reasons || []), ...(fb.note ? [fb.note] : [])].join(', ') : '');
+
   /** A column's state words, never only a mark: Your pick from last round / Kept / Passed. */
   const stateWord = (state, batchItem) => (state === 'keep' ? (batchItem ? 'Your pick' : 'Kept') : state === 'pass' ? 'Passed' : '');
 
@@ -359,17 +413,22 @@
 
   /** "N of M chosen", then, only once something is chosen, what has and has not been sent. Nothing is sent until the owner presses Send picks. */
   function tallyText(counts, total) {
-    const chosen = counts.picked + counts.sent;
-    const head = chosen + ' of ' + total + ' chosen';
-    if (chosen === 0) return head;
-    if (counts.sent === 0) return head + ' - nothing sent until you press Send picks';
-    if (counts.picked > 0) return head + ' - ' + counts.sent + ' sent, ' + counts.picked + ' not sent yet';
-    return head + ' - ' + counts.sent + ' sent';
+    const c = k => counts[k] || 0;
+    const chosen = c('picked') + c('sent');
+    const back = c('back') + c('sentBack');
+    const head = chosen + ' of ' + total + ' chosen' + (back ? ', ' + back + ' sent back' : '');
+    const staged = c('picked') + c('back');
+    const sent = c('sent') + c('sentBack');
+    if (staged + sent === 0) return head;
+    if (sent === 0) return head + ' - nothing sent until you press Send picks';
+    if (staged > 0) return head + ' - ' + sent + ' sent, ' + staged + ' not sent yet';
+    return head + ' - ' + sent + ' sent';
   }
 
   /** The rail's own count line: chosen, and how many are skipped (they come back at the end) or blocked. */
   function railSummary(counts, total) {
     const bits = [(counts.picked + counts.sent) + ' of ' + total + ' chosen'];
+    if (counts.back || counts.sentBack) bits.push((counts.back + counts.sentBack) + ' sent back');
     if (counts.skipped) bits.push(counts.skipped + ' skipped, back at the end');
     if (counts.blocked) bits.push(counts.blocked + ' blocked');
     return bits.join('. ');
@@ -381,6 +440,8 @@
     switch (item.status) {
       case 'picked': return 'Picked' + letter + ', not sent';
       case 'sent': return item.via === 'cli' ? 'Picked' + letter + ' outside this page' : 'Sent' + letter;
+      case 'back': return 'Sent back, not sent yet';
+      case 'sentBack': return item.via === 'cli' ? 'Sent back outside this page' : 'Sent back';
       case 'skipped': return 'Skipped';
       case 'blocked': return 'Blocked: ' + (item.message || 'could not be sent');
       case 'ended': return 'Closed';
@@ -432,6 +493,15 @@
     return out;
   }
   const noChoice = choice => choice.variant === null && choice.passes.length === 0;
+  /** The words of a send-back line in the Send review: where, and what was said, cut at 120 characters. */
+  const backLine = (item, b) => { const t = item.who + ' (' + item.where + '): sent back - ' + noneSummary(b); return t.length > 120 ? t.slice(0, 120).trimEnd() + '...' : t; };
+  /** What the Send button and its review say: picks and send-backs, each only when there are some. */
+  function sendWords(picks, backs) {
+    const bits = [];
+    if (picks) bits.push(picks + (picks === 1 ? ' pick' : ' picks'));
+    if (backs) bits.push(backs + (backs === 1 ? ' send-back' : ' send-backs'));
+    return bits.join(' and ');
+  }
 
   /** The first words of a draft for the Send review: units joined, cut at 60 characters. */
   function previewText(units) {
@@ -478,7 +548,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, queueIdFromPath, RAIL_PAGE, isUndecided, tallyText, railSummary, statusWord, railLabel, nextUnchosen, stepItem, railPageOf, railWindow, keepChoice, passChoice, marksFromChoice, noChoice, previewText, reviewLine, changedUnits, keyAction, compareLimit, shownKeys, togglePicked, rowIsSame, rowShown, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, queueIdFromPath, RAIL_PAGE, isUndecided, tallyText, railSummary, statusWord, railLabel, nextUnchosen, stepItem, railPageOf, railWindow, keepChoice, passChoice, marksFromChoice, noChoice, previewText, reviewLine, changedUnits, keyAction, compareLimit, shownKeys, togglePicked, rowIsSame, rowShown, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord, NONE_REASONS, MAX_NONE_NOTE, noneReasonLabel, toggleReason, noteLength, noneReady, noneHelp, premiseHint, noneOptions, noneBody, noneSummary, lastFeedbackText, backLine, sendWords };
     return;
   }
 
@@ -505,6 +575,8 @@
     // a batch: the rail, the open item, the Send and Finish panels, the shortcut switch, items already fetched
     cur: null, entered: null, rail: null, railSig: '', railPage: 0, panel: null, sending: false, sendTotal: 0, sendBase: 0, itemError: null,
     keys: readKeys(), cache: new Map(), prefetched: new Set(),
+    // "None of these": the open panel (or null) and what was typed when the owner left it for the Draft view
+    none: null, stash: null,
   };
   /** The shortcut switch is remembered in this browser only; storage may be unavailable. */
   function readCuts() { try { return window.localStorage.getItem('prose-cuts') !== 'off'; } catch { return true; } }
@@ -1175,6 +1247,24 @@
     render();
   }
 
+  /** After a send-back, the new set shows what the owner said last time above its variants. Display only. */
+  function lastFeedbackBlock() {
+    const fb = data.session.lastFeedback;
+    return fb ? h('p', { class: 'lastfb', role: 'note', text: lastFeedbackText(fb) }) : null;
+  }
+
+  /** The button that opens the "None of these" panel (a lineup only). */
+  const noneButton = () => btn('None of these', openNone, '', { 'data-key': 'none', 'aria-haspopup': 'dialog' });
+
+  /** A batch item with a staged send-back: what will be recorded when the owner presses Send, and how to change or drop it. */
+  function stagedBackBlock() {
+    const b = data.queue && data.queue.back;
+    if (!b) return null;
+    return h('section', { class: 'sentback', role: 'note', 'aria-label': 'Sent back, not sent yet' },
+      h('p', null, h('strong', { text: 'Sent back, not sent yet. ' }), 'This set goes back to your writer when you press Send picks. ' + noneSummary(b)),
+      h('div', { class: 'row' }, btn('Change', openNone, '', { 'data-key': 'none-edit', 'aria-haspopup': 'dialog' }), btn('Take it back', () => setChoice({ variant: null, passes: [] }), 'link', { 'data-key': 'none-clear', 'data-gate': '1' })));
+  }
+
   function lineupScreen() {
     const s = data.state;
     const pinned = s.round > 0 && s.champion !== null && s.lineup.includes(s.champion) ? s.champion : null;
@@ -1191,7 +1281,7 @@
             btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', () => markKeep(c), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep'), 'data-key': 'keep-' + c.index }),
             btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', () => markPass(c), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass'), 'data-key': 'pass-' + c.index })),
         }))];
-      return [...batchTop(), briefBlock(), ...body];
+      return [...batchTop(), briefBlock(), lastFeedbackBlock(), stagedBackBlock(), ...body];
     }
     if (ui.marksRound !== s.round) { ui.marks = {}; ui.marksRound = s.round; ui.drawn = {}; ui.cmp = { recent: null, phone: null, open: new Set() }; }
     const choosable = c => !(c.changed || !c.hashOk || !c.units) && c.index !== pinned;
@@ -1205,16 +1295,16 @@
       const broken = shown.filter(c => !choosable(c) && c.index !== pinned).map(c => c.index);
       await send({ type: 'lineup', kept, duds: [...duds, ...broken], order: shown.map(c => c.index) });
     }, 'primary', { disabled: !ready, 'data-gate': '1' });
-    const dock = h('div', { class: 'actionbar' }, go, h('span', { class: 'quiet', role: 'status', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }));
+    const dock = h('div', { class: 'actionbar' }, go, noneButton(), h('span', { class: 'quiet', role: 'status', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }));
     // Side by side when the server aligned the drafts (every one readable); otherwise the stack of cards as before.
-    if (data.compare && shown.length > 0 && shown.every(c => !c.changed && c.hashOk && c.units)) return [briefBlock(), compareView(shown, pinned), dock];
+    if (data.compare && shown.length > 0 && shown.every(c => !c.changed && c.hashOk && c.units)) return [briefBlock(), lastFeedbackBlock(), compareView(shown, pinned), dock];
     const cards = shown.map(c => {
       const actions = c.index === pinned ? null : h('div', { class: 'row grow' },
         btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', () => markKeep(c), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep'), 'data-key': 'keep-' + c.index }),
         btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', () => markPass(c), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass'), 'data-key': 'pass-' + c.index }));
       return card(c, { tag: c.index === pinned ? 'Your pick from last round' : null, actions, state: c.index === pinned ? null : ui.marks[c.index] });
     });
-    return [briefBlock(), originalBlock(), rateControl(), cards, dock];
+    return [briefBlock(), lastFeedbackBlock(), originalBlock(), rateControl(), cards, dock];
   }
 
   function duelPosition(pair) {
@@ -1427,12 +1517,24 @@
 
   function labelFor(index) { const c = candidateOf(index); return c ? 'draft ' + c.label : 'draft ' + index; }
 
+  /** What the owner told the writer when they sent the set back: the closest draft, the reasons, the note. */
+  function recapBlock(sb) {
+    const c = sb.closest === null || sb.closest === undefined ? null : candidateOf(sb.closest);
+    return h('section', { class: 'recap', 'aria-label': 'What you told your writer' },
+      h('h2', { text: 'What you told your writer' }),
+      h('p', { text: c ? 'Closest: draft ' + c.label : 'None came close.' }),
+      sb.reasons && sb.reasons.length ? h('ul', { class: 'reasons' }, sb.reasons.map(r => h('li', { text: noneReasonLabel(r) }))) : null,
+      sb.note ? h('p', { class: 'note-said', text: sb.note }) : null);
+  }
+
   function revealScreen() {
-    setTitle('Your choice', 'Here is what your writer guessed before you chose.');
+    const none = data.state.stage === 'sentBack';
+    setTitle(none ? 'Sent back' : 'Your choice', none ? 'Here is what your writer guessed before you looked.' : 'Here is what your writer guessed before you chose.');
     const box = h('div', { class: 'reveal' });
+    const mine = r => (r.outcome === 'none' ? 'You sent this set back, so there is no pick.' : 'You chose ' + labelFor(r.picked) + '.');
     const fill = r => {
       box.replaceChildren();
-      revealParts(r, labelFor, r.setId === data.session.setId, 'You chose ' + labelFor(r.picked) + '.')
+      revealParts(r, labelFor, r.setId === data.session.setId, mine(r))
         .forEach(part => box.append(h('p', { class: part.cls, text: part.text })));
     };
     if (ui.reveal && ui.revealFor === fullSig(data)) fill(ui.reveal);
@@ -1441,10 +1543,10 @@
       const sig = fullSig(data);
       request('GET', base() + '/reveal').then(res => {
         if (res.ok) { ui.reveal = res.body; ui.revealFor = sig; fill(res.body); }
-        else { box.replaceChildren(h('p', { text: 'You chose ' + labelFor(data.state.shipped) + '.' }), h('p', { class: 'quiet', text: 'The sealed guess is not available.' })); }
-      }).catch(() => { box.replaceChildren(h('p', { text: 'You chose ' + labelFor(data.state.shipped) + '.' }), h('p', { class: 'quiet', text: 'Could not reach the server for the sealed guess. Reload to try again.' })); });
+        else { box.replaceChildren(h('p', { text: none ? 'You sent this set back.' : 'You chose ' + labelFor(data.state.shipped) + '.' }), h('p', { class: 'quiet', text: 'The sealed guess is not available.' })); }
+      }).catch(() => { box.replaceChildren(h('p', { text: none ? 'You sent this set back.' : 'You chose ' + labelFor(data.state.shipped) + '.' }), h('p', { class: 'quiet', text: 'Could not reach the server for the sealed guess. Reload to try again.' })); });
     }
-    return [box];
+    return none ? [recapBlock(data.state.sentBack), box, h('p', { class: 'quiet', text: 'Your writer will make new drafts. You can close this page.' })] : [box];
   }
 
   // ---- batch review: the rail, one item at a time, staged choices, Send picks, Finish ----
@@ -1461,7 +1563,7 @@
   }
 
   /** The state of a rail item as a class: the hollow circle waits, the filled circle holds the letter, the slash is a skip. */
-  const stateClass = it => (it.status === 'picked' ? 'picked' : it.status === 'sent' ? 'picked sent' : it.status === 'skipped' ? 'skipped' : it.status === 'blocked' ? 'blocked' : it.status === 'ended' ? 'ended' : '');
+  const stateClass = it => (it.status === 'picked' ? 'picked' : it.status === 'sent' ? 'picked sent' : it.status === 'back' ? 'back' : it.status === 'sentBack' ? 'back sent' : it.status === 'skipped' ? 'skipped' : it.status === 'blocked' ? 'blocked' : it.status === 'ended' ? 'ended' : '');
 
   function renderRail() {
     const el = $('rail');
@@ -1637,7 +1739,7 @@
   /** The items the server would send: the chosen ones not yet sent, in rail order. Their text comes from fresh item payloads. */
   async function openSend(thenFinish) {
     if (!ui.rail || ui.sending) return;
-    const ns = ui.rail.order.filter(n => ['picked', 'blocked'].includes(ui.rail.items[n - 1].status));
+    const ns = ui.rail.order.filter(n => ['picked', 'back', 'blocked'].includes(ui.rail.items[n - 1].status));
     ui.panel = { kind: 'send', loading: true, lines: [], thenFinish: !!thenFinish };
     render();
     const lines = [];
@@ -1651,7 +1753,8 @@
           rememberItem(n, res.body);
           const v = res.body.queue.choice.variant;
           const c = v === null ? null : res.body.candidates.find(x => x.index === v);
-          if (c) lines.push({ n, text: reviewLine(railItem(n), c.label, changedUnits(res.body, v)) });
+          if (c) lines.push({ n, kind: 'pick', text: reviewLine(railItem(n), c.label, changedUnits(res.body, v)) });
+          else if (v === null && res.body.queue.back) lines.push({ n, kind: 'back', text: backLine(railItem(n), res.body.queue.back) });
         } catch { /* the line is left out; the server sends what is staged */ }
       }
     };
@@ -1674,7 +1777,7 @@
     const panel = ui.panel;
     if (!panel || panel.kind !== 'send' || panel.loading || ui.sending || panel.lines.length === 0) return;
     ui.panel = null;
-    ui.sending = true; ui.sendTotal = panel.lines.length; ui.sendBase = ui.rail.queue.counts.sent;
+    ui.sending = true; ui.sendTotal = panel.lines.length; ui.sendBase = ui.rail.queue.counts.sent + (ui.rail.queue.counts.sentBack || 0);
     render();
     schedule();
     const body = await batchPost('/send', { sendId: newEventId(window.crypto).slice(0, 60) });
@@ -1682,7 +1785,7 @@
     if (body && Array.isArray(body.results)) {
       const sent = body.results.filter(r => r.status === 'sent').length;
       const blocked = body.results.filter(r => r.status === 'blocked');
-      if (blocked.length) showNotice(sent + ' sent. ' + blocked.length + (blocked.length === 1 ? ' pick' : ' picks') + ' could not be sent.', blocked[0].message + (blocked.length > 1 ? ' (The others are marked in the list.)' : ''));
+      if (blocked.length) showNotice(sent + ' sent. ' + blocked.length + (blocked.length === 1 ? ' item' : ' items') + ' could not be sent.', blocked[0].message + (blocked.length > 1 ? ' (The others are marked in the list.)' : ''));
     }
     ui.cache.clear(); ui.prefetched.clear();
     await load();
@@ -1719,21 +1822,25 @@
     if (pn.kind === 'send') {
       if (pn.loading) return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' }, h('h2', { id: 'panel-h', tabindex: '-1', text: 'Send picks' }), h('p', { class: 'quiet', text: 'Getting your choices together...' }));
       const n = pn.lines.length;
+      const picks = pn.lines.filter(l => l.kind !== 'back').length;
+      const backs = n - picks;
+      const words = sendWords(picks, backs);
       return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' },
-        h('h2', { id: 'panel-h', tabindex: '-1', text: n === 0 ? 'Nothing to send' : 'Send ' + n + (n === 1 ? ' pick?' : ' picks?') }),
-        n === 0 ? h('p', { text: 'Nothing is chosen yet. Keep a draft in an item first.' })
-          : [h('ul', { class: 'review' }, pn.lines.map(l => h('li', { text: l.text }))),
-            h('p', { class: 'warn', text: 'Picks cannot be changed once sent.' })],
+        h('h2', { id: 'panel-h', tabindex: '-1', text: n === 0 ? 'Nothing to send' : 'Send ' + words + '?' }),
+        n === 0 ? h('p', { text: 'Nothing is chosen yet. Keep a draft in an item, or send one back, first.' })
+          : [backs ? h('p', { class: 'quiet', role: 'status', text: picks + ' chosen, ' + backs + ' sent back' }) : null,
+            h('ul', { class: 'review' }, pn.lines.map(l => h('li', { text: l.text }))),
+            h('p', { class: 'warn', text: backs ? 'Picks and send-backs cannot be changed once sent.' : 'Picks cannot be changed once sent.' })],
         h('div', { class: 'row' },
-          n > 0 ? btn(pn.thenFinish ? 'Send ' + n + (n === 1 ? ' pick and finish' : ' picks and finish') : 'Send ' + n + (n === 1 ? ' pick' : ' picks'), confirmSend, 'primary', { 'data-key': 'confirm-send' }) : null,
+          n > 0 ? btn(pn.thenFinish ? 'Send ' + words + ' and finish' : 'Send ' + words, confirmSend, 'primary', { 'data-key': 'confirm-send' }) : null,
           btn('Not yet', closePanel, '', { 'data-key': 'panel-back' })));
     }
     if (pn.kind === 'finish') {
-      const unsent = c.picked;
+      const unsent = c.picked + (c.back || 0);
       return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' },
         h('h2', { id: 'panel-h', tabindex: '-1', text: unsent ? 'Send them first?' : 'Finish the review?' }),
         unsent
-          ? h('p', { text: unsent + (unsent === 1 ? ' pick is' : ' picks are') + ' chosen but not sent. Finishing without sending drops them; the sets stay unpicked.' })
+          ? h('p', { text: unsent + (unsent === 1 ? ' choice is' : ' choices are') + ' not sent yet. Finishing without sending drops them; the sets stay unpicked.' })
           : h('p', { text: 'Sets without a pick stay as they are, and your writer can open them again. Picks already sent stay.' }),
         h('div', { class: 'row' },
           unsent ? btn('Send and finish', () => openSend(true), 'primary', { 'data-key': 'finish-send' }) : null,
@@ -1755,7 +1862,7 @@
     const q = data.queue;
     const prev = stepItem(ui.rail.order, ui.cur, -1);
     const next = stepItem(ui.rail.order, ui.cur, 1);
-    const live = openStage() && q.status !== 'sent' && q.status !== 'ended';
+    const live = openStage() && q.status !== 'sent' && q.status !== 'sentBack' && q.status !== 'ended';
     return [
       panelBlock(),
       q.message && q.status === 'blocked' ? h('p', { class: 'warn blocked-msg', role: 'alert', text: 'Could not be sent: ' + q.message }) : null,
@@ -1763,7 +1870,8 @@
         btn('Previous', () => go(prev), 'small', { disabled: prev === null, 'data-key': 'prev' }),
         btn('Next', () => go(next), 'small', { disabled: next === null, 'data-key': 'next' }),
         live ? btn('Skip this one', skipItem, 'small', { 'data-key': 'skip', 'data-gate': '1' }) : null,
-        live ? btn('Clear choice', () => setChoice({ variant: null, passes: [] }), 'small', { disabled: noChoice(q.choice), 'data-key': 'clear', 'data-gate': '1' }) : null,
+        live && data.state.stage === 'lineup' ? noneButton() : null,
+        live ? btn('Clear choice', () => setChoice({ variant: null, passes: [] }), 'small', { disabled: noChoice(q.choice) && !q.back, 'data-key': 'clear', 'data-gate': '1' }) : null,
         h('a', { class: 'own', href: '/s/' + data.session.id, text: 'Open as its own session' })),
     ];
   }
@@ -1774,18 +1882,20 @@
     const total = r.items.length;
     const c = r.queue.counts;
     if (r.queue.stage !== 'open') {
-      const text = r.queue.stage === 'done' ? 'All ' + total + ' sets have a pick.' : 'The review is over: ' + c.sent + ' sent, ' + (total - c.sent) + ' not chosen.';
+      const back = c.sentBack || 0;
+      const text = r.queue.stage === 'done' ? (back ? 'All ' + total + ' sets are settled: ' + c.sent + ' picked, ' + back + ' sent back.' : 'All ' + total + ' sets have a pick.')
+        : 'The review is over: ' + c.sent + ' sent' + (back ? ', ' + back + ' sent back' : '') + ', ' + (total - c.sent - back) + ' not chosen.';
       return h('div', { class: 'actionbar batchbar over' }, h('span', { class: 'tally', role: 'status', text }));
     }
     const nextN = nextUnchosen(r.order, r.items, ui.cur);
     const undecided = c.waiting + c.skipped + c.blocked;
-    const status = ui.sending ? 'Sending ' + Math.min(ui.sendTotal, Math.max(0, c.sent - ui.sendBase)) + ' of ' + ui.sendTotal + '...' : tallyText(c, total);
+    const status = ui.sending ? 'Sending ' + Math.min(ui.sendTotal, Math.max(0, c.sent + (c.sentBack || 0) - ui.sendBase)) + ' of ' + ui.sendTotal + '...' : tallyText(c, total);
     return h('div', { class: 'actionbar batchbar' },
       h('span', { class: 'tally', role: 'status', text: status }),
       btn(undecided === 0 ? 'All chosen' : 'Next unchosen', goUnchosen, '', { disabled: nextN === null, 'data-key': 'next-unchosen' }),
       btn('Finish', openFinish, '', { disabled: ui.sending, 'data-key': 'finish' }),
       btn('Keys', toggleHelp, 'link', { 'aria-pressed': String(!!(ui.panel && ui.panel.kind === 'help')), 'data-key': 'keys' }),
-      btn('Send picks', () => openSend(false), 'primary', { disabled: c.picked === 0 || ui.sending, 'data-key': 'send' }));
+      btn('Send picks', () => openSend(false), 'primary', { disabled: (c.picked + (c.back || 0)) === 0 || ui.sending, 'data-key': 'send' }));
   }
 
   /** What an item that is not a lineup shows: sent (the sealed guess, opened), closed, or judged in its own session. */
@@ -1798,6 +1908,13 @@
         const c = candidateOf(q.sentVariant);
         setTitle('Picked outside this page', 'Picked outside this page');
         return [...top, h('p', { text: 'This set was picked outside this page' + (c ? ': draft ' + c.label : '') + '.' }), h('p', { class: 'quiet', text: 'Your writer or the command line recorded it, so there is nothing more to do here.' }), batchDock()];
+      }
+      return [...top, ...revealScreen(), batchDock()];
+    }
+    if (q.status === 'sentBack') {
+      if (q.sentBack && q.sentBack.via === 'cli') {
+        setTitle('Sent back outside this page', 'Sent back outside this page');
+        return [...top, h('p', { text: 'This set was sent back outside this page' + (q.sentBack.reasons.length ? ': ' + q.sentBack.reasons.map(noneReasonLabel).join(', ') : '') + '.' }), h('p', { class: 'quiet', text: 'Your writer or the command line recorded it, so there is nothing more to do here.' }), batchDock()];
       }
       return [...top, ...revealScreen(), batchDock()];
     }
@@ -1815,7 +1932,7 @@
   /** The shortcuts: one place that maps a key to what the screen does. */
   function runKey(act) {
     const q = data && data.queue;
-    const live = openStage() && q && q.status !== 'sent' && q.status !== 'ended' && data.state.stage === 'lineup';
+    const live = openStage() && q && q.status !== 'sent' && q.status !== 'sentBack' && q.status !== 'ended' && data.state.stage === 'lineup';
     const cand = act.letter ? data.candidates.find(c => c.label === act.letter && data.state.lineup.includes(c.index) && !c.changed && c.hashOk && c.units) : null;
     switch (act.action) {
       case 'close': closePanel(); break;
@@ -1823,7 +1940,7 @@
       case 'next': { const n = stepItem(ui.rail.order, ui.cur, 1); if (n !== null) go(n); break; }
       case 'previous': { const n = stepItem(ui.rail.order, ui.cur, -1); if (n !== null) go(n); break; }
       case 'unchosen': goUnchosen(); break;
-      case 'review': if (openStage() && ui.rail.queue.counts.picked > 0) openSend(false); break;
+      case 'review': if (openStage() && ui.rail.queue.counts.picked + (ui.rail.queue.counts.back || 0) > 0) openSend(false); break;
       case 'confirm': confirmSend(); break;
       case 'skip': if (live) skipItem(); break;
       case 'clear': if (live && !noChoice(q.choice)) setChoice({ variant: null, passes: [] }); break;
@@ -1836,7 +1953,7 @@
   }
 
   function onKey(ev) {
-    if (!batch || !data || !ui.rail) return;
+    if (!batch || !data || !ui.rail || ui.none) return; // while the "None of these" panel is open the page behind it takes no shortcuts
     const t = ev.target;
     const inField = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable));
     const act = keyAction({ key: ev.key, shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey, inField },
@@ -1865,9 +1982,9 @@
     else if (stage === 'duel') screen = duelScreen();
     else if (stage === 'refine') screen = refineScreen();
     else if (stage === 'waiting') screen = waitingScreen();
-    else if (stage === 'shipped') screen = revealScreen();
+    else if (stage === 'shipped' || stage === 'sentBack') screen = revealScreen();
     else { setTitle('This session is closed', ''); screen = [h('p', { text: 'Thanks for reading. Your writer closed this session, so there is nothing more to do here.' })]; }
-    const prompt = data.session.prompt && stage !== 'shipped' && stage !== 'abandoned' ? h('p', { class: 'quiet', text: data.session.prompt }) : null;
+    const prompt = data.session.prompt && stage !== 'shipped' && stage !== 'sentBack' && stage !== 'abandoned' ? h('p', { class: 'quiet', text: data.session.prompt }) : null;
     const items = [prompt, ...screen].flat(2).filter(Boolean);
     const bars = ui.plan ? [] : [pendingBar(), removedBar()].filter(Boolean);
     const bar = bars.length ? h('div', { class: 'bars' }, bars) : null;
@@ -1890,6 +2007,163 @@
     if (batch) prefetch();
   }
 
+  // ---- "None of these": a dialog over the page. Built once and updated in place, so a poll re-rendering the page never takes the owner's typing or focus ----
+
+  function openNone() {
+    if (!data || data.state.stage !== 'lineup' || ui.none) return;
+    const options = noneOptions(data);
+    const staged = batch && data.queue && data.queue.back;
+    const stash = ui.stash && ui.stash.key === (batch ? ui.cur : data.session.id) ? ui.stash : null;
+    const from = stash || (staged ? { closest: staged.closest, reasons: staged.reasons.slice(), note: staged.note || '' } : null);
+    ui.none = {
+      options, closest: from && options.some(o => o.index === from.closest) ? from.closest : null, reasons: from ? from.reasons.slice() : [], note: from ? from.note : '',
+      busy: false, error: null, eventId: newEventId(window.crypto), opener: document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-key') : null,
+    };
+    ui.stash = null;
+    stopSpeech();
+    showNone();
+  }
+
+  /** Close the panel and give the focus back to the control that opened it (or the title row when that control is gone). */
+  function closeNone(keepWords) {
+    const n = ui.none;
+    if (!n) return;
+    if (keepWords) ui.stash = { key: batch ? ui.cur : data.session.id, closest: n.closest, reasons: n.reasons.slice(), note: n.note };
+    ui.none = null;
+    hideNone();
+    const again = n.opener ? Array.prototype.find.call(document.querySelectorAll('[data-key]'), el => el.getAttribute('data-key') === n.opener) : null;
+    (again && !again.disabled ? again : $('title')).focus();
+  }
+
+  function hideNone() {
+    $('dialog-root').replaceChildren();
+    $('desk').removeAttribute('inert');
+    $('desk').removeAttribute('aria-hidden');
+  }
+
+  /** The tab stops inside a panel, in order. A radio group is one stop (its checked radio), as the browser treats it. */
+  const dialogFocusables = root => Array.prototype.filter.call(root.querySelectorAll('button, input, textarea, a[href], [tabindex="0"]'), el => {
+    if (el.disabled || el.hidden || el.offsetParent === null) return false;
+    if (el.type === 'radio') { const group = Array.prototype.filter.call(root.querySelectorAll('input[type="radio"]'), r => r.name === el.name); const on = group.find(r => r.checked) || group[0]; return el === on; }
+    return true;
+  });
+
+  function showNone() {
+    const n = ui.none;
+    const refs = { chips: {} };
+    const radios = [...n.options.map(o => ({ index: o.index, text: 'Draft ' + o.label })), { index: null, text: 'None came close' }];
+    const closest = h('fieldset', { class: 'fs' }, h('legend', { text: 'Which came closest?' }),
+      radios.map((o, i) => {
+        const id = 'none-closest-' + i;
+        const input = h('input', { type: 'radio', name: 'none-closest', id, checked: n.closest === o.index, on: { change: () => { n.closest = o.index; } } });
+        return h('label', { class: 'opt', for: id }, input, h('span', { text: o.text }));
+      }));
+    const chips = h('fieldset', { class: 'fs' }, h('legend', { text: 'What is wrong? Choose any that apply.' }),
+      h('div', { class: 'chips' }, NONE_REASONS.map(r => {
+        const b = h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': 'false', 'data-reason': r.id, on: { click: () => { n.reasons = toggleReason(n.reasons, r.id); syncNone(refs); } } },
+          h('span', { text: r.label }), h('span', { class: 'chip-state', 'aria-hidden': 'true' }));
+        refs.chips[r.id] = b;
+        return b;
+      })));
+    refs.hint = h('div', { class: 'hint-slot', 'aria-live': 'polite' });
+    refs.note = h('textarea', { id: 'none-note', rows: '4', 'aria-describedby': 'none-count none-help', value: n.note, on: { input: () => { n.note = refs.note.value; syncNone(refs); } } });
+    refs.count = h('span', { id: 'none-count', class: 'quiet' });
+    refs.help = h('p', { id: 'none-help', class: 'quiet' });
+    refs.err = h('p', { class: 'warn', role: 'alert' });
+    refs.send = btn('Send back', submitNone, 'primary', { 'data-key': 'none-send' });
+    const cancel = btn('Cancel', () => closeNone(false), '', { 'data-key': 'none-cancel' });
+    const dialog = h('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'none-h' },
+      h('div', { class: 'dlg-body' },
+        h('h2', { id: 'none-h', tabindex: '-1', text: 'None of these' }),
+        h('p', { class: 'quiet', text: 'Tell your writer why none of the drafts work. This set is closed, and they write a new one.' }),
+        closest, chips, refs.hint,
+        h('div', { class: 'fs' }, h('label', { for: 'none-note', text: 'Anything to add? (optional if you chose a reason)' }), refs.note, h('div', { class: 'counter' }, refs.count)),
+        refs.help, refs.err),
+      h('div', { class: 'row dlg-actions' }, refs.send, cancel));
+    $('dialog-root').replaceChildren(h('div', { class: 'scrim' }, dialog));
+    $('desk').setAttribute('inert', '');
+    $('desk').setAttribute('aria-hidden', 'true');
+    n.refs = refs;
+    syncNone(refs);
+    $('none-h').focus();
+  }
+
+  /** The parts of the panel that depend on what was chosen and typed. */
+  function syncNone(refs) {
+    const n = ui.none;
+    if (!n) return;
+    for (const r of NONE_REASONS) {
+      const on = n.reasons.includes(r.id);
+      const b = refs.chips[r.id];
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('on', on);
+      b.lastChild.textContent = on ? 'chosen' : '';
+    }
+    const wantHint = premiseHint(n);
+    if (wantHint && !refs.hint.firstChild) {
+      refs.hint.replaceChildren(h('p', { class: 'hint' }, 'If the line itself should go, strike it in the Draft view. ',
+        data && data.draft ? btn('Open the Draft view', () => { closeNone(true); ui.view = 'draft'; ui.pick = null; render(); $('title').focus(); }, 'link', { 'data-key': 'none-draft' }) : null));
+    } else if (!wantHint && refs.hint.firstChild) refs.hint.replaceChildren();
+    const len = noteLength(n.note);
+    refs.count.textContent = len + ' / ' + MAX_NONE_NOTE;
+    refs.count.classList.toggle('over', len > MAX_NONE_NOTE);
+    refs.help.textContent = noneHelp(n);
+    refs.err.textContent = n.error || '';
+    refs.send.disabled = !noneReady(n) || n.busy;
+    refs.send.textContent = n.busy ? 'Sending...' : 'Send back';
+  }
+
+  /** Send the set back: one event in a single-set session, a staged send-back in a batch (nothing is sent until Send). The answer closes the panel; a refusal stays in it. */
+  async function submitNone() {
+    const n = ui.none;
+    if (!n || n.busy || !noneReady(n)) return;
+    n.busy = true; n.error = null; syncNone(n.refs);
+    const body = noneBody(n);
+    let res = null;
+    try {
+      res = batch
+        ? await post('/api/queue/' + batchId + '/sendback', JSON.stringify({ item: ui.cur, ...body, eventId: n.eventId }))
+        : await post(base() + '/event', JSON.stringify({ type: 'none', ...body, eventId: n.eventId }));
+    } catch { n.error = 'Could not reach the server. Try again.'; }
+    if (res && res.ok && res.body) {
+      hideNotice(); showBanner(false);
+      ui.stash = null;
+      const still = ui.none === n;
+      if (still) { ui.none = null; hideNone(); }
+      if (batch) {
+        if (res.body.rail) applyRail(res.body.rail, true);
+        if (res.body.state && res.body.state.queue.n === ui.cur) { rememberItem(ui.cur, res.body.state); apply(res.body.state); }
+      } else if (res.body.state) apply(res.body.state);
+      const again = n.opener ? Array.prototype.find.call(document.querySelectorAll('[data-key]'), el => el.getAttribute('data-key') === n.opener) : null;
+      (again && !again.disabled ? again : $('title')).focus();
+      return;
+    }
+    if (res) {
+      const e = res.body && res.body.error;
+      n.error = ((e && e.message) || 'Something went wrong (' + res.status + ').') + (e && e.hint ? ' ' + e.hint : '');
+      if (res.status === 409 || res.status === 404) load();
+    }
+    n.busy = false;
+    if (ui.none === n) syncNone(n.refs);
+  }
+
+  /** The panel's own keys: Escape closes it, Tab stays inside it. */
+  function onDialogKey(ev) {
+    const n = ui.none;
+    if (!n) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); closeNone(false); return; }
+    if (ev.key !== 'Tab') return;
+    const root = $('dialog-root');
+    const items = dialogFocusables(root);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const at = document.activeElement;
+    if (!root.contains(at)) { ev.preventDefault(); first.focus(); }
+    else if (ev.shiftKey && (at === first || at.id === 'none-h')) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && at === last) { ev.preventDefault(); first.focus(); }
+  }
+
   // ---- start ----
 
   /** The font licences, linked from the page itself (index.html stays free of /fonts references; the files are served by the same server). */
@@ -1899,6 +2173,8 @@
   }
 
   function boot() {
+    document.body.appendChild(h('div', { id: 'dialog-root' }));
+    document.addEventListener('keydown', onDialogKey, true);
     fontsFooter();
     if (!sessionId && !batch) { showMessage('Reading', 'Open the link your writer gave you to start reading.'); return; }
     if (!auth.token) { showMessage('This link is missing its key', 'Ask your writer for a fresh link.'); return; }

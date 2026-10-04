@@ -22,6 +22,7 @@ import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
 import { readPrediction, textHash } from '../owner/prediction.ts';
 import { draftHash, originalLines, type Original } from '../owner/original.ts';
 import { basePath, briefView, readSet, variantPath, type PromptSet } from '../owner/sets.ts';
+import { NONE_REASON_LABELS, newFeedback, type NoneReason } from '../owner/feedback.ts';
 import {
   CLIENT_EVENTS, EventSchema, appendEventAsync, checkTransition, foldSession, nextPair, readEvents, readReveal, readSession, variantOf, writeRevealAsync,
   type PairChooser, type Session, type SessionCandidate, type SessionEvent, type SessionState, type StoredEvent,
@@ -30,7 +31,7 @@ import { TasteDuels, type DuelCandidateSource } from './taste.ts';
 import { layoutOf, type Layout, type UnitLayout } from './units.ts';
 import { buildCompare, unitCells, type Compare } from './compare.ts';
 import {
-  QueueSchema, appendQueueEventAsync, childInfoOf, currentItem, foldQueue, parseQueueEvents, rankedPicks,
+  QueueSchema, appendQueueEventAsync, childInfoOf, currentItem, foldQueue, parseQueueEvents, rankedOutcomes, sentBackOfSet,
   type ChildInfo, type Queue, type QueueItem, type QueueState, type StoredQueueEvent,
 } from './queue.ts';
 import { parseDocument } from '../document.ts';
@@ -66,6 +67,8 @@ const SkipBody = z.strictObject({ item: ItemNo, eventId: z.string().regex(EVENT_
 /** A send id: short enough that `<sendId>-<n>-l` is still a valid event id. */
 const SendBody = z.strictObject({ sendId: z.string().regex(EVENT_ID_RE).max(80), eventId: z.string().regex(EVENT_ID_RE).optional() });
 const FinishBody = z.strictObject({ eventId: z.string().regex(EVENT_ID_RE) });
+/** "None of these" for a batch item: staged like a choice. The reasons are checked against the fixed list, the note trimmed and capped (feedback.ts), before anything is written. */
+const SendbackBody = z.strictObject({ item: ItemNo, closest: z.number().int().min(1).nullable(), reasons: z.array(z.string().max(40)).max(20), note: z.string().max(4000).optional(), eventId: z.string().regex(EVENT_ID_RE) });
 /** The request body cap for POST /event. */
 const MAX_BODY = 64 * 1024;
 /** What the page sends to strike a line, and to take a strike back: strict, every field checked before the CLI is asked. */
@@ -370,6 +373,8 @@ export const labelOf = (n: number): string => (n >= 26 ? labelOf(Math.floor(n / 
 
 /** The agent's sealed prediction as the CLI reveals it at pick time. */
 interface PickAgent { pick: number; shortlist: number[]; why: string; hit: boolean; shortlistHit: boolean; sealValid: boolean }
+/** What `set none` prints of the reveal: the sealed guess, never scored. */
+interface NoneRevealOut { agent: { pick: number; shortlist: number[]; why: string; sealValid: boolean; unscored: true } | null; model?: unknown; note?: string }
 
 /** Where a candidate lives: the set holding it and its variant number inside that set. */
 interface Where { setId: string; variant: number; round: number }
@@ -382,6 +387,9 @@ interface ChildEntry { info: ChildInfo; session: Session | null; state: SessionS
 interface SessionRow { id: string; setId: string; form: string; stage: string; createdAt: string; project: string }
 
 /** The line(s) the set revises, as the owner sees them, and whether the draft has changed since. */
+/** What the owner said about the set this one redoes (`set new --redo`): the reasons in words and the note, for the page to show above the new variants. Display only. */
+export interface FeedbackView { reasons: string[]; note: string | null }
+
 export interface OriginalView { source: string; lines: ReturnType<typeof originalLines>; stale: boolean }
 
 /** The draft behind the session, for the Draft view: its lines as a strike names them, and the strikes against it. */
@@ -406,7 +414,7 @@ const DRAFT_FILE = /\.(?:fountain|md|markdown|dialog\.ya?ml|ya?ml)$/i;
 const normText = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export interface SessionPayload {
-  session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null; brief: ReturnType<typeof briefView> | null; original: OriginalView | null };
+  session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null; brief: ReturnType<typeof briefView> | null; original: OriginalView | null; lastFeedback: FeedbackView | null };
   state: Omit<SessionState, 'candidates'>;
   candidates: Candidate[];
   order: number[];
@@ -414,7 +422,7 @@ export interface SessionPayload {
   pair: [number, number] | null;
   /** The direction vocabulary the refine screen offers. */
   directions: string[];
-  reveal: { shipped: boolean };
+  reveal: { shipped: boolean; sentBack: boolean };
   /** The round-0 set's draft with its strikes, or null when it cannot be shown (missing, outside the project, unreadable). */
   draft: DraftView | null;
   /** The lineup as aligned rows (the base text against each shown variant, keyed by candidate index), or null outside the lineup stage or when the variants cannot be compared (the page then shows cards). */
@@ -591,6 +599,7 @@ export class ReadingServer {
       { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/item\/(\d{1,2})\/strike\/undo$/, handler: c => this.itemRoute(c, t => this.postStrike(t.ctx, 'undo')) },
       { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/choose$/, handler: c => this.postChoose(c) },
       { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/skip$/, handler: c => this.postSkip(c) },
+      { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/sendback$/, handler: c => this.postSendback(c) },
       { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/send$/, handler: c => this.postSend(c) },
       { method: 'POST', re: /^\/api\/queue\/([a-z0-9-]+)\/finish$/, handler: c => this.postFinish(c) },
     ];
@@ -668,6 +677,12 @@ export class ReadingServer {
       if (brief) return briefView(brief);
     }
     return null;
+  }
+
+  /** What the owner said about the set the round-0 set redoes, or null (a set that redoes nothing). Read live (stat-keyed). */
+  private feedbackOf(root: string, setId: string): FeedbackView | null {
+    const f = this.setOf(root, setId, false)?.feedback;
+    return f ? { reasons: f.reasons.map(r => NONE_REASON_LABELS[r as NoneReason] ?? r), note: f.note ?? null } : null;
   }
 
   /**
@@ -780,13 +795,13 @@ export class ReadingServer {
     const shown = [...plan.order, ...plan.sequence.filter(i => !plan.order.includes(i))];
     const { candidates: _hidden, ...publicState } = state;
     return {
-      session: { id: session.id, setId: session.setId, form: session.form, register: session.register, prompt: session.prompt, target: session.target, wpm: session.wpm, brief: this.briefOf(root, maps), original: this.originalOf(root, session.setId) },
+      session: { id: session.id, setId: session.setId, form: session.form, register: session.register, prompt: session.prompt, target: session.target, wpm: session.wpm, brief: this.briefOf(root, maps), original: this.originalOf(root, session.setId), lastFeedback: this.feedbackOf(root, session.setId) },
       state: publicState,
       candidates: shown.map(make),
       order: plan.order,
       pair: nextPair(state, choose),
       directions: KNOWN_DIRECTIONS,
-      reveal: { shipped: state.shipped !== null },
+      reveal: { shipped: state.shipped !== null, sentBack: state.sentBack !== null },
       draft: this.draftView(root, session, state, maps),
       compare: state.stage === 'lineup' ? this.compareOf(root, session, state, plan.order, maps) : null,
     };
@@ -891,7 +906,7 @@ export class ReadingServer {
     const fold = foldStrikes(this.strikeEvents(root, set.source), draft.hash);
     const last = undoableApply(fold, draft.hash);
     const strikes = fold.pending.map(p => ({ id: p.id, ref: p.ref, text: p.text, ...(p.speaker ? { speaker: p.speaker } : {}), reason: p.reason, ...(p.note ? { note: p.note } : {}), at: p.at, stale: p.stale }));
-    const editable = state.stage !== 'shipped' && state.stage !== 'abandoned';
+    const editable = state.stage !== 'shipped' && state.stage !== 'abandoned' && state.stage !== 'sentBack';
     const applied = last ? { id: last.id, count: last.strikes.length, at: last.at } : null;
     const rev = createHash('sha256').update(JSON.stringify([draft.hash, editable, strikes.map(s => [s.id, s.reason, s.note ?? null, s.stale]), applied, this.briefOf(root, maps), set.original?.lines ?? null])).digest('hex').slice(0, 16);
     const lines = draft.lines.slice(0, MAX_DRAFT_LINES).map(l => ({
@@ -936,7 +951,7 @@ export class ReadingServer {
     const out = await this.serial(id, async () => {
       const session = readSession(root, id);
       const stage = foldSession(session, readEvents(root, id)).stage;
-      if (stage === 'shipped' || stage === 'abandoned') throw new ProseError('E_CONFLICT', `the session is ${stage}, so strikes can no longer change`, { hint: 'Open a new reading session' });
+      if (stage === 'shipped' || stage === 'abandoned' || stage === 'sentBack') throw new ProseError('E_CONFLICT', `the session is ${stage === 'sentBack' ? 'sent back' : stage}, so strikes can no longer change`, { hint: 'Open a new reading session' });
       const set = this.setOf(root, session.setId, true);
       const file = set ? this.draftFile(root, set.source) : null;
       if (!set || !file) throw new ProseError('E_NOT_FOUND', 'the draft is not available', { hint: 'The draft may have moved or been deleted' });
@@ -956,8 +971,8 @@ export class ReadingServer {
   private reveal(id: string, within?: string): unknown {
     const root = this.findSession(id, within);
     const state = foldSession(readSession(root, id), readEvents(root, id));
-    const reveal = state.shipped !== null ? readReveal(root, id) : null;
-    if (reveal === null) throw new ProseError('E_NOT_FOUND', 'not shipped yet', { hint: 'The reveal appears once the session is shipped' });
+    const reveal = state.shipped !== null || state.sentBack !== null ? readReveal(root, id) : null;
+    if (reveal === null) throw new ProseError('E_NOT_FOUND', 'not shipped yet', { hint: 'The reveal appears once the session is shipped or sent back' });
     return reveal;
   }
 
@@ -1036,6 +1051,19 @@ export class ReadingServer {
         const sealed = existsSync(join(setDir(root, w.setId), 'prediction.json'));
         const picked = await run(['set', 'pick', w.setId, '--pick', String(w.variant), ...(sealed ? [] : ['--no-predict']), '--dir', root], { cwd: root }) as { reveal?: { agent: PickAgent } | null; voided?: string };
         await writeRevealAsync(root, id, this.revealOf(w, checked.champion, picked));
+        break;
+      }
+      case 'none': {
+        // The set sent back is the current round's: a pinned champion of an earlier round lives in another set and is not one of "these".
+        const setId = maps.roundSet.get(state.round) ?? session.setId;
+        let closest: number | null = null;
+        if (checked.closest !== null) {
+          const w = where(checked.closest);
+          if (w.setId !== setId) throw new ProseError('E_USAGE', 'The draft that came closest must be one of the new drafts of this round', { hint: 'Pick one of the drafts the writer just made, or say none came close' });
+          closest = w.variant;
+        }
+        const out = await run(['set', 'none', setId, ...(checked.reasons.length ? ['--reason', checked.reasons.join(',')] : []), ...(checked.note !== undefined ? [`--note=${checked.note}`] : []), ...(closest !== null ? ['--closest', String(closest)] : []), '--dir', root], { cwd: root }) as { reveal?: NoneRevealOut };
+        await writeRevealAsync(root, id, { schema: 'prose/session-reveal@1', outcome: 'none', at: new Date().toISOString(), setId, picked: null, variant: null, matched: null, prediction: out.reveal?.agent ?? null, ...(out.reveal?.model ? { model: out.reveal.model } : {}), ...(out.reveal?.agent ? {} : { note: out.reveal?.note ?? 'No prediction was sealed for this set, so there is nothing to reveal' }) });
         break;
       }
       default: break;
@@ -1139,7 +1167,7 @@ export class ReadingServer {
   }
 
   private missingChild(set: PromptSet | null): ChildEntry {
-    return { info: { stage: 'abandoned', shipped: null, shippedAt: null, pickedElsewhere: set?.picked ?? null, pickedAt: set?.pickedAt ?? null, missing: true }, session: null, state: null, sequence: [] };
+    return { info: { stage: 'abandoned', sentBack: sentBackOfSet(set), shipped: null, shippedAt: null, pickedElsewhere: set?.picked ?? null, pickedAt: set?.pickedAt ?? null, missing: true }, session: null, state: null, sequence: [] };
   }
 
   /** The queue folded with its children as they are now. */
@@ -1159,13 +1187,14 @@ export class ReadingServer {
       return at < 0 ? null : labelOf(at);
     };
     return {
-      queue: { id: queue.id, prompt: queue.prompt, total: queue.items.length, counts: state.counts, stage: state.stage, cursor: rankedPicks(state).length },
+      queue: { id: queue.id, prompt: queue.prompt, total: queue.items.length, counts: state.counts, stage: state.stage, cursor: rankedOutcomes(state).length },
       items: queue.items.map((q, k) => {
         const s = state.items[k];
         return {
           n: q.n, who: q.who, where: q.where, form: q.form, status: s.status,
           picked: s.status === 'sent' ? label(k, s.sentVariant) : s.status === 'picked' ? label(k, s.choice.variant) : null,
           ...(s.via === 'cli' ? { via: 'cli' } : {}), ...(s.message ? { message: s.message } : {}),
+          ...(s.status === 'back' || s.status === 'sentBack' ? { reasons: (s.status === 'back' ? s.back! : s.sentBack!).reasons.map(r => NONE_REASON_LABELS[r as NoneReason] ?? r) } : {}),
         };
       }),
       order: state.order,
@@ -1204,7 +1233,7 @@ export class ReadingServer {
     const s = state.items[n - 1];
     return {
       ...payload,
-      queue: { n, stage: state.stage, status: s.status, choice: s.choice, sentVariant: s.sentVariant, ...(s.via ? { via: s.via } : {}), ...(s.message ? { message: s.message } : {}) },
+      queue: { n, stage: state.stage, status: s.status, choice: s.choice, back: s.back, sentBack: s.sentBack, sentVariant: s.sentVariant, ...(s.via ? { via: s.via } : {}), ...(s.message ? { message: s.message } : {}) },
     };
   }
 
@@ -1235,6 +1264,7 @@ export class ReadingServer {
   private needUndecided(state: QueueState, n: number): void {
     const status = state.items[n - 1].status;
     if (status === 'sent') throw new ProseError('E_CONFLICT', 'this item is already sent', { hint: 'A pick cannot be changed once sent' });
+    if (status === 'sentBack') throw new ProseError('E_CONFLICT', 'this item is already sent back', { hint: 'A send-back cannot be changed once sent; your writer can make a new set with prose set new --redo' });
     if (status === 'ended') throw new ProseError('E_CONFLICT', 'this item is closed', { hint: 'Ask your writer to open it again: prose reading open --pending' });
   }
 
@@ -1281,6 +1311,27 @@ export class ReadingServer {
       this.needOpen(state);
       this.needUndecided(state, body.item);
       const { duplicate } = await appendQueueEventAsync(root, queue.id, { type: 'skip', item: body.item, eventId: body.eventId });
+      return this.queueReply(root, queue, body.item, duplicate ? { duplicate: true } : {});
+    });
+    this.json(c.res, 200, out);
+  }
+
+  /** Stage "none of these" for an item: validated like the CLI validates it (the fixed reasons, the trimmed and capped note), then kept in the queue log until Send. */
+  private async postSendback(c: Ctx): Promise<void> {
+    const { root, queue } = this.findQueue(c.match[1]);
+    const body = await this.queueBody(c, SendbackBody);
+    if (!queue.items.some(i => i.n === body.item)) throw new ProseError('E_SCHEMA', `item ${body.item} is not in this queue`, { hint: `The queue has items 1 to ${queue.items.length}` });
+    const feedback = newFeedback({ reasons: body.reasons, closest: body.closest, ...(body.note !== undefined ? { note: body.note } : {}) });
+    const out = await this.serial(queue.id, async () => {
+      const { state, entries } = this.railState(root, queue);
+      this.needOpen(state);
+      this.needUndecided(state, body.item);
+      const entry = entries[body.item - 1];
+      if (!entry.session || !entry.state || entry.state.stage !== 'lineup') throw new ProseError('E_CONFLICT', 'this item can no longer be sent back', { hint: 'Open the set as its own session, or ask your writer to open it again' });
+      if (feedback.closest !== null && !entry.state.candidates.some(x => x.index === feedback.closest)) {
+        throw new ProseError('E_SCHEMA', `variant ${feedback.closest} is not in this set`, { hint: `The drafts are ${entry.state.candidates.map(x => x.index).join(', ')}` });
+      }
+      const { duplicate } = await appendQueueEventAsync(root, queue.id, { type: 'sendback', item: body.item, closest: feedback.closest, reasons: feedback.reasons, ...(feedback.note !== undefined ? { note: feedback.note } : {}), eventId: body.eventId });
       return this.queueReply(root, queue, body.item, duplicate ? { duplicate: true } : {});
     });
     this.json(c.res, 200, out);
@@ -1333,25 +1384,53 @@ export class ReadingServer {
     }
   }
 
+  /**
+   * Send one item back: the session's `none` event, which runs `set none` first (the verdict row, the unscored reveal and the closed set)
+   * and appends only if that succeeded. Idempotent by event id and by the child's state; a failure blocks only this item.
+   */
+  private async sendBackItem(root: string, queue: Queue, n: number, back: { closest: number | null; reasons: string[]; note?: string }, sendId: string): Promise<{ n: number; status: 'sent' | 'blocked'; message?: string }> {
+    const item = queue.items.find(i => i.n === n)!;
+    const id = item.sessionId;
+    const blocked = async (message: string) => {
+      try { await appendQueueEventAsync(root, queue.id, { type: 'blocked', item: n, message: message.slice(0, 300) }); } catch (e) { logError(`could not record a blocked item: ${(e as Error)?.message}`); }
+      return { n, status: 'blocked' as const, message };
+    };
+    try {
+      const session = readSession(root, id);
+      if (session.queue !== queue.id) return await blocked('This item is not part of this queue');
+      const state = foldSession(session, readEvents(root, id));
+      if (state.sentBack) return { n, status: 'sent' };
+      if (state.shipped !== null) return await blocked('This set was picked elsewhere');
+      const set = this.setOf(root, item.setId, true);
+      if (!set) return await blocked('This set is no longer available');
+      if (set.picked !== undefined) return await blocked(`This set was already picked outside this page (draft ${set.picked})`);
+      if (state.stage !== 'lineup') return await blocked('This item was partly judged in its own session. Open the set as its own session to finish it');
+      await this.serial(id, () => this.applyEvent(root, id, { type: 'none', closest: back.closest, reasons: back.reasons as never, ...(back.note !== undefined ? { note: back.note } : {}), eventId: `${sendId}-${n}-n` }));
+      return { n, status: 'sent' };
+    } catch (e) {
+      return await blocked(this.blockedMessage(e));
+    }
+  }
+
   private async postSend(c: Ctx): Promise<void> {
     const { root, queue } = this.findQueue(c.match[1]);
     const body = await this.queueBody(c, SendBody);
     const out = await this.serial(queue.id, async () => {
       const { state } = this.railState(root, queue);
-      const todo = state.order.filter(n => { const s = state.items[n - 1]; return (s.status === 'picked' || s.status === 'blocked') && s.choice.variant !== null; });
+      const todo = state.order.filter(n => { const s = state.items[n - 1]; return s.status === 'picked' || s.status === 'back' || (s.status === 'blocked' && (s.choice.variant !== null || s.back !== null)); });
       const earlier = this.queueEvents(root, queue.id).find(e => e.type === 'send' && e.sendId === body.sendId);
       if (todo.length === 0 && earlier && earlier.type === 'send') {
         // a retry of a send that already finished: nothing to redo, the same answer
-        const results = earlier.items.map(n => ({ n, status: state.items[n - 1]?.status === 'sent' ? 'sent' : 'blocked', ...(state.items[n - 1]?.message ? { message: state.items[n - 1].message } : {}) }));
+        const results = earlier.items.map(n => ({ n, status: state.items[n - 1]?.status === 'sent' || state.items[n - 1]?.status === 'sentBack' ? 'sent' : 'blocked', ...(state.items[n - 1]?.message ? { message: state.items[n - 1].message } : {}) }));
         return this.queueReply(root, queue, earlier.items[0] ?? 1, { duplicate: true, results });
       }
       this.needOpen(state);
-      if (todo.length === 0) throw new ProseError('E_CONFLICT', 'nothing is chosen to send', { hint: 'Keep a draft in an item, then press Send picks' });
+      if (todo.length === 0) throw new ProseError('E_CONFLICT', 'nothing is chosen to send', { hint: 'Keep a draft in an item, or send one back, then press Send' });
       await appendQueueEventAsync(root, queue.id, { type: 'send', sendId: body.sendId, items: todo });
       const results: Array<{ n: number; status: 'sent' | 'blocked'; message?: string }> = [];
       for (const n of todo) {
-        const choice = state.items[n - 1].choice;
-        results.push(await this.sendItem(root, queue, n, choice.variant!, choice.passes, body.sendId));
+        const it = state.items[n - 1];
+        results.push(it.choice.variant === null && it.back ? await this.sendBackItem(root, queue, n, it.back, body.sendId) : await this.sendItem(root, queue, n, it.choice.variant!, it.choice.passes, body.sendId));
       }
       return this.queueReply(root, queue, todo[0], { results });
     });
@@ -1367,7 +1446,7 @@ export class ReadingServer {
       if (before.stage !== 'finished' && before.stage !== 'closed') await appendQueueEventAsync(root, queue.id, { type: 'finish', eventId: body.eventId });
       const { entries } = this.railState(root, queue);
       for (const [k, entry] of entries.entries()) {
-        if (!entry.state || entry.state.stage === 'shipped' || entry.state.stage === 'abandoned') continue;
+        if (!entry.state || entry.state.stage === 'shipped' || entry.state.stage === 'sentBack' || entry.state.stage === 'abandoned') continue;
         const id = queue.items[k].sessionId;
         try { await this.serial(id, () => appendEventAsync(root, id, { type: 'abandon' })); } catch { /* it finished meanwhile */ }
       }

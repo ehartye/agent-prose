@@ -101,6 +101,7 @@ function pendingPick(project: string, id: string): number | null {
 function recordPickLocked(project: string, set: PromptSet, pick: number, opts: PickOptions, ctx: LockContext): PickResult {
   const now = opts.now ?? new Date();
   if (set.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${set.id} was already picked (variant ${set.picked})`, { hint: 'Start a new set with prose set new' });
+  if (set.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${set.id} was sent back (none of its variants was wanted), so it is closed; it cannot take a pick`, { hint: `Make a new set with prose set new --redo ${set.id}` });
   const pending = pendingPick(project, set.id);
   if (pending !== null && pending !== pick) {
     throw new ProseError('E_CONFLICT', `An earlier pick of variant ${pending} for set ${set.id} was interrupted after its verdicts were logged`, {

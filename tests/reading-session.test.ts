@@ -203,7 +203,7 @@ describe('EventSchema', () => {
     expect(r(['warmer', 'drier', 'plainer', 'shorter', 'longer'])).toBe(false);
     expect(r(['louder'])).toBe(false);
     expect(EventSchema.safeParse({ type: 'duel', a: 1, b: 2, outcome: 'c', position: 'ab', eventId: 'x' }).success).toBe(false);
-    expect([...CLIENT_EVENTS].sort()).toEqual(['abandon', 'duel', 'lineup', 'note', 'peek', 'play', 'refine', 'ship']);
+    expect([...CLIENT_EVENTS].sort()).toEqual(['abandon', 'duel', 'lineup', 'none', 'note', 'peek', 'play', 'refine', 'ship']);
   });
 });
 

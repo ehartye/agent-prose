@@ -96,8 +96,8 @@ describe('readVerdicts', () => {
     const v1 = JSON.stringify({ ...JSON.parse(good), schema: 'prose/verdict@1', setUid: undefined });
     const noUid = JSON.stringify({ ...JSON.parse(good), setUid: undefined });
     writeFileSync(f, [good, v1, '{garbage', '', noUid, '"a string"'].join('\n') + '\n');
-    expect(readVerdicts(f)).toEqual({ rows: [JSON.parse(good)], unknownVersion: 1, malformed: 3, malformedLines: [3, 5, 6] });
-    expect(readVerdicts(join(tmp(), 'none.jsonl'))).toEqual({ rows: [], unknownVersion: 0, malformed: 0, malformedLines: [] });
+    expect(readVerdicts(f)).toEqual({ rows: [JSON.parse(good)], none: [], unknownVersion: 1, malformed: 3, malformedLines: [3, 5, 6] });
+    expect(readVerdicts(join(tmp(), 'none.jsonl'))).toEqual({ rows: [], none: [], unknownVersion: 0, malformed: 0, malformedLines: [] });
   });
 
   it('lists at most the first 20 malformed line numbers', () => {

@@ -95,6 +95,7 @@ function recordDuelLocked(project: string, setId: string, sa: Side, sb: Side, in
   const other = cross ? readSet(project, sa.set === setId ? sb.set : sa.set) : set;
   for (const s of cross ? [set, other] : [set]) {
     if (s.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${s.id} was already picked (variant ${s.picked})`, { hint: 'Start a new set with prose set new' });
+    if (s.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${s.id} was sent back (none of its variants was wanted), so it is closed`, { hint: `Make a new set with prose set new --redo ${s.id}` });
   }
   const setFor = (id: string) => (id === setId ? set : other);
 

@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { ProseError } from '../errors.ts';
 import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
+import { MAX_NONE_NOTE, NONE_REASONS, newFeedback } from '../owner/feedback.ts';
 import { withDirLock, withDirLockAsync, writeFileAtomic, writeFileAtomicAsync } from '../owner/fsutil.ts';
 import { EVENT_ID_RE, newId, sessionDir, sessionsDir, validId } from '../owner/paths.ts';
 
@@ -78,6 +79,8 @@ export const EventSchema = z.discriminatedUnion('type', [
   /** Agent only. */
   z.strictObject({ type: z.literal('round'), n: z.number().int().min(1), setId: z.string().min(1), candidates: z.array(RoundCandidateSchema).min(1) }),
   z.strictObject({ type: z.literal('ship'), champion: Index, eventId: EventId.optional() }),
+  /** "None of these": every variant of the round's set rejected, with the reasons and a note; ends the session like a ship (no pick). `closest` is a session candidate index. */
+  z.strictObject({ type: z.literal('none'), closest: Index.nullable(), reasons: z.array(z.enum(NONE_REASONS)).max(NONE_REASONS.length), note: z.string().max(MAX_NONE_NOTE).optional(), eventId: EventId.optional() }),
   z.strictObject({ type: z.literal('abandon'), eventId: EventId.optional() }),
 ]);
 export type SessionEvent = z.infer<typeof EventSchema>;
@@ -87,13 +90,13 @@ const LegacyRoundSchema = z.strictObject({
   candidates: z.array(SessionCandidateSchema.extend({ hash: Sha256.optional() })).min(1),
 });
 /** Events the owner's page may send; rounds come only from the agent's CLI. */
-export const CLIENT_EVENTS: ReadonlySet<string> = new Set(['play', 'lineup', 'duel', 'note', 'peek', 'refine', 'ship', 'abandon']);
+export const CLIENT_EVENTS: ReadonlySet<string> = new Set(['play', 'lineup', 'duel', 'note', 'peek', 'refine', 'ship', 'none', 'abandon']);
 export type StoredEvent = SessionEvent & { at: string; seq: number };
 
 export interface SessionNote { index: number; unit: number; text: string; round: number }
 
 export interface SessionState {
-  stage: 'lineup' | 'duel' | 'refine' | 'waiting' | 'shipped' | 'abandoned';
+  stage: 'lineup' | 'duel' | 'refine' | 'waiting' | 'shipped' | 'sentBack' | 'abandoned';
   round: number;
   candidates: SessionCandidate[];
   /** Variants on offer in the current round's lineup (the champion is pinned after round 0). */
@@ -106,6 +109,8 @@ export interface SessionState {
   champion: number | null;
   pendingRefine: { champion: number; directions: string[]; like: number | null } | null;
   shipped: number | null;
+  /** The owner sent the round's set back (none of these): what they said. Null otherwise. */
+  sentBack: { closest: number | null; reasons: string[]; note?: string } | null;
   notes: SessionNote[];
   /** Variants whose "what changed?" the owner opened. */
   peeked: number[];
@@ -128,14 +133,14 @@ const pinnedOf = (s: Pick<SessionState, 'round' | 'champion'>): number[] => (s.r
 export function foldSession(session: Session, events: StoredEvent[]): SessionState {
   const s: SessionState = {
     stage: 'lineup', round: 0, candidates: [...session.candidates], lineup: session.candidates.map(c => c.index),
-    kept: [], duds: [], shortlist: [], duels: [], champion: null, pendingRefine: null, shipped: null,
+    kept: [], duds: [], shortlist: [], duels: [], champion: null, pendingRefine: null, shipped: null, sentBack: null,
     notes: [], peeked: [], events: events.length,
   };
   const score = new Map<number, number>();
   const bump = (i: number, by: number) => score.set(i, (score.get(i) ?? 0) + by);
   const championOf = () => [...s.shortlist].sort((a, b) => (score.get(b) ?? 0) - (score.get(a) ?? 0) || s.shortlist.indexOf(a) - s.shortlist.indexOf(b))[0] ?? null;
   for (const e of events) {
-    if (s.stage === 'shipped' || s.stage === 'abandoned') break;
+    if (s.stage === 'shipped' || s.stage === 'abandoned' || s.stage === 'sentBack') break;
     switch (e.type) {
       case 'lineup': {
         const pinned = pinnedOf(s);
@@ -172,6 +177,7 @@ export function foldSession(session: Session, events: StoredEvent[]): SessionSta
         s.stage = 'lineup';
         break;
       case 'ship': s.shipped = e.champion; s.champion = e.champion; s.stage = 'shipped'; break;
+      case 'none': s.sentBack = { closest: e.closest, reasons: e.reasons, ...(e.note ? { note: e.note } : {}) }; s.stage = 'sentBack'; break;
       case 'abandon': s.stage = 'abandoned'; break;
       case 'play': break; // engagement only
     }
@@ -222,7 +228,7 @@ const conflict = (message: string, hint: string) => new ProseError('E_CONFLICT',
  */
 export function checkTransition(state: SessionState, e: SessionEvent): SessionEvent {
   const { stage } = state;
-  if (stage === 'shipped' || stage === 'abandoned') throw conflict(`${e.type} is not accepted: the session is ${stage}`, 'Open a new reading session');
+  if (stage === 'shipped' || stage === 'abandoned' || stage === 'sentBack') throw conflict(`${e.type} is not accepted: the session is ${stage === 'sentBack' ? 'sent back' : stage}`, 'Open a new reading session');
   const known = new Set(state.candidates.map(c => c.index));
   const exists = (i: number) => { if (!known.has(i)) throw new ProseError('E_SCHEMA', `variant ${i} is not in this session`, { hint: `Variants are ${[...known].join(', ')}` }); };
   const need = (ok: boolean, hint: string) => { if (!ok) throw conflict(`${e.type} is not accepted in the ${stage} stage`, hint); };
@@ -233,6 +239,7 @@ export function checkTransition(state: SessionState, e: SessionEvent): SessionEv
     case 'lineup': break;
     case 'duel': exists(e.a); exists(e.b); break;
     case 'refine': case 'ship': exists(e.champion); break;
+    case 'none': if (e.closest !== null) exists(e.closest); break;
   }
   switch (e.type) {
     case 'lineup': {
@@ -264,6 +271,11 @@ export function checkTransition(state: SessionState, e: SessionEvent): SessionEv
       need(stage === 'duel' || stage === 'refine', 'Shipping needs a champion: submit the lineup first');
       onShortlist(e.champion);
       return e;
+    case 'none': {
+      need(stage === 'lineup' || stage === 'duel' || stage === 'refine', 'The set can be sent back while the owner is judging it, not while the writer is making a round');
+      const f = newFeedback({ reasons: e.reasons, ...(e.note !== undefined ? { note: e.note } : {}), closest: e.closest });
+      return { type: 'none', closest: f.closest, reasons: f.reasons, ...(f.note !== undefined ? { note: f.note } : {}), ...(e.eventId !== undefined ? { eventId: e.eventId } : {}) };
+    }
     default: return e;
   }
 }

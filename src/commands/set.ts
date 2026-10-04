@@ -6,6 +6,8 @@ import type { Io } from '../io.ts';
 import { ProseError } from '../errors.ts';
 import { needProject } from '../project.ts';
 import { recordPick } from '../owner/pick.ts';
+import { recordNone } from '../owner/none.ts';
+import { NONE_REASONS, reasonWords } from '../owner/feedback.ts';
 import { DUEL_OUTCOMES, duelKind, recordDuel, type DuelOutcome } from '../owner/duel.ts';
 import { checkSet } from '../owner/check.ts';
 import { assertDirections } from '../owner/directions.ts';
@@ -14,7 +16,8 @@ import { withSetLock } from '../owner/fsutil.ts';
 import { predictWithModel, repairModelPrediction } from '../taste/prediction.ts';
 import { isStale, originalLines } from '../owner/original.ts';
 import { resolveBySpeaker, resolveCharacterText } from '../owner/character.ts';
-import { briefView, createSet, newBrief, editedBrief, listSetsDetailed, readSet, variantPath, writeSet, type Brief, type BriefInput } from '../owner/sets.ts';
+import type { Feedback } from '../owner/feedback.ts';
+import { briefView, createSet, newBrief, editedBrief, listSetsDetailed, readSet, variantPath, writeSet, type Brief, type BriefInput, type PromptSet } from '../owner/sets.ts';
 
 const whole = (text: string, what: string): number => {
   if (!/^\d+$/.test(text.trim())) throw new ProseError('E_USAGE', `${what} must be a whole number`, { hint: `Got "${text}"` });
@@ -22,6 +25,13 @@ const whole = (text: string, what: string): number => {
 };
 
 const csv = (s: string | undefined) => (s ? s.split(',').map(x => x.trim()).filter(Boolean) : []);
+
+/** The owner's feedback as the agent reads it: the reasons as ids and as words, the closest variant with its direction, the note. */
+const feedbackView = (project: string, setId: string, f: Feedback) => {
+  let closestDirection: string | null = null;
+  if (f.closest !== null) { try { closestDirection = readSet(project, setId).variants.find(v => v.index === f.closest)?.direction ?? null; } catch { closestDirection = null; } }
+  return { closest: f.closest, closestDirection, reasons: f.reasons, reasonWords: reasonWords(f.reasons), note: f.note ?? null };
+};
 
 const presentNext = (keep: number[], checkNext: string) =>
   keep.length >= 2 ? `Present only the kept variants (${keep.join(', ')})` : checkNext;
@@ -31,7 +41,7 @@ export function registerSetCommands(program: Command, io: Io): void {
 
   set.command('new')
     .description('Start a set from a draft: copies it into a base and one file per variant for you to rewrite')
-    .argument('<draft>', '.fountain, .md or .dialog.yaml draft inside a prose project')
+    .argument('[draft]', '.fountain, .md or .dialog.yaml draft inside a prose project (with --redo: defaults to the draft the sent-back set was made from)')
     .option('--directions <list>', 'comma-separated directions, assigned to variants in turn (e.g. punchier,drier)')
     .option('--count <n>', 'number of variants, 2-6 (default: one per direction, at least 3)')
     .option('--id <id>', 'set id (default: generated)')
@@ -39,12 +49,31 @@ export function registerSetCommands(program: Command, io: Io): void {
     .option('--context <text>', 'the brief: where and how the lines are heard (at most 400 characters)')
     .option('--brief-confirmed', 'the owner agreed to this brief; without it the set records the brief as unconfirmed and set check warns')
     .option('--brief-from <set-id>', "copy another set's brief, confirmation included (a refine round); not with --character or --context")
+    .option('--redo <set-id>', "start again after the owner sent a set back (none of these): copies that set's brief and the line it revises, records which set it redoes and carries the owner's feedback along; refuses a set that was not sent back; not with --character, --context, --brief-from or --lines")
     .option('--lines <refs>', 'the existing line(s) this set revises: source line numbers or ranges of the draft, e.g. 12 or 12-13,20; shown to the owner beside the variants (omit for a new line)')
-    .action((draft: string, opts: { directions?: string; count?: string; id?: string; character?: string; context?: string; briefConfirmed?: boolean; briefFrom?: string; lines?: string }) => {
-      const project = needProject(dirname(resolve(draft)));
+    .option('--dir <dir>', 'with --redo and no draft: where to start looking for the project (default: the current directory)')
+    .action((draftArg: string | undefined, opts: { directions?: string; count?: string; id?: string; character?: string; context?: string; briefConfirmed?: boolean; briefFrom?: string; lines?: string; redo?: string; dir?: string }) => {
+      if (draftArg === undefined && opts.redo === undefined) throw new ProseError('E_USAGE', "error: missing required argument 'draft'", { hint: 'prose set new <draft>, or prose set new --redo <set-id>' });
+      const project = needProject(draftArg !== undefined ? dirname(resolve(draftArg)) : (opts.dir ?? process.cwd()));
       let brief: BriefInput | Brief | undefined;
+      let redo: { of: string; original?: PromptSet['original']; feedback: Feedback } | undefined;
+      let draft = draftArg as string;
       const notes: string[] = [];
-      if (opts.briefFrom !== undefined) {
+      if (opts.redo !== undefined) {
+        for (const [flag, on] of [['--character', opts.character !== undefined], ['--context', opts.context !== undefined], ['--brief-from', opts.briefFrom !== undefined], ['--brief-confirmed', opts.briefConfirmed === true], ['--lines', opts.lines !== undefined]] as const) {
+          if (on) throw new ProseError('E_USAGE', `--redo copies the brief and the line from the sent-back set, so it cannot be mixed with ${flag}`, { hint: 'Edit afterwards with prose set brief <id>' });
+        }
+        const old = readSet(project, opts.redo);
+        if (old.sentBack === undefined) {
+          throw new ProseError('E_CONFLICT', `Set ${old.id} was not sent back, so there is nothing to redo`, {
+            hint: old.picked !== undefined ? 'It was picked; start a new set from the draft with prose set new <draft>' : `The owner has not sent it back; present it: prose reading open --set ${old.id}`,
+          });
+        }
+        redo = { of: old.id, ...(old.original ? { original: old.original } : {}), feedback: { closest: old.sentBack.closest, reasons: old.sentBack.reasons, ...(old.sentBack.note !== undefined ? { note: old.sentBack.note } : {}) } };
+        brief = old.brief;
+        draft ??= resolve(project, old.source);
+        if (!existsSync(draft)) throw new ProseError('E_NOT_FOUND', `The draft ${old.source} that set ${old.id} was made from is not there`, { hint: 'Pass the draft: prose set new <draft> --redo <set-id>' });
+      } else if (opts.briefFrom !== undefined) {
         if (opts.character !== undefined || opts.context !== undefined) throw new ProseError('E_USAGE', '--brief-from copies a brief, so it cannot be mixed with --character or --context', { hint: 'Edit afterwards with prose set brief <id>' });
         const from = readSet(project, opts.briefFrom).brief;
         if (!from) throw new ProseError('E_USAGE', `Set ${opts.briefFrom} has no brief to copy`, { hint: 'Pass --character and --context instead' });
@@ -61,6 +90,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       }
       const s = createSet(project, draft, {
         ...(brief ? { brief } : {}),
+        ...(redo ? { redo } : {}),
         ...(opts.lines !== undefined ? { lines: opts.lines } : {}),
         directions: csv(opts.directions),
         ...(opts.count !== undefined ? { count: Number(opts.count) } : {}),
@@ -72,8 +102,9 @@ export function registerSetCommands(program: Command, io: Io): void {
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: false } : null,
         excluded: s.excluded ?? null,
+        ...(redo ? { redoOf: redo.of, feedback: feedbackView(project, redo.of, redo.feedback) } : {}),
         ...(notes.length ? { notes } : {}),
-        next: `${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}${s.excluded ? `${s.excluded.length} struck line${s.excluded.length === 1 ? ' is' : 's are'} excluded: leave ${s.excluded.length === 1 ? 'it' : 'them'} exactly as ${s.excluded.length === 1 ? 'it is' : 'they are'} in every variant (set check rejects an edit). ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
+        next: `${redo ? `This redoes ${redo.of}: do not repeat the directions the owner rejected (see feedback). ` : ''}${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}${s.excluded ? `${s.excluded.length} struck line${s.excluded.length === 1 ? ' is' : 's are'} excluded: leave ${s.excluded.length === 1 ? 'it' : 'them'} exactly as ${s.excluded.length === 1 ? 'it is' : 'they are'} in every variant (set check rejects an edit). ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
       });
     });
 
@@ -92,6 +123,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       const brief = withSetLock(project, id, ctx => {
         const s = readSet(project, id);
         if (s.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${id} is already picked, so its brief cannot change`, { hint: 'The owner chose with the old brief on screen; start a new set for new words' });
+        if (s.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${id} was sent back, so its brief cannot change`, { hint: `The owner judged it with that brief on screen; make a new set with prose set new --redo ${id}` });
         const picked = opts.character !== undefined ? resolveCharacterText(project, opts.character) : undefined;
         if (picked) notes.push(...picked.notes);
         const next = editedBrief(s.brief, picked ? { ...opts, character: picked.character, characterRef: picked.characterRef } : opts, new Date());
@@ -111,7 +143,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       const { sets, problems } = listSetsDetailed(project);
       io.emit({
         project,
-        sets: sets.map(s => ({ id: s.id, form: s.form, createdAt: s.createdAt, variants: s.variants.length, picked: s.picked ?? null, brief: s.brief !== undefined })),
+        sets: sets.map(s => ({ id: s.id, form: s.form, createdAt: s.createdAt, variants: s.variants.length, picked: s.picked ?? null, status: s.picked !== undefined ? 'picked' : s.sentBack !== undefined ? 'sent back' : 'open', ...(s.redoOf ? { redoOf: s.redoOf } : {}), brief: s.brief !== undefined })),
         ...(problems.length ? { problems } : {}),
       });
     });
@@ -126,6 +158,9 @@ export function registerSetCommands(program: Command, io: Io): void {
       const check = checkSet(project, s);
       io.emit({
         set: s.id, project, form: s.form, directions: s.directions, picked: s.picked ?? null,
+        status: s.picked !== undefined ? 'picked' : s.sentBack !== undefined ? 'sent back' : 'open',
+        sentBack: s.sentBack ? { at: s.sentBack.at, ...feedbackView(project, s.id, s.sentBack) } : null,
+        ...(s.redoOf ? { redoOf: s.redoOf, feedback: s.feedback ? feedbackView(project, s.redoOf, s.feedback) : null } : {}),
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: isStale(project, s.original) } : null,
         excluded: s.excluded ?? null,
@@ -190,6 +225,19 @@ export function registerSetCommands(program: Command, io: Io): void {
     .action((id: string, opts: { pick: string; tags?: string; predict: boolean; dir?: string }) => {
       const project = needProject(opts.dir ?? process.cwd());
       io.emit(recordPick(project, readSet(project, id), whole(opts.pick, '--pick'), { tags: csv(opts.tags), noPredict: opts.predict === false }));
+    });
+
+  set.command('none')
+    .description('Record that the owner rejected every variant and why ("none of these", from the reading page): closes the set, reveals your sealed prediction unscored, and is never a pick, a duel or taste data. A closed set takes no pick: make a new one with set new --redo')
+    .argument('<id>', 'set id')
+    .option('--reason <list>', `why, comma-separated, from: ${NONE_REASONS.join(', ')}`)
+    .option('--note <text>', "what is wrong, in the owner's words (plain text, at most 1000 characters)")
+    .option('--closest <n>', 'the variant that came closest (omit when none did); must be one the owner was shown')
+    .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
+    .action((id: string, opts: { reason?: string; note?: string; closest?: string; dir?: string }) => {
+      const project = needProject(opts.dir ?? process.cwd());
+      const r = recordNone(project, id, { reasons: csv(opts.reason), ...(opts.note !== undefined ? { note: opts.note } : {}), ...(opts.closest !== undefined ? { closest: whole(opts.closest, '--closest') } : {}) });
+      io.emit({ ...r, reasonWords: reasonWords(r.reasons) });
     });
 
   set.command('duel')

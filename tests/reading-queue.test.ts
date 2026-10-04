@@ -18,7 +18,7 @@ const queueOf = (n: number): Queue => ({
 });
 let seq = 0;
 const ev = (e: object): StoredQueueEvent => ({ ...e, at: `2026-10-04T18:3${seq % 10}:00.000Z`, seq: ++seq }) as StoredQueueEvent;
-const open = (): ChildInfo => ({ stage: 'lineup', shipped: null, shippedAt: null, pickedElsewhere: null, pickedAt: null, missing: false });
+const open = (): ChildInfo => ({ stage: 'lineup', sentBack: null, shipped: null, shippedAt: null, pickedElsewhere: null, pickedAt: null, missing: false });
 const kids = (n: number, over: Record<number, Partial<ChildInfo>> = {}) => Object.fromEntries(Array.from({ length: n }, (_, k) => [k + 1, { ...open(), ...over[k + 1] }]));
 const choose = (item: number, variant: number | null, passes: number[] = [], eventId?: string) => ev({ type: 'choose', item, variant, passes, ...(eventId ? { eventId } : {}) });
 const skip = (item: number, eventId?: string) => ev({ type: 'skip', item, ...(eventId ? { eventId } : {}) });
@@ -29,7 +29,7 @@ describe('foldQueue', () => {
     expect(s.stage).toBe('open');
     expect(s.order).toEqual([1, 2, 3]);
     expect(s.items.map(i => i.status)).toEqual(['waiting', 'waiting', 'waiting']);
-    expect(s.counts).toEqual({ waiting: 3, picked: 0, sent: 0, skipped: 0, blocked: 0, ended: 0 });
+    expect(s.counts).toEqual({ waiting: 3, picked: 0, back: 0, sent: 0, sentBack: 0, skipped: 0, blocked: 0, ended: 0 });
   });
 
   it('a choice stages a pick; choosing again replaces it; variant null clears it but keeps the passes', () => {

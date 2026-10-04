@@ -12,13 +12,14 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { ProseError } from '../errors.ts';
 import { withDirLock, withDirLockAsync, writeFileAtomic } from '../owner/fsutil.ts';
+import { MAX_NONE_NOTE, NONE_REASONS } from '../owner/feedback.ts';
 import { EVENT_ID_RE, queueDir, queuesDir, validId } from '../owner/paths.ts';
 import { readSet, type PromptSet } from '../owner/sets.ts';
 import { foldSession, readEvents, readSession, type Session, type SessionState, type StoredEvent } from './session.ts';
 
 /** Sets in one queue, a hard cap. */
 export const MAX_QUEUE_ITEMS = 50;
-/** Stored events after which choose and skip are refused (429); send, finish, close and blocked are always accepted. */
+/** Stored events after which choose, skip and sendback are refused (429); send, finish, close and blocked are always accepted. */
 export const MAX_QUEUE_EVENTS = 4000;
 /** Variants a set has at most; `passes` cannot name more. */
 const MAX_PASSES = 6;
@@ -54,6 +55,8 @@ export const QueueEventSchema = z.discriminatedUnion('type', [
   /** The staged choice for an item: the session candidate index kept (null clears it) and the ones passed. */
   z.strictObject({ type: z.literal('choose'), item: Item, variant: Variant.nullable(), passes: z.array(Variant).max(MAX_PASSES), eventId: EventId.optional() }),
   z.strictObject({ type: z.literal('skip'), item: Item, eventId: EventId.optional() }),
+  /** The staged "none of these" for an item (nothing is sent until Send): the session candidate index that came closest (or null), the reasons and a note. A later choose or skip replaces it; it replaces a staged choice. */
+  z.strictObject({ type: z.literal('sendback'), item: Item, closest: Variant.nullable(), reasons: z.array(z.enum(NONE_REASONS)).max(NONE_REASONS.length), note: z.string().max(MAX_NONE_NOTE).optional(), eventId: EventId.optional() }),
   /** An audit marker written when a send starts; the picks themselves are the children's ship events. */
   z.strictObject({ type: z.literal('send'), sendId: EventId, items: z.array(Item).max(MAX_QUEUE_ITEMS), eventId: EventId.optional() }),
   /** A send attempt failed for this item (with the message the owner sees); cleared by the item's next choose or skip. */
@@ -65,13 +68,18 @@ export type QueueEvent = z.infer<typeof QueueEventSchema>;
 export type StoredQueueEvent = QueueEvent & { at: string; seq: number };
 
 /** Events the owner's page may cause (through the choose, skip, send and finish routes); `close` and `blocked` are the CLI's and the server's own. */
-export const COUNTED = new Set(['choose', 'skip']);
+export const COUNTED = new Set(['choose', 'skip', 'sendback']);
 
 // ---- the fold (pure) ----
 
+/** What the owner said when they sent an item back; `closest` is a session candidate index when it comes from the child, a set variant number from the command line. */
+export interface SentBackInfo { closest: number | null; reasons: string[]; note?: string; at: string | null; via: 'page' | 'cli' }
+
 /** What the fold needs to know of an item's child session and set, read by the caller. */
 export interface ChildInfo {
-  stage: 'lineup' | 'duel' | 'refine' | 'waiting' | 'shipped' | 'abandoned';
+  stage: 'lineup' | 'duel' | 'refine' | 'waiting' | 'shipped' | 'sentBack' | 'abandoned';
+  /** The owner sent this item back (none of these), in the child session or, from the command line, on the set; null when not. */
+  sentBack: SentBackInfo | null;
   /** The candidate (variant) index the child shipped, or null. */
   shipped: number | null;
   shippedAt: string | null;
@@ -82,13 +90,20 @@ export interface ChildInfo {
   missing: boolean;
 }
 
-export type ItemStatus = 'waiting' | 'picked' | 'skipped' | 'sent' | 'blocked' | 'ended';
+export type ItemStatus = 'waiting' | 'picked' | 'back' | 'skipped' | 'sent' | 'sentBack' | 'blocked' | 'ended';
+
+/** A staged send-back: what Send will record for the item. */
+export interface StagedBack { closest: number | null; reasons: string[]; note?: string }
 
 export interface ItemState {
   n: number;
   status: ItemStatus;
   /** The staged choice (variant null and no passes when there is none). Kept after the item is sent, for the record. */
   choice: { variant: number | null; passes: number[] };
+  /** The staged "none of these" (status `back`), or null. */
+  back: StagedBack | null;
+  /** What the owner said, once the item is sent back (status `sentBack`). */
+  sentBack: SentBackInfo | null;
   /** The variant that was actually picked, when the item is sent. */
   sentVariant: number | null;
   sentAt: string | null;
@@ -119,8 +134,8 @@ const unique = (xs: number[]) => [...new Set(xs)];
  */
 export function foldQueue(queue: Queue, events: StoredQueueEvent[], children: Record<number, ChildInfo | undefined>): QueueState {
   const known = new Set(queue.items.map(i => i.n));
-  const staged = new Map<number, { variant: number | null; passes: number[]; last: 'choose' | 'skip' | 'blocked' | null; message?: string }>();
-  for (const i of queue.items) staged.set(i.n, { variant: null, passes: [], last: null });
+  const staged = new Map<number, { variant: number | null; passes: number[]; back: StagedBack | null; last: 'choose' | 'skip' | 'sendback' | 'blocked' | null; message?: string }>();
+  for (const i of queue.items) staged.set(i.n, { variant: null, passes: [], back: null, last: null });
   let order = queue.items.map(i => i.n);
   let finished = false, closed = false;
   const seen = new Set<string>();
@@ -138,13 +153,22 @@ export function foldQueue(queue: Queue, events: StoredQueueEvent[], children: Re
         if (!known.has(e.item) || !s) break;
         s.variant = e.variant;
         s.passes = unique(e.passes).filter(p => p !== e.variant);
+        s.back = null; // choosing (or clearing) takes a staged send-back away
         s.last = 'choose'; delete s.message;
+        break;
+      }
+      case 'sendback': {
+        const s = staged.get(e.item);
+        if (!known.has(e.item) || !s) break;
+        s.variant = null; s.passes = [];
+        s.back = { closest: e.closest, reasons: [...new Set(e.reasons)], ...(e.note ? { note: e.note } : {}) };
+        s.last = 'sendback'; delete s.message;
         break;
       }
       case 'skip': {
         const s = staged.get(e.item);
         if (!known.has(e.item) || !s) break;
-        s.variant = null; s.passes = []; s.last = 'skip'; delete s.message;
+        s.variant = null; s.passes = []; s.back = null; s.last = 'skip'; delete s.message;
         order = [...order.filter(n => n !== e.item), e.item];
         break;
       }
@@ -164,31 +188,40 @@ export function foldQueue(queue: Queue, events: StoredQueueEvent[], children: Re
     const s = staged.get(q.n)!;
     const child = children[q.n];
     const choice = { variant: s.variant, passes: [...s.passes] };
-    const base = { n: q.n, choice, sentVariant: null as number | null, sentAt: null as string | null, via: null as ItemState['via'] };
+    const base = { n: q.n, choice, back: s.back, sentBack: null as SentBackInfo | null, sentVariant: null as number | null, sentAt: null as string | null, via: null as ItemState['via'] };
     if (child && child.shipped !== null) return { ...base, status: 'sent', sentVariant: child.shipped, sentAt: child.shippedAt, via: 'page' };
     if (child && child.pickedElsewhere !== null) return { ...base, status: 'sent', sentVariant: child.pickedElsewhere, sentAt: child.pickedAt, via: 'cli' };
+    if (child && child.sentBack) return { ...base, status: 'sentBack', sentBack: child.sentBack, sentAt: child.sentBack.at, via: child.sentBack.via };
     if (ended) return { ...base, status: 'ended' };
     if (!child || child.missing) return { ...base, status: 'blocked', message: 'This set is no longer available' };
     if (child.stage === 'abandoned') return { ...base, status: 'ended' };
     if (s.last === 'blocked') return { ...base, status: 'blocked', message: s.message };
     if (s.last === 'skip') return { ...base, status: 'skipped' };
-    return { ...base, status: s.variant !== null ? 'picked' : 'waiting' };
+    return { ...base, status: s.variant !== null ? 'picked' : s.back ? 'back' : 'waiting' };
   });
-  const counts: Record<ItemStatus, number> = { waiting: 0, picked: 0, sent: 0, skipped: 0, blocked: 0, ended: 0 };
+  const counts: Record<ItemStatus, number> = { waiting: 0, picked: 0, back: 0, sent: 0, sentBack: 0, skipped: 0, blocked: 0, ended: 0 };
   for (const i of items) counts[i.status]++;
-  const settled = items.every(i => i.status === 'sent' || i.status === 'ended');
+  // every item is resolved: picked or sent back (a skipped or waiting item is never done by itself: a skip returns it to the queue)
+  const settled = items.every(i => i.status === 'sent' || i.status === 'sentBack' || i.status === 'ended');
   const stage: QueueStage = closed ? 'closed' : finished ? 'finished' : settled ? 'done' : 'open';
   return { stage, order, items, counts, events: valid };
 }
+
+/** The send-back recorded on a set (from the command line, or by a session of its own), as the fold reads it. */
+export const sentBackOfSet = (set: PromptSet | null): SentBackInfo | null =>
+  set?.sentBack ? { closest: set.sentBack.closest, reasons: set.sentBack.reasons, ...(set.sentBack.note ? { note: set.sentBack.note } : {}), at: set.sentBack.at, via: 'cli' } : null;
 
 /** An item's child session and set, as the fold wants them. `set` is null when it cannot be read (deleted, or half-written). */
 export function childInfoOf(session: Session, events: StoredEvent[], set: PromptSet | null): { info: ChildInfo; state: SessionState } {
   const state = foldSession(session, events);
   const shipEvent = events.find(e => e.type === 'ship');
+  const noneEvent = events.find(e => e.type === 'none');
+  const fromSet = sentBackOfSet(set);
   return {
     state,
     info: {
       stage: state.stage, shipped: state.shipped, shippedAt: shipEvent?.at ?? null,
+      sentBack: state.sentBack ? { ...state.sentBack, at: noneEvent?.at ?? null, via: 'page' } : fromSet,
       pickedElsewhere: set && set.picked !== undefined ? set.picked : null, pickedAt: set?.pickedAt ?? null, missing: set === null,
     },
   };
@@ -202,7 +235,7 @@ export function loadChildren(project: string, queue: Queue): LoadedChild[] {
     let session: Session | null = null, events: StoredEvent[] = [], set: PromptSet | null = null;
     try { session = readSession(project, item.sessionId); events = readEvents(project, item.sessionId); } catch { /* the child is gone */ }
     try { set = readSet(project, item.setId); } catch { /* the set is gone */ }
-    if (!session) return { item, session, events, state: null, set, info: { stage: 'abandoned', shipped: null, shippedAt: null, pickedElsewhere: set?.picked ?? null, pickedAt: set?.pickedAt ?? null, missing: true } };
+    if (!session) return { item, session, events, state: null, set, info: { stage: 'abandoned', sentBack: null, shipped: null, shippedAt: null, pickedElsewhere: set?.picked ?? null, pickedAt: set?.pickedAt ?? null, missing: true } };
     const { info, state } = childInfoOf(session, events, set);
     return { item, session, events, state, set, info };
   });
@@ -225,6 +258,17 @@ export function rankedPicks(state: QueueState): Array<{ n: number; variant: numb
     .filter(i => i.status === 'sent' && i.sentVariant !== null)
     .map(i => ({ n: i.n, variant: i.sentVariant!, at: i.sentAt ?? '', via: i.via! }))
     .sort((a, b) => a.at.localeCompare(b.at) || a.n - b.n);
+}
+
+/**
+ * The outcomes `reading wait` hands out, picks and send-backs together in one order (when each was recorded, ties by item number):
+ * the cursor counts into this list, so it must only ever grow at the end. With no send-back in the queue it is `rankedPicks` exactly.
+ */
+export type Outcome = { n: number; at: string; via: 'page' | 'cli' } & ({ kind: 'pick'; variant: number } | { kind: 'none' });
+export function rankedOutcomes(state: QueueState): Outcome[] {
+  const out: Outcome[] = rankedPicks(state).map(p => ({ kind: 'pick' as const, ...p }));
+  for (const i of state.items) if (i.status === 'sentBack' && i.sentBack) out.push({ kind: 'none', n: i.n, at: i.sentAt ?? '', via: i.via ?? 'page' });
+  return out.sort((a, b) => a.at.localeCompare(b.at) || a.n - b.n);
 }
 
 // ---- files ----

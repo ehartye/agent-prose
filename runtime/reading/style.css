@@ -344,6 +344,48 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1
   .state.skipped::after { background: CanvasText; }
 }
 
+/* ---- "None of these": the rail mark, the notes above the variants, and the dialog ---- */
+/* hollow circle with a short bar = sent back (filled once sent); distinct from the red slash of a skip, and always with its words beside it */
+.state.back { border-color: var(--ink); }
+.state.back::after { content: ''; position: absolute; left: 22%; right: 22%; top: 50%; height: 2px; margin-top: -1px; background: var(--ink); }
+.state.back.sent { background: var(--ink); }
+.state.back.sent::after { background: var(--sheet); }
+.lastfb { margin: 0 0 1rem; padding: 0.55rem 0.9rem; border-left: 4px solid var(--graphite); background: var(--sheet); border-radius: 0 4px 4px 0; overflow-wrap: anywhere; white-space: pre-line; }
+.sentback { border: 1.5px solid var(--ink); border-radius: 4px; background: var(--sheet); padding: 0.4rem 1rem; margin: 0 0 1rem; overflow-wrap: anywhere; white-space: pre-line; }
+.sentback .row { margin: 0.3rem 0; }
+.recap { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 0.2rem 1rem 0.6rem; margin: 0.6rem 0 1rem; }
+.recap h2 { margin-top: 0.6rem; }
+.recap .reasons { margin: 0.3rem 0; padding-left: 1.2rem; }
+.recap .note-said { white-space: pre-line; overflow-wrap: anywhere; border-left: 3px solid var(--graphite); padding-left: 0.75rem; }
+.reveal .nopick { font: 700 0.78rem var(--script); letter-spacing: 0.14em; text-transform: uppercase; color: var(--graphite); }
+
+.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(10, 14, 18, 0.55); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.dialog { background: var(--sheet); color: var(--ink); border: 2px solid var(--ink); border-radius: 4px; width: min(40rem, 100%); max-height: 100%; display: flex; flex-direction: column; padding: 0 1.2rem; box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6); }
+.dialog .dlg-body { overflow: auto; flex: 1 1 auto; min-height: 0; padding-bottom: 0.4rem; }
+.dialog h2 { margin: 0.8rem 0 0.2rem; }
+.dialog h2:focus { outline: 3px solid var(--blue); outline-offset: 3px; }
+.dialog .fs { border: 0; padding: 0; margin: 0.9rem 0 0; min-width: 0; }
+.dialog legend { padding: 0; font-weight: 700; margin-bottom: 0.2rem; }
+.dialog .opt { display: flex; align-items: center; gap: 0.7rem; min-height: 44px; cursor: pointer; }
+.dialog .opt input { width: 1.4rem; height: 1.4rem; margin: 0; accent-color: var(--blue); flex: none; }
+.dialog .chips { margin: 0.3rem 0; }
+.chip-btn { font-weight: 400; padding: 0.4rem 0.9rem; border-color: var(--graphite); display: inline-flex; gap: 0.5rem; align-items: center; }
+.chip-btn.on, .chip-btn[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: var(--sheet); font-weight: 700; }
+.chip-state { font: 700 0.7rem var(--script); letter-spacing: 0.1em; text-transform: uppercase; }
+.dialog textarea { width: 100%; min-height: 6rem; padding: 0.6rem; border: 1.5px solid var(--graphite); border-radius: 4px; background: var(--paper); margin-top: 0.25rem; }
+.dialog .counter { text-align: right; font-size: 0.85rem; }
+.dialog .counter .over { color: var(--red); font-weight: 700; }
+.dialog .hint { border: 1.5px dashed var(--graphite); border-radius: 4px; padding: 0.4rem 0.8rem; margin: 0.6rem 0; }
+.dialog .dlg-actions { flex: none; background: var(--sheet); padding: 0.6rem 0 calc(0.8rem + env(safe-area-inset-bottom)); margin: 0; border-top: 1px solid var(--rule); }
+@media (forced-colors: active) {
+  .dialog, .sentback, .lastfb, .recap { border-color: CanvasText; }
+  .state.back, .state.back.sent { border-color: CanvasText; }
+  .state.back::after { background: CanvasText; }
+  .state.back.sent { background: CanvasText; }
+  .state.back.sent::after { background: Canvas; }
+  .chip-btn[aria-pressed="true"] { outline: 2px solid CanvasText; }
+}
+
 /* ---- the licence line ---- */
 .site-foot { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem 1.5rem; color: var(--graphite); font-size: 0.85rem; }
 .site-foot a { display: inline-flex; align-items: center; min-height: 44px; }
