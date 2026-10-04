@@ -30,12 +30,13 @@ import { TasteDuels, type DuelCandidateSource } from './taste.ts';
 import { layoutOf, type Layout, type UnitLayout } from './units.ts';
 import { parseDocument } from '../document.ts';
 import { strikeLines, type StrikeLine } from '../strike/lines.ts';
+import { removedView } from '../strike/apply.ts';
 import { planRemoval, verifiedLines } from '../strike/plan.ts';
 import { MAX_NOTE, STRIKE_REASONS, foldStrikes, parseStrikeLog, strikeKey, undoableApply, type StrikeEvent } from '../strike/store.ts';
 
 export const DEFAULT_PORT = 47311;
 /** Bump when routes change: a running server of another API level is replaced, not reused. */
-export const SERVER_API = 2;
+export const SERVER_API = 3;
 const PROBE_MS = 1500;
 /** Connections the HTTP server accepts at once, and how long a client may take to send headers, a whole request, or sit idle. */
 const MAX_CONNECTIONS = 200;
@@ -59,6 +60,9 @@ const StrikeBody = z.strictObject({
   draftHash: z.string().regex(/^[0-9a-f]{64}$/), eventId: z.string().regex(EVENT_ID_RE),
 });
 const ClearBody = z.strictObject({ strike: z.string().regex(/^s\d+$/).max(12), eventId: z.string().regex(EVENT_ID_RE) });
+/** Apply carries the digest of the plan the owner saw; undo names the removal the page shows (the CLI refuses any other). */
+const ApplyBody = z.strictObject({ digest: z.string().regex(/^[0-9a-f]{64}$/), eventId: z.string().regex(EVENT_ID_RE) });
+const UndoBody = z.strictObject({ apply: z.string().regex(/^a\d+$/).max(12), eventId: z.string().regex(EVENT_ID_RE) });
 /** A CLI write that has not finished by then is given up on (a held set lock alone is given up on after 5 s). */
 const CLI_TIMEOUT_MS = 15_000;
 /** The CLI entry, next to the code: the managed runtime copy finds its own. */
@@ -531,6 +535,8 @@ export class ReadingServer {
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/event$/, handler: c => this.postEvent(c) },
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike$/, handler: c => this.postStrike(c, 'add') },
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/clear$/, handler: c => this.postStrike(c, 'clear') },
+      { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/apply$/, handler: c => this.postStrike(c, 'apply') },
+      { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/undo$/, handler: c => this.postStrike(c, 'undo') },
     ];
   }
 
@@ -814,24 +820,17 @@ export class ReadingServer {
     const missing = strikes.find(s => !s.line);
     if (missing) throw new ProseError('E_CONFLICT', `${missing.id} no longer names a line of the draft`, { hint: 'Undo it and strike again' });
     const plan = planRemoval(draft.text, draft.format, draft.form, draft.hash, strikes.map(s => ({ id: s.id, ref: s.ref, reason: s.reason, line: s.line! })));
-    const by = new Map(strikes.map(s => [s.id, s]));
-    return {
-      digest: plan.digest, count: plan.count, bytes: plan.bytes,
-      removed: plan.removed.map(r => ({
-        start: r.start, end: r.end, kind: r.kind, text: r.raw.replace(/\r\n$|\r$|\n$/, ''),
-        ...(r.strike ? { strike: r.strike, reason: by.get(r.strike)?.reason, ...(by.get(r.strike)?.note ? { note: by.get(r.strike)!.note } : {}) } : {}),
-      })),
-    };
+    return { digest: plan.digest, count: plan.count, bytes: plan.bytes, removed: removedView(plan.removed, strikes.map(x => ({ id: x.id, ref: x.ref, reason: x.reason, ...(x.note ? { note: x.note } : {}) }))) };
   }
 
-  /** Record a strike or clear one: validated here, then the CLI does the write (locks, dedupe, stale and overlap rules live there). */
-  private async postStrike(c: Ctx, kind: 'add' | 'clear'): Promise<void> {
+  /** Record or clear a strike, apply the strikes or undo the last apply: validated here, then the CLI does the write (locks, dedupe, stale, digest and hash rules live there; this server never edits a draft). */
+  private async postStrike(c: Ctx, kind: 'add' | 'clear' | 'apply' | 'undo'): Promise<void> {
     const id = c.match[1];
     const root = this.findSession(id);
     const text = await readBody(c.req, MAX_BODY);
     let raw: unknown;
     try { raw = JSON.parse(text); } catch { throw new ProseError('E_USAGE', 'the request body is not valid JSON', { hint: 'Send one JSON object' }); }
-    const parsed = kind === 'add' ? StrikeBody.safeParse(raw) : ClearBody.safeParse(raw);
+    const parsed = { add: StrikeBody, clear: ClearBody, apply: ApplyBody, undo: UndoBody }[kind].safeParse(raw);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       throw new ProseError('E_SCHEMA', `Invalid strike request: ${issue.path.length ? `${issue.path.join('.')}: ` : ''}${issue.message}`.slice(0, 200), { hint: 'See the strike request shapes the page sends' });
@@ -845,8 +844,11 @@ export class ReadingServer {
       const file = set ? this.draftFile(root, set.source) : null;
       if (!set || !file) throw new ProseError('E_NOT_FOUND', 'the draft is not available', { hint: 'The draft may have moved or been deleted' });
       const run = this.opts.runProse ?? runProse;
+      const form = ['--form', set.form];
       const argv = 'ref' in body
-        ? ['strike', 'add', file, '--line', body.ref, '--reason', body.reason, ...(body.note !== undefined ? [`--note=${body.note}`] : []), '--draft-hash', body.draftHash, `--event-id=${body.eventId}`, '--dir', root]
+        ? ['strike', 'add', file, '--line', body.ref, '--reason', body.reason, ...(body.note !== undefined ? [`--note=${body.note}`] : []), '--draft-hash', body.draftHash, `--event-id=${body.eventId}`, ...form, '--dir', root]
+        : 'digest' in body ? ['strike', 'apply', file, '--confirm', body.digest, `--event-id=${body.eventId}`, ...form, '--dir', root]
+        : 'apply' in body ? ['strike', 'undo', file, '--apply', body.apply, `--event-id=${body.eventId}`, ...form, '--dir', root]
         : ['strike', 'clear', file, body.strike, `--event-id=${body.eventId}`, '--dir', root];
       const result = await run(argv, { cwd: root }) as { duplicate?: boolean };
       return { ok: true, ...(result?.duplicate ? { duplicate: true } : {}), state: await this.payloadAsync(id) };

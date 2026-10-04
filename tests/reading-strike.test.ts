@@ -134,7 +134,7 @@ describe('POST /api/session/<id>/strike', () => {
     const r = await http(info, STRIKE, { body: json({ ref: '5', reason: 'not-worth-rewrite', note: '--not a flag; $(rm -rf)', draftHash: hash, eventId: 'ev-1' }) });
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ ok: true, state: { draft: { source: 't.md' } } });
-    expect(st.calls).toEqual([{ cwd: s.project, args: ['strike', 'add', join(s.project, 't.md'), '--line', '5', '--reason', 'not-worth-rewrite', '--note=--not a flag; $(rm -rf)', '--draft-hash', hash, '--event-id=ev-1', '--dir', s.project] }]);
+    expect(st.calls).toEqual([{ cwd: s.project, args: ['strike', 'add', join(s.project, 't.md'), '--line', '5', '--reason', 'not-worth-rewrite', '--note=--not a flag; $(rm -rf)', '--draft-hash', hash, '--event-id=ev-1', '--form', 'speech-small', '--dir', s.project] }]);
   });
 
   it('passes the CLI\'s duplicate answer through', async () => {
@@ -231,6 +231,107 @@ describe('POST /api/session/<id>/strike', () => {
   });
 });
 
+describe('POST /api/session/<id>/strike/apply and /undo', () => {
+  const DIGEST = 'c'.repeat(64);
+
+  it('runs the CLI apply with the digest, an event id and the set form, and answers with the fresh state', async () => {
+    const s = seed();
+    const st = stub({ applied: true });
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    const r = await http(info, `${STRIKE}/apply`, { body: json({ digest: DIGEST, eventId: 'ap-1' }) });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ ok: true, state: { draft: { source: 't.md' } } });
+    expect(st.calls).toEqual([{ cwd: s.project, args: ['strike', 'apply', join(s.project, 't.md'), '--confirm', DIGEST, '--event-id=ap-1', '--form', 'speech-small', '--dir', s.project] }]);
+  });
+
+  it('runs the CLI undo naming the removal the page shows', async () => {
+    const s = seed();
+    const st = stub({ undone: 'a1' });
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    expect((await http(info, `${STRIKE}/undo`, { body: json({ apply: 'a1', eventId: 'un-1' }) })).status).toBe(200);
+    expect(st.calls[0].args).toEqual(['strike', 'undo', join(s.project, 't.md'), '--apply', 'a1', '--event-id=un-1', '--form', 'speech-small', '--dir', s.project]);
+  });
+
+  it('refuses a tampered body before the CLI is asked: digest, ids, extra and missing keys, and a path', async () => {
+    const s = seed();
+    const st = stub();
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    const bad: Array<[string, unknown]> = [
+      ['apply', { digest: 'x', eventId: 'e' }], ['apply', { digest: 'C'.repeat(64), eventId: 'e' }], ['apply', { digest: DIGEST }], ['apply', { eventId: 'e' }],
+      ['apply', { digest: DIGEST, eventId: 'e', file: 'x.md' }], ['apply', { digest: DIGEST, eventId: 'a b' }], ['apply', { digest: `${DIGEST}--x`, eventId: 'e' }],
+      ['undo', { apply: '--all', eventId: 'e' }], ['undo', { apply: 's1', eventId: 'e' }], ['undo', { eventId: 'e' }], ['undo', { apply: 'a1', eventId: 'e', force: true }],
+    ];
+    for (const [route, b] of bad) {
+      const r = await http(info, `${STRIKE}/${route}`, { body: json(b) });
+      expect([r.status, r.body.error.code], JSON.stringify(b)).toEqual([400, 'E_SCHEMA']);
+    }
+    expect((await http(info, `${STRIKE}/apply`, { body: '{nope' })).status).toBe(400);
+    expect(st.calls).toEqual([]);
+  });
+
+  it('needs the token and a same-origin request, and takes no GET', async () => {
+    const s = seed();
+    const st = stub();
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    for (const route of ['apply', 'undo']) {
+      const b = route === 'apply' ? { digest: DIGEST, eventId: 'e' } : { apply: 'a1', eventId: 'e' };
+      expect((await http(info, `${STRIKE}/${route}`, { body: json(b), token: null })).status).toBe(401);
+      expect((await http(info, `${STRIKE}/${route}`, { body: json(b), token: 'wrong' })).status).toBe(401);
+      expect((await http(info, `${STRIKE}/${route}`)).status).toBeGreaterThanOrEqual(400);
+    }
+    expect(st.calls).toEqual([]);
+  });
+
+  it('refuses an Origin that is not its own', async () => {
+    const s = seed();
+    const st = stub();
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    const status = await new Promise<number>(ok => {
+      const data = json({ digest: DIGEST, eventId: 'e' });
+      const req = request({ host: '127.0.0.1', port: info.port, path: `${STRIKE}/apply?t=${TOKEN}`, method: 'POST', agent: false, headers: { 'content-type': 'application/json', 'content-length': String(data.length), origin: 'http://evil.example' } }, res => { res.resume(); res.on('end', () => ok(res.statusCode!)); });
+      req.end(data);
+    });
+    expect(status).toBe(403);
+    expect(st.calls).toEqual([]);
+  });
+
+  it('is 409 once the session has ended, and nothing reaches the CLI', async () => {
+    const s = seed();
+    const st = stub();
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    appendEvent(s.project, 'read-1', { type: 'abandon', eventId: 'bye' });
+    expect((await http(info, `${STRIKE}/apply`, { body: json({ digest: DIGEST, eventId: 'e' }) })).status).toBe(409);
+    expect((await http(info, `${STRIKE}/undo`, { body: json({ apply: 'a1', eventId: 'e' }) })).status).toBe(409);
+    expect(st.calls).toEqual([]);
+  });
+
+  it('is 404 when the draft is not available, and an oversize body is 413', async () => {
+    const s = seed();
+    const st = stub();
+    const { info } = await startServer(servers, { projects: [s.project], runProse: st.run });
+    expect((await http(info, `${STRIKE}/apply`, { body: 'x'.repeat(70 * 1024) })).status).toBe(413);
+    writeSet(s.project, { ...readSet(s.project, 'demo'), source: 'gone.md' });
+    expect((await http(info, `${STRIKE}/apply`, { body: json({ digest: DIGEST, eventId: 'e' }) })).status).toBe(404);
+    expect(st.calls).toEqual([]);
+  });
+
+  it('shares the session queue with strikes: an apply never runs beside another write', async () => {
+    const s = seed();
+    let running = 0;
+    let peak = 0;
+    const runProse: RunProse = async () => { running++; peak = Math.max(peak, running); await new Promise(r => setTimeout(r, 40)); running--; return {}; };
+    const { info } = await startServer(servers, { projects: [s.project], runProse });
+    const h = await hashOf(info);
+    const all = await Promise.all([
+      http(info, STRIKE, { body: json(body(h, { eventId: 'q-1' })) }),
+      http(info, `${STRIKE}/apply`, { body: json({ digest: DIGEST, eventId: 'q-2' }) }),
+      http(info, `${STRIKE}/undo`, { body: json({ apply: 'a1', eventId: 'q-3' }) }),
+    ]);
+    expect(all.map(r => r.status)).toEqual([200, 200, 200]);
+    expect(peak).toBe(1);
+  });
+});
+
 describe('POST /api/session/<id>/strike/clear', () => {
   it('runs the CLI clear with an event id and validates its body', async () => {
     const s = seed();
@@ -300,6 +401,66 @@ describe('strike and clear through the real CLI', () => {
     expect([r.status, r.body.error.code]).toEqual([409, 'E_CONFLICT']);
     expect(logRows(s)).toEqual([]);
   }, 30_000);
+});
+
+describe('apply and undo through the real CLI', () => {
+  const TWO = `${SHORT}\nA second paragraph here.\n\nA third one follows.\n`;
+  const setup = async () => {
+    const s = seed();
+    const { info } = await startServer(servers, { projects: [s.project] });
+    const file = join(s.project, 't.md');
+    writeFileSync(file, TWO);
+    const h = await hashOf(info);
+    await http(info, STRIKE, { body: json(body(h, { ref: '7', eventId: 'r-1' })) });
+    const plan = await http(info, `${STRIKE}/preview`);
+    return { s, info, file, plan: plan.body };
+  };
+
+  it('previews, applies with the digest, shows the removal as undoable, and undoes it byte for byte', async () => {
+    const { s, info, file, plan } = await setup();
+    const r = await http(info, `${STRIKE}/apply`, { body: json({ digest: plan.digest, eventId: 'ap-real' }) });
+    expect(r.status).toBe(200);
+    expect(readFileSync(file, 'utf8')).toBe(TWO.replace('A second paragraph here.\n\n', ''));
+    expect(r.body.state.draft.strikes).toEqual([]);
+    expect(r.body.state.draft.applied).toMatchObject({ id: 'a1', count: 1 });
+    expect(logRows(s).map(x => x.type)).toEqual(['strike', 'apply']);
+    const retry = await http(info, `${STRIKE}/apply`, { body: json({ digest: plan.digest, eventId: 'ap-real' }) });
+    expect([retry.status, retry.body.duplicate]).toEqual([200, true]);
+    const un = await http(info, `${STRIKE}/undo`, { body: json({ apply: 'a1', eventId: 'un-real' }) });
+    expect(un.status).toBe(200);
+    expect(readFileSync(file, 'utf8')).toBe(TWO);
+    expect(un.body.state.draft.applied).toBeNull();
+    expect(un.body.state.draft.strikes).toEqual([expect.objectContaining({ id: 's1', stale: false })]);
+  }, 60_000);
+
+  it('refuses a digest that is not the plan (409) and changes nothing', async () => {
+    const { s, info, file, plan } = await setup();
+    const r = await http(info, `${STRIKE}/apply`, { body: json({ digest: plan.digest.replace(/^./, plan.digest[0] === 'a' ? 'b' : 'a'), eventId: 'ap-bad' }) });
+    expect([r.status, r.body.error.code]).toEqual([409, 'E_CONFLICT']);
+    expect(readFileSync(file, 'utf8')).toBe(TWO);
+    expect(logRows(s).map(x => x.type)).toEqual(['strike']);
+  }, 60_000);
+
+  it('refuses a plan whose strikes went stale because the draft changed, and an undo with nothing applied', async () => {
+    const { info, file, plan } = await setup();
+    writeFileSync(file, `${TWO}A closing line.\n`);
+    const stale = await http(info, `${STRIKE}/apply`, { body: json({ digest: plan.digest, eventId: 'ap-stale' }) });
+    expect([stale.status, stale.body.error.code]).toEqual([409, 'E_CONFLICT']);
+    expect(readFileSync(file, 'utf8')).toBe(`${TWO}A closing line.\n`);
+    expect((await http(info, `${STRIKE}/undo`, { body: json({ apply: 'a1', eventId: 'un-none' }) })).status).toBe(409);
+  }, 60_000);
+
+  it('an undo after the draft was edited by hand is refused with the hint, nothing written', async () => {
+    const { info, file, plan } = await setup();
+    await http(info, `${STRIKE}/apply`, { body: json({ digest: plan.digest, eventId: 'ap-1' }) });
+    const edited = readFileSync(file, 'utf8').replace('A third one follows.', 'A third one trails.');
+    writeFileSync(file, edited);
+    const un = await http(info, `${STRIKE}/undo`, { body: json({ apply: 'a1', eventId: 'un-1' }) });
+    expect([un.status, un.body.error.code]).toEqual([409, 'E_CONFLICT']);
+    expect(un.body.error.hint).toMatch(/prose strike list .* --state applied/);
+    expect(readFileSync(file, 'utf8')).toBe(edited);
+    expect((await get(info)).body.draft.applied).toBeNull();
+  }, 60_000);
 });
 
 describe('GET /api/session/<id>/strike/preview', () => {
