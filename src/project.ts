@@ -39,9 +39,9 @@ export function initProject(dir: string, { home = homedir() }: HomeOption = {}):
   const parent = dirname(root) === root ? null : findProject(dirname(root), { home });
   mkdirSync(join(root, PROJECT_DIR, 'voices'), { recursive: true });
   if (created) writeFileSync(file, JSON.stringify({ schema: 'prose/project@1' }, null, 2) + '\n');
-  // Sets and taste data are working files; voice bibles and project.json stay trackable.
+  // Sets, taste data and strike logs (which hold struck text) are working files; voice bibles and project.json stay trackable.
   const ignore = join(root, PROJECT_DIR, '.gitignore');
-  if (!existsSync(ignore)) writeFileSync(ignore, 'sets/\ntaste/\n');
+  if (!existsSync(ignore)) writeFileSync(ignore, 'sets/\ntaste/\nstrikes/\n');
   return { dir: root, created, ...(parent ? { shadows: parent } : {}) };
 }
 

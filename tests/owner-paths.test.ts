@@ -47,11 +47,11 @@ describe('directories', () => {
 });
 
 describe('project ignore file', () => {
-  it('init ignores sets and taste data but never overwrites an edited file', () => {
+  it('init ignores sets, taste data and strike logs but never overwrites an edited file', () => {
     const dir = tmp('prose-ign-');
     initProject(dir, { home: tmp('prose-home-') });
     const file = join(dir, '.agent-prose', '.gitignore');
-    expect(readFileSync(file, 'utf8')).toBe('sets/\ntaste/\n');
+    expect(readFileSync(file, 'utf8')).toBe('sets/\ntaste/\nstrikes/\n');
     writeFileSync(file, 'sets/\n');
     initProject(dir, { home: tmp('prose-home-') });
     expect(readFileSync(file, 'utf8')).toBe('sets/\n');

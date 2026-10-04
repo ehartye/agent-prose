@@ -10,6 +10,7 @@ import { registerProjectCommands } from './commands/project.ts';
 import { registerReadingCommands } from './commands/reading.ts';
 import { registerRuleCommands } from './commands/rules.ts';
 import { registerSetCommands } from './commands/set.ts';
+import { registerStrikeCommands } from './commands/strike.ts';
 import { registerTasteCommands } from './commands/taste.ts';
 import { registerVerseCommands } from './commands/verse.ts';
 
@@ -27,6 +28,7 @@ export function buildProgram(io: Io): Command {
   registerReadingCommands(program, io);
   registerRuleCommands(program, io);
   registerSetCommands(program, io);
+  registerStrikeCommands(program, io);
   registerTasteCommands(program, io);
   registerVerseCommands(program, io);
   return program;
