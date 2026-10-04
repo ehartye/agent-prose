@@ -99,6 +99,14 @@ describe('the brief block on the page', () => {
     expect(r.briefParts(brief({ character: null, context: null, characterRef: 'jane' }))).toBeNull();
   });
 
+  it('folds to one line: the first sentence of the character, else of the context, else nothing', () => {
+    expect(r.briefGist(brief({ character: 'Dry and quick. Never cruel.', context: 'A bridge.' }))).toBe('Dry and quick.');
+    expect(r.briefGist(brief({ character: 'No full stop here', context: 'A bridge.' }))).toBe('No full stop here');
+    expect(r.briefGist(brief({ character: null, context: 'Wake-up scene! The first talk.' }))).toBe('Wake-up scene!');
+    expect(r.briefGist(brief({ character: 'Line one.\n\nLine   two.' }))).toBe('Line one.');
+    expect(r.briefGist(null)).toBe('');
+  });
+
   it('re-renders when the brief changes: the render signature includes it', () => {
     const p = (b: object | null) => ({ state: { stage: 'lineup', round: 0, events: 3 }, session: { brief: b } });
     expect(r.signature(p(null))).toBe('lineup|0|3|');

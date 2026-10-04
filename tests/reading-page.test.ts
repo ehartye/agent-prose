@@ -4,14 +4,19 @@ import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 
 const DIR = join(import.meta.dirname, '..', 'runtime', 'reading');
-const files = readdirSync(DIR);
+const entries = readdirSync(DIR, { withFileTypes: true });
+const files = entries.filter(e => e.isFile()).map(e => e.name);
 const read = (f: string) => readFileSync(join(DIR, f), 'utf8');
 const html = read('index.html');
 const js = read('app.js');
 
 describe('the reading page: static safety', () => {
-  it('has the three page files', () => {
+  it('has the three page files and the fonts folder, and nothing else', () => {
     expect([...files].sort()).toEqual(['app.js', 'index.html', 'style.css']);
+    expect(entries.filter(e => e.isDirectory()).map(e => e.name)).toEqual(['fonts']);
+    expect(readdirSync(join(DIR, 'fonts')).sort()).toEqual([
+      'OFL-Atkinson.txt', 'OFL-CourierPrime.txt', 'README.txt', 'atkinson-400.ttf', 'atkinson-700.ttf', 'courier-prime-400.ttf', 'courier-prime-700.ttf',
+    ]);
   });
 
   it('uses none of the banned APIs', () => {
@@ -60,11 +65,14 @@ describe('index.html', () => {
 
   it('stays within the server CSP', () => {
     const server = readFileSync(join(import.meta.dirname, '..', 'src', 'reading', 'server.ts'), 'utf8');
-    expect(server).toContain(`const CSP = "default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";`);
+    expect(server).toContain(`const CSP = "default-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";`);
+    const csp = /const CSP = "([^"]*)"/.exec(server)![1];
+    expect(csp).not.toMatch(/unsafe|https?:|data:|\*/);
+    expect(csp).toContain("font-src 'self'");
     // a grid column must be allowed to shrink below its content, or one unbroken word widens the whole phone page
     expect(read('style.css')).toMatch(/\.duel-grid \{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
     expect(read('style.css')).toMatch(/\.reading \{[^}]*overflow-wrap: anywhere/);
-    expect(read('style.css')).not.toMatch(/@import|url\(\s*['"]?https?:|@font-face/);
+    expect(read('style.css')).not.toMatch(/@import|url\(\s*['"]?(https?:|\/\/|data:)/);
   });
 });
 

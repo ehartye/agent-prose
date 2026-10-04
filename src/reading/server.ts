@@ -36,7 +36,7 @@ import { MAX_NOTE, STRIKE_REASONS, foldStrikes, parseStrikeLog, strikeKey, undoa
 
 export const DEFAULT_PORT = 47311;
 /** Bump when routes change: a running server of another API level is replaced, not reused. */
-export const SERVER_API = 3;
+export const SERVER_API = 4;
 const PROBE_MS = 1500;
 /** Connections the HTTP server accepts at once, and how long a client may take to send headers, a whole request, or sit idle. */
 const MAX_CONNECTIONS = 200;
@@ -313,7 +313,7 @@ export function sameToken(a: string, b: string): boolean {
 
 // ---- the page payload ----
 
-const CSP = "default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const CSP = "default-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 /** The only files the server ever serves as pages, by request path; the content type is fixed per entry. */
 const PAGES = {
   index: { file: 'index.html', type: 'text/html; charset=utf-8' },
@@ -321,6 +321,18 @@ const PAGES = {
   style: { file: 'style.css', type: 'text/css; charset=utf-8' },
 } as const;
 type PageKey = keyof typeof PAGES;
+/** The vendored fonts and their licences, by exact request path (a font fetch cannot carry the token header, so these are served without one).
+ *  The files are read once at start from runtime/reading/fonts; nothing in a request is ever joined to a disk path. */
+const ASSETS = {
+  '/fonts/courier-prime-400.ttf': { file: 'fonts/courier-prime-400.ttf', type: 'font/ttf' },
+  '/fonts/courier-prime-700.ttf': { file: 'fonts/courier-prime-700.ttf', type: 'font/ttf' },
+  '/fonts/atkinson-400.ttf': { file: 'fonts/atkinson-400.ttf', type: 'font/ttf' },
+  '/fonts/atkinson-700.ttf': { file: 'fonts/atkinson-700.ttf', type: 'font/ttf' },
+  '/fonts/OFL-CourierPrime.txt': { file: 'fonts/OFL-CourierPrime.txt', type: 'text/plain; charset=utf-8' },
+  '/fonts/OFL-Atkinson.txt': { file: 'fonts/OFL-Atkinson.txt', type: 'text/plain; charset=utf-8' },
+} as const;
+type AssetPath = keyof typeof ASSETS;
+const isAsset = (path: string): path is AssetPath => Object.hasOwn(ASSETS, path);
 
 /** A small deterministic generator (mulberry32) seeded from a string, so a shuffle is the same on every load. */
 function seeded(seed: string): () => number {
@@ -501,6 +513,7 @@ export class ReadingServer {
   private opts: ReadingServerOptions;
   /** Page files, read once at listen(): a request never touches the disk for a page, whatever its path. */
   private pages = new Map<PageKey, Buffer>();
+  private assets = new Map<AssetPath, Buffer>();
   private routes: Route[];
   /** One write at a time per session: the read-check-CLI-append of two events never interleaves. */
   private queues = new Map<string, Promise<unknown>>();
@@ -976,6 +989,13 @@ export class ReadingServer {
     res.end(this.pages.get(key));
   }
 
+  /** A font or licence: not secret, named per plugin version, so it may be cached (every other response is no-store). */
+  private asset(res: ServerResponse, path: AssetPath): void {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.writeHead(200, { 'content-type': ASSETS[path].type });
+    res.end(this.assets.get(path));
+  }
+
   /** An error as the page gets it: the code, message and hint, with project and home paths scrubbed out. */
   private errorBody(e: ProseError): { error: { code: ErrorCode; message: string; hint?: string } } {
     const roots = [...this.knownProjects(), proseHome()].flatMap(r => [r, r.replaceAll('\\', '/')]);
@@ -1007,6 +1027,10 @@ export class ReadingServer {
     }
 
     if (path === '/favicon.ico' && method === 'GET') { res.writeHead(204); res.end(); return; } // no icon, and no 404 in the console
+    if (isAsset(path)) {
+      if (method !== 'GET') throw methodNotAllowed();
+      return this.asset(res, path);
+    }
     if (!path.startsWith('/api/')) {
       const key: PageKey | null = path === '/' || /^\/s\/[a-z0-9-]+$/.test(path) ? 'index' : path === '/app.js' ? 'app' : path === '/style.css' ? 'style' : null;
       if (!key) throw NOT_FOUND();
@@ -1055,6 +1079,10 @@ export class ReadingServer {
     const dir = this.opts.runtimeDir ?? RUNTIME_DIR;
     for (const [key, { file }] of Object.entries(PAGES) as Array<[PageKey, { file: string }]>) {
       try { this.pages.set(key, readFileSync(join(dir, file))); }
+      catch { throw new ProseError('E_SERVER', `The page file ${file} is missing from the runtime`, { hint: 'Run the prose-setup skill again to repair the managed runtime' }); }
+    }
+    for (const [path, { file }] of Object.entries(ASSETS) as Array<[AssetPath, { file: string }]>) {
+      try { this.assets.set(path, readFileSync(join(dir, file))); }
       catch { throw new ProseError('E_SERVER', `The page file ${file} is missing from the runtime`, { hint: 'Run the prose-setup skill again to repair the managed runtime' }); }
     }
   }

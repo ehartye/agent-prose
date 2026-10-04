@@ -120,6 +120,7 @@ describe('managed runtime', () => {
     const made: string[] = [];
     afterAll(() => { for (const d of made) rmSync(d, { recursive: true, force: true }); });
     const PAGE = ['runtime/reading/index.html', 'runtime/reading/app.js', 'runtime/reading/style.css'];
+    const FONTS = ['courier-prime-400.ttf', 'courier-prime-700.ttf', 'atkinson-400.ttf', 'atkinson-700.ttf', 'OFL-CourierPrime.txt', 'OFL-Atkinson.txt', 'README.txt'].map(f => `runtime/reading/fonts/${f}`);
     const LF = String.fromCharCode(10);
     const CRLF = String.fromCharCode(13, 10);
     const lines = (eol: string, last: string) => ['console.log(1);', `console.log(${last});`, ''].join(eol);
@@ -137,7 +138,17 @@ describe('managed runtime', () => {
     }
 
     it('are part of the runtime files', () => {
-      for (const f of PAGE) expect(describeSource(root).files).toContain(f);
+      for (const f of [...PAGE, ...FONTS]) expect(describeSource(root).files).toContain(f);
+    });
+
+    it('fingerprint the font binaries verbatim, so a font change is a new release', () => {
+      const a = miniSource('console.log(1);');
+      mkdirSync(join(a, 'runtime', 'reading', 'fonts'));
+      const font = join(a, 'runtime', 'reading', 'fonts', 'x.ttf');
+      writeFileSync(font, Buffer.from([0, 1, 13, 10, 2]));
+      const before = describeSource(a).fingerprint;
+      writeFileSync(font, Buffer.from([0, 1, 10, 2]));
+      expect(describeSource(a).fingerprint).not.toBe(before);
     });
 
     it('change the fingerprint when app.js changes, and not when only its line endings do', () => {
@@ -157,6 +168,7 @@ describe('managed runtime', () => {
       const rt = installRuntime(root, { home, npm, checkDependencies: () => {} });
       const text = (f: string) => readFileSync(f, 'utf8').replaceAll(CRLF, LF);
       for (const f of PAGE) expect(text(join(rt.root, f))).toBe(text(join(root, f)));
+      for (const f of FONTS) expect(readFileSync(join(rt.root, f)).equals(readFileSync(join(root, f))), f).toBe(true);
     });
   });
 
