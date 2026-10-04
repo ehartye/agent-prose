@@ -38,6 +38,12 @@ describe('craft/audit-rates.json', () => {
       expect(loadRates(join(dir, 'absent.json'))).toBeUndefined();
       writeFileSync(join(dir, 'bad.json'), '{"schema":"nope"}');
       expect(loadRates(join(dir, 'bad.json'))).toBeUndefined();
+      for (const bad of [0, 0.5, 100.5, -3]) {
+        const rates = JSON.parse(readFileSync(RATES_PATH, 'utf8'));
+        rates.datasets.arxiv.human.tripletP95 = bad;
+        writeFileSync(join(dir, 'p95.json'), JSON.stringify(rates));
+        expect(loadRates(join(dir, 'p95.json')), `tripletP95 ${bad}`).toBeUndefined();
+      }
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });
@@ -46,11 +52,13 @@ describe('audit-measure --write-rates', () => {
   it('writes a schema-valid file from two small directories without any text or ids', () => {
     const dir = mkdtempSync(join(tmpdir(), 'prose-rates-'));
     try {
+      // Each text needs 100 words and a three-item list, so the measured triplet 95th percentile is at least 1 (the schema floor).
+      const PAD = ` We bought apples, pears, and plums. ${'We met on Tuesday and walked home together. '.repeat(14)}`;
       for (const set of ['one', 'two']) {
         for (const g of ['human', 'model-plain']) mkdirSync(join(dir, set, g), { recursive: true });
-        writeFileSync(join(dir, set, 'human', 'a1.txt'), 'We measured the thing and it moved. The results were clear.');
-        writeFileSync(join(dir, set, 'human', 'a2.txt'), 'It stands as a testament to the work. We report red, green, and blue results in this note.');
-        writeFileSync(join(dir, set, 'model-plain', 'a1.txt'), 'Leverage the seamless platform to unlock value.');
+        writeFileSync(join(dir, set, 'human', 'a1.txt'), `We measured the thing and it moved. The results were clear.${PAD}`);
+        writeFileSync(join(dir, set, 'human', 'a2.txt'), `It stands as a testament to the work. We report red, green, and blue results in this note.${PAD}`);
+        writeFileSync(join(dir, set, 'model-plain', 'a1.txt'), `Leverage the seamless platform to unlock value.${PAD}`);
       }
       const out = join(dir, 'rates.json');
       const r = spawnSync(process.execPath, [script, '--data', `arxiv=${join(dir, 'one')}`, '--data', `wikiintro=${join(dir, 'two')}`, '--write-rates', out, '--date', '2026-01-02'], { encoding: 'utf8' });

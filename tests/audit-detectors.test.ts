@@ -167,8 +167,11 @@ describe('detectors', () => {
       for (const text of c.hit) it(`flags ${JSON.stringify(text)}`, () => {
         const found = famOf(text, family);
         expect(found.length).toBeGreaterThan(0);
+        // Raw span length from the family's own detector: the finding's text is already squeezed to 120 and proves nothing.
+        const units = unitsOf(parseDocument('d.md', text, {}), [text]);
+        const raw = units.flatMap((u, i) => FAMILIES.find(x => x.id === family)!.find(u, { markdown: true, limited: false }, units, i));
+        for (const s of raw) expect(s.end - s.start, `${family} span`).toBeLessThanOrEqual(120);
         for (const f of found) {
-          expect(f.text.length).toBeLessThanOrEqual(120);
           expect(f.line).toBeGreaterThanOrEqual(1);
           expect(f.why.length).toBeGreaterThan(10);
           expect(f.direction.length).toBeGreaterThan(10);
@@ -779,5 +782,28 @@ describe('wide-span families do not repeat another family’s words', () => {
   });
   it('restating-closer marks only the opening words', () => {
     expect(famOf('First point.\n\nIn summary, we leverage the data and streamline it.', 'restating-closer').map(f => f.text)).toEqual(['In summary,']);
+  });
+});
+
+describe('wide-span families contain no other family’s finding', () => {
+  const longPost = [
+    'Point one.', 'We leverage a seamless, groundbreaking platform to streamline work, planning, and reviews.',
+    'Teams value streamlining, planning, and testing. '.repeat(30) + 'We delve into the data.',
+    'In summary, we pivotal-ly delve and streamline, leverage the data, and elevate your brand.',
+  ].join('\n\n');
+  it('never has a restating-closer or triplet-density span that holds another family’s span', () => {
+    const units = unitsOf(parseDocument('d.md', longPost, {}), [longPost]);
+    const spansOf = (id: string) => units.map((u, i) => FAMILIES.find(f => f.id === id)!.find(u, { markdown: true, limited: false }, units, i).map(s => ({ i, ...s })));
+    const wide = ['restating-closer', 'triplet-density'].flatMap(id => spansOf(id).flat().map(s => ({ id, ...s })));
+    expect(wide.length).toBeGreaterThan(0);
+    const found = detect(units, { markdown: true, limited: false });
+    const lines = (f: Finding) => f.line;
+    for (const w of wide) {
+      const reported = found.filter(f => f.family === w.id);
+      // Whatever the detector marks, the report does not also list another family inside it: check by text and line.
+      for (const r of reported) for (const o of found.filter(x => x.family !== w.id && lines(x) === lines(r))) {
+        expect(r.text.includes(o.text) && o.text.length > 0, `${w.id} holds ${o.family} "${o.text}"`).toBe(false);
+      }
+    }
   });
 });

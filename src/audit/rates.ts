@@ -17,7 +17,7 @@ const Share = z.strictObject({
 const Side = z.strictObject({
   families: z.record(z.string(), Share),
   /** 95th percentile of `tripletListsPer1000` among texts of at least 100 words. */
-  tripletP95: z.number().min(0),
+  tripletP95: z.number().min(1).max(100),
   medians: z.strictObject({
     emDashesPer1000: z.number().nullable(),
     sentenceLengthVariation: z.number().nullable(),
