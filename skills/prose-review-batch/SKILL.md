@@ -41,6 +41,10 @@ is recorded exactly as `prose set pick` records it and your sealed predictions r
   changed once sent. A staged choice is not a pick and `reading status` does not report it.
 - **Skip** an item: it goes to the end of the queue and comes back. A skipped or waiting item never ends the batch
   by itself.
+- **None of these** on an item sends the set back: staged like a choice, sent with Send. `wait` delivers it in `sentBack`
+  (`set`, `closest`, `reasons`, `note`, `reveal`, unscored) and counts it in the cursor; a batch is `done` with reason
+  `all-resolved` once every item is picked or sent back. For each: read the feedback, do not repeat the rejected
+  directions, say what you will change, then `prose set new --redo <set>`. A sent-back set is closed.
 - **Finish** ends the review: sets without a pick are left as they are. **Not chosen** means exactly that.
 - A batch item is a quick pick: no duel and no refine round, and no notes. For that, open the set alone with
   `prose reading open --set <id>` (each item also links to its own session). A batch gives pick rows, not duel rows.

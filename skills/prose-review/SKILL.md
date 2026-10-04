@@ -84,6 +84,13 @@ taste is yours. This skill puts the choice with the owner and makes the options 
 
 If the owner declines to choose, do not invent a pick: `prose set pick` is for real choices.
 
+## When none of the variants work
+
+The page has **None of these**: the owner rejects every variant and says why. `reading wait` answers `event: none` with
+`set`, `closest`, `reasons`, `note` and the reveal (shown, never scored). Read the feedback, do not repeat the rejected
+directions, tell the owner what you will change, then `prose set new --redo <set>` (it copies the brief and line and
+carries the feedback), rewrite, check, predict, `reading open`. A sent-back set is closed and takes no pick.
+
 ## The reading page
 
 The owner reads, hears and compares the kept variants in a browser, so the choice does not
