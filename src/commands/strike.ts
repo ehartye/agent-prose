@@ -9,6 +9,7 @@ import { needProject } from '../project.ts';
 import { EVENT_ID_RE } from '../owner/paths.ts';
 import { currentDraftHash, draftHash } from '../owner/original.ts';
 import { strikeLines, type StrikeLine } from '../strike/lines.ts';
+import { applyStrikes, recoverPending, undoStrikes } from '../strike/apply.ts';
 import { simulateRemoval } from '../strike/plan.ts';
 import { parseRefs, refOf } from '../strike/spans.ts';
 import {
@@ -17,9 +18,9 @@ import {
 } from '../strike/store.ts';
 
 /** The draft as read now: its text, hash, format and form. Parse errors are the parser's own (E_PARSE, E_SCHEMA). */
-function readDraft(draft: DraftRef): { text: string; hash: string; format: Format; form: string } {
+function readDraft(draft: DraftRef, form?: string): { text: string; hash: string; format: Format; form: string } {
   const text = readFileSync(draft.file, 'utf8');
-  const doc = parseDocument(draft.file, text);
+  const doc = parseDocument(draft.file, text, form ? { form } : {});
   return { text, hash: draftHash(text), format: doc.format, form: doc.form };
 }
 
@@ -71,8 +72,9 @@ export function registerStrikeCommands(program: Command, io: Io): void {
     .option('--note <text>', `why, in a few words (at most ${MAX_NOTE} characters)`)
     .option('--draft-hash <sha>', 'the draft hash you looked at; a changed draft is E_CONFLICT (the reading page always sends it)')
     .option('--event-id <id>', 'names this strike: a retry with the same id is skipped (default: none)')
-    .option('--dir <dir>', 'where to start looking for the project (default: the draft\'s folder)')
-    .action((draftArg: string, opts: { line: string; reason: string; note?: string; draftHash?: string; eventId?: string; dir?: string }) => {
+    .option('--form <id>', 'read the draft as this form (the reading page passes its set form); default: the form the draft declares')
+    .option('--dir <dir>', 'where to start looking for the project (default: the draft folder)')
+    .action((draftArg: string, opts: { line: string; reason: string; note?: string; draftHash?: string; eventId?: string; form?: string; dir?: string }) => {
       const reason = reasonOf(opts.reason);
       const note = noteOf(opts.note);
       const wantHash = hashOf(opts.draftHash);
@@ -82,7 +84,8 @@ export function registerStrikeCommands(program: Command, io: Io): void {
       const project = projectOf(draftArg, opts.dir);
       const draft = resolveDraft(project, draftArg);
       const out = withStrikes(project, draft, w => {
-        const { text, hash, format, form } = readDraft(draft);
+        const recovered = recoverPending(w, draft);
+        const { text, hash, format, form } = readDraft(draft, opts.form);
         if (wantHash !== undefined && wantHash !== hash) {
           throw new ProseError('E_CONFLICT', 'The draft changed since you looked at it, so nothing was struck', { hint: 'Reload the draft and strike again' });
         }
@@ -90,7 +93,7 @@ export function registerStrikeCommands(program: Command, io: Io): void {
         const fold = foldStrikes(w.events, hash);
         if (again?.type === 'strike') {
           const kept = fold.pending.find(p => p.id === again.id);
-          return { duplicate: true, strike: kept ? view(kept) : { id: again.id, ref: again.ref, text: again.text, reason: again.reason }, pending: fold.pending.length };
+          return { ...(recovered ? { recovered } : {}), duplicate: true, strike: kept ? view(kept) : { id: again.id, ref: again.ref, text: again.text, reason: again.reason }, pending: fold.pending.length };
         }
         const r = refs[0];
         const lines = strikeLines(text, format, form);
@@ -112,6 +115,7 @@ export function registerStrikeCommands(program: Command, io: Io): void {
         });
         if (stored.type !== 'strike') throw new ProseError('E_INTERNAL', 'the strike was not stored');
         return {
+          ...(recovered ? { recovered } : {}),
           strike: { id: stored.id, ref: stored.ref, ...(stored.speaker ? { speaker: stored.speaker } : {}), text: stored.text, reason: stored.reason, ...(stored.note ? { note: stored.note } : {}) },
           pending: fold.pending.length + 1,
         };
@@ -136,17 +140,45 @@ export function registerStrikeCommands(program: Command, io: Io): void {
       const project = projectOf(draftArg, opts.dir);
       const draft = resolveDraft(project, draftArg);
       const out = withStrikes(project, draft, w => {
+        const recovered = recoverPending(w, draft);
         const hash = currentDraftHash(project, draft.source);
         const before = foldStrikes(w.events, hash);
-        if (id !== undefined && storedByEventId(w.events, 'clear', eventId)) return { duplicate: true, cleared: [id], pending: before.pending.length };
+        if (id !== undefined && storedByEventId(w.events, 'clear', eventId)) return { ...(recovered ? { recovered } : {}), duplicate: true, cleared: [id], pending: before.pending.length };
         const targets = id === undefined ? before.pending.map(p => p.id) : [id];
         if (id !== undefined && !before.pending.some(p => p.id === id)) {
           throw new ProseError('E_NOT_FOUND', `${id} is not a pending strike of ${draft.source}`, { hint: 'prose strike list <draft> shows the pending strikes' });
         }
         for (const t of targets) w.append({ type: 'clear', strike: t, ...(id !== undefined && eventId ? { eventId } : {}) });
-        return { cleared: targets, pending: before.pending.length - targets.length };
+        return { ...(recovered ? { recovered } : {}), cleared: targets, pending: before.pending.length - targets.length };
       });
       io.emit({ draft: draft.source, ...out });
+    });
+
+  strike.command('apply')
+    .description('Remove the struck lines from the draft. Without --confirm it is a dry run: it prints the exact text that would go and a digest. With --confirm <digest> it writes, only if the draft and the strikes are exactly what the dry run showed')
+    .argument('<draft>', 'the draft the strikes were made on')
+    .option('--confirm <digest>', 'the digest of the dry run the owner agreed to')
+    .option('--event-id <id>', 'names this apply: a retry with the same id is skipped')
+    .option('--form <id>', 'read the draft as this form (the reading page passes its set form)')
+    .option('--dir <dir>', 'where to start looking for the project (default: the draft folder)')
+    .action((draftArg: string, opts: { confirm?: string; eventId?: string; form?: string; dir?: string }) => {
+      const eventId = eventIdOf(opts.eventId);
+      const project = projectOf(draftArg, opts.dir);
+      io.emit(applyStrikes(project, resolveDraft(project, draftArg), { ...(opts.confirm !== undefined ? { confirm: opts.confirm } : {}), ...(eventId ? { eventId } : {}), ...(opts.form ? { form: opts.form } : {}) }));
+    });
+
+  strike.command('undo')
+    .description('Put back the lines the latest apply removed, verified by hash. Refused when the draft has changed since that apply')
+    .argument('<draft>', 'the draft the strikes were applied to')
+    .option('--apply <id>', 'refuse unless this is the latest apply (the reading page sends the one it shows)')
+    .option('--event-id <id>', 'names this undo: a retry with the same id is skipped')
+    .option('--form <id>', 'read the draft as this form')
+    .option('--dir <dir>', 'where to start looking for the project (default: the draft folder)')
+    .action((draftArg: string, opts: { apply?: string; eventId?: string; form?: string; dir?: string }) => {
+      if (opts.apply !== undefined && !/^a\d+$/.test(opts.apply)) throw new ProseError('E_USAGE', `"${opts.apply.slice(0, 40)}" is not an apply id`, { hint: 'Apply ids look like a1' });
+      const eventId = eventIdOf(opts.eventId);
+      const project = projectOf(draftArg, opts.dir);
+      io.emit(undoStrikes(project, resolveDraft(project, draftArg), { ...(opts.apply ? { apply: opts.apply } : {}), ...(eventId ? { eventId } : {}), ...(opts.form ? { form: opts.form } : {}) }));
     });
 
   strike.command('list')
