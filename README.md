@@ -35,6 +35,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose-voice` | Voice bibles for characters, brands and speakers, fitted from samples and checked on every draft |
 | `prose-poetry` | Poems and verse forms (free verse, sonnet, haiku, limerick, ballad, villanelle, sestina) and words to a given meter, checked for syllables, rhyme and form |
 | `prose-songwriting` | Song lyrics (verse-chorus, AABA, lullaby, hymn text, words to a melody): labelled sections, matched line lengths, refrains, syllables per beat |
+| `prose-strike` | Lines the owner wants gone: strikes recorded with a reason, read back, kept out of rewrites; never edits the draft |
 | `prose-audit` | Audit a draft for generic or formulaic prose (stock openers, hollow significance, formula sentence shapes, chat residue, model-era vocabulary) and revise it by span toward specifics; never judges who wrote it |
 
 ## Commands
@@ -49,18 +50,21 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose scan <file> [--form <id>] [--text] [--words]` | syllables, stress, rhyme scheme and meter of a verse draft (US English pronunciations; JSON, or `--text` for a table) |
 | `prose pronounce <word...>` | the dictionary pronunciation, syllables, stress and rhyme key of each word, with its source (dict, affix or guessed) |
 | `prose rules [--form <id>]` | the cited rules, optionally for one form |
-| `prose init [--dir <dir>]` | create `.agent-prose/` (project.json, voices/ and a `.gitignore` for sets and taste data); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
+| `prose init [--dir <dir>]` | create `.agent-prose/` (project.json, voices/ and a `.gitignore` for sets, taste data and strike logs); safe to rerun; reports `shadows` when inside another project, whose voices drafts here no longer see |
 | `prose voice list [--dir <dir>]` | the voice bibles of the project found from a directory upward |
 | `prose voice fit <file> --speaker <name> --id <id> [--name <name>]` | measure one speaker and write `.agent-prose/voices/<id>.yaml` with ranges around the measurements |
 | `prose set new <draft> --directions <list> [--count <n>] [--id <id>] [--character <text>] [--context <text>] [--brief-confirmed] [--brief-from <set>] [--lines <refs>]` | start a variant set: base copy plus one file per variant to rewrite; the optional brief (who speaks, where the line is heard) is shown to the owner above the variants, and `--brief-from` carries another set's brief into a refine round; `--lines` (source line numbers or ranges such as `12` or `12-13,20`) snapshots the existing line(s) being revised, shown above the variants as "The current line" (context only: never a candidate, never scored) |
 | `prose set brief <id> [--character <text>] [--context <text>] [--clear-character] [--clear-context] [--confirmed] [--dir <project>]` | edit a set's brief; new text clears the owner's confirmation unless `--confirmed` is passed again; a picked set refuses |
 | `prose set list`, `prose set show <id>`, `prose set annotate <id> <n>` (each takes `--dir <project>`) | list sets; show the brief, the existing line (`original`, with `stale` once the draft has changed since) and every variant's text, status and the kept ones; record a variant's angle label or note |
-| `prose set check <id> [--dir <project>]` | reject unchanged, near-duplicate and lint-failing variants; verify each moved in its direction; warn (`brief-unconfirmed`) when the brief was never confirmed, or (`outside-selection-changed`) when a variant altered a line outside the `--lines` selection |
+| `prose set check <id> [--dir <project>]` | reject unchanged, near-duplicate and lint-failing variants; verify each moved in its direction; warn (`brief-unconfirmed`) when the brief was never confirmed, or (`outside-selection-changed`) when a variant altered a line outside the `--lines` selection; rejects a variant that edits a struck line (`struck-line-edited`) |
 | `prose predict --set <id> --pick <n> [--shortlist <list>] --why <text> [--dir <project>]` | seal a guess of the owner's pick (kept variants only; freezes what is shown and a hash of each variant file); also seals the taste model's own guess, or its abstention, in `model-prediction.json`. `--set <id> --model-only` is a repair: it seals only the model's guess for an agent prediction already sealed (after a crash between the two writes), and only before the pick |
 | `prose set pick <id> --pick <n> [--tags <list>] [--no-predict] [--dir <project>]` | record the owner's choice as taste verdicts and reveal whether the guess hit |
 | `prose taste show [--voice <id>] [--all-projects] [--dir <project>]` | the owner's style tendencies in plain words, learned from their picks and duels (global layer, plus project and voice layers once they have 15 pairs) |
 | `prose taste stats [--all-projects] [--dir <project>]` | for the agent and for the taste model: predictions, hits, shortlist hits, hit rate and recent rate (the model's abstentions are counted, not scored), how often the model beat, matched or lost to the agent on the same pick (the comparison uses the pick only), and how many verdict rows and duels the logs hold. Shortlist hits are meaningful only for sets of four or more variants (`shortlistEligible` counts them); with three or fewer shown, a three-wide shortlist covers everything |
 | `prose set duel <id> --a <n> --b <n> --outcome a\|b\|tie\|bothBad` | record a head-to-head from the reading page as one taste verdict (the page calls it; it never ships the set) |
+| `prose strike [add] <draft> --line <ref> --reason <wrong-direction\|faulty-premise\|not-worth-rewrite> [--note <text>] [--draft-hash <sha>] [--event-id <id>]` | record that a line should not exist (the owner's strike): a source line number or range (any line inside a span names the span; Markdown prose strikes at paragraph level), bound to the draft's hash now. The draft is not edited. A change to the draft, even elsewhere, makes every pending strike stale |
+| `prose strike clear <draft> <strike-id>` / `--all` | withdraw pending strikes (the page's Undo) |
+| `prose strike list [<draft>] [--all] [--reason <tag>] [--state pending\|applied\|all]` | strikes with their reasons and `stale` flags, counts by reason, across drafts with `--all` |
 | `prose serve [--local] [--port <n>] [--foreground] [--stop] [--status]` | start or reuse the LAN reading server and print its link (the link carries the access token) |
 | `prose reading open --set <id> [--no-predict] [--prompt <text>] [--dir <project>]` | put a checked, predicted set on the reading page: freezes what is shown, registers the project, prints the link |
 | `prose reading wait --id <id> [--timeout <s>]` | block until the owner asks to refine, ships or abandons; prints champion, directions, notes with the unit text, the existing line (`original`) and what to do next |
@@ -103,13 +107,14 @@ terminal. `prose serve` runs a small web server and the agent hands the owner a 
   a new round shown against the champion. "What changed?" shows a draft's direction only when asked.
 - **Read aloud and timing.** Play reads a draft with the device's own voice (the browser's speech synthesis; no
   audio leaves the machine) and highlights the current sentence or line, with an estimate against the declared target.
+- **Draft.** A Draft view lists the draft line by line (a paragraph is one line in prose). Strike a line with a reason (wrong direction, faulty premise, not worth rewriting) and an optional note; it stays in place, crossed out with its reason and an Undo. A bar at the bottom of every screen says how many lines are struck. Striking only records the decision: nothing is removed from the draft, and any later change to the draft makes the strikes stale (Undo them and strike again). Struck lines are kept out of the next rewrite set.
 - **Ship.** The owner chooses the winner; the page then reveals the agent's sealed prediction and whether it matched.
 
-Every judgement lands in the same taste log as `prose set pick`. Nothing the page shows lets the owner edit a draft;
+Every judgement lands in the same taste log as `prose set pick`. Nothing the page does edits a draft;
 every write goes through the `prose` CLI.
 
 **Exposure.** By default the server listens on the whole network, and anyone on it who has the link can read the drafts
-in the projects registered with the server (traffic is plain HTTP; the link carries a random token). Tell the owner
+in the projects registered with the server, and mark their lines as struck (a record in `.agent-prose/strikes/`; no draft text is removed). Traffic is plain HTTP; the link carries a random token. Tell the owner
 before opening a session, and use `prose serve --local` to keep the server on this machine (the page then works only
 on this computer). Windows Firewall may block the first connection from a phone; the command prints the port to allow.
 
@@ -126,12 +131,12 @@ The agent's sequence:
 the registered projects, so the link the owner was given works again after the next `prose serve`. (The page removes `?t=` from the address bar once it has loaded, so a bookmark made from the address bar afterwards has no token; keep the original link.) `prose serve` replaces a running server of the other bind (`--local` or not), and `reading open` reuses whatever is running.
 
 **Where state lives.** Each session is a folder in the project, `.agent-prose/sessions/<id>/` (`session.json`, an
-append-only `events.jsonl`, `reveal.json`). The per-user `server.json` in `~/.agent-prose` holds the access token and
+append-only `events.jsonl`, `reveal.json`); each draft's strikes are an append-only log in `.agent-prose/strikes/<key>/`. The per-user `server.json` in `~/.agent-prose` holds the access token and
 the registered projects (`AGENT_PROSE_HOME` moves it).
 
 **Not included.** No cloud text-to-speech (the browser's voice only; cloud audio belongs to the planned render command).
 
-`prose init` writes `.agent-prose/.gitignore` so sets and taste data stay out of version control;
+`prose init` writes `.agent-prose/.gitignore` so sets, taste data and strike logs (which hold struck text) stay out of version control (an existing project keeps its own file: add `strikes/` to it);
 voice bibles stay trackable. Per-user taste logs live under `~/.agent-prose/taste` (override with
 `AGENT_PROSE_HOME`). `AGENT_PROSE_HOME` moves both the managed runtime and the taste logs; to reinstall,
 remove `releases/<key>`, not the directory: it also holds your taste history.

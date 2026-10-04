@@ -9,15 +9,15 @@
 // Pattern source: agent-beeps' audition server, adapted for text.
 import { execFile } from 'node:child_process';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, truncateSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, truncateSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { hostname, networkInterfaces } from 'node:os';
-import { basename, isAbsolute, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import { ProseError, type ErrorCode } from '../errors.ts';
 import { writeFileAtomic } from '../owner/fsutil.ts';
-import { ID_RE, projectKey, proseHome, sessionDir, sessionsDir, setDir, validId } from '../owner/paths.ts';
+import { EVENT_ID_RE, ID_RE, projectKey, proseHome, sessionDir, sessionsDir, setDir, strikeDir, validId } from '../owner/paths.ts';
 import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
 import { readPrediction, textHash } from '../owner/prediction.ts';
 import { draftHash, originalLines, type Original } from '../owner/original.ts';
@@ -28,10 +28,14 @@ import {
 } from './session.ts';
 import { TasteDuels, type DuelCandidateSource } from './taste.ts';
 import { layoutOf, type Layout, type UnitLayout } from './units.ts';
+import { parseDocument } from '../document.ts';
+import { strikeLines, type StrikeLine } from '../strike/lines.ts';
+import { planRemoval, verifiedLines } from '../strike/plan.ts';
+import { MAX_NOTE, STRIKE_REASONS, foldStrikes, parseStrikeLog, strikeKey, undoableApply, type StrikeEvent } from '../strike/store.ts';
 
 export const DEFAULT_PORT = 47311;
 /** Bump when routes change: a running server of another API level is replaced, not reused. */
-export const SERVER_API = 1;
+export const SERVER_API = 2;
 const PROBE_MS = 1500;
 /** Connections the HTTP server accepts at once, and how long a client may take to send headers, a whole request, or sit idle. */
 const MAX_CONNECTIONS = 200;
@@ -49,6 +53,12 @@ export const MAX_NOTES_PER_VARIANT = 100;
 const ENGAGEMENT = new Set(['play', 'peek', 'note']);
 /** The request body cap for POST /event. */
 const MAX_BODY = 64 * 1024;
+/** What the page sends to strike a line, and to take a strike back: strict, every field checked before the CLI is asked. */
+const StrikeBody = z.strictObject({
+  ref: z.string().regex(/^\d+(-\d+)?$/).max(20), reason: z.enum(STRIKE_REASONS), note: z.string().min(1).max(MAX_NOTE).optional(),
+  draftHash: z.string().regex(/^[0-9a-f]{64}$/), eventId: z.string().regex(EVENT_ID_RE),
+});
+const ClearBody = z.strictObject({ strike: z.string().regex(/^s\d+$/).max(12), eventId: z.string().regex(EVENT_ID_RE) });
 /** A CLI write that has not finished by then is given up on (a held set lock alone is given up on after 5 s). */
 const CLI_TIMEOUT_MS = 15_000;
 /** The CLI entry, next to the code: the managed runtime copy finds its own. */
@@ -334,12 +344,33 @@ interface PickAgent { pick: number; shortlist: number[]; why: string; hit: boole
 /** Where a candidate lives: the set holding it and its variant number inside that set. */
 interface Where { setId: string; variant: number; round: number }
 
-interface Candidate { index: number; label: string; units?: string[]; layout?: Layout; breaks?: number[]; changed: boolean; hashOk: boolean; name?: string; direction?: string | null; angle?: string; note?: string }
+interface Candidate { index: number; label: string; units?: string[]; layout?: Layout; breaks?: number[]; /** Unit indexes that are lines struck before this set was made (shown struck, text only). */ struck?: number[]; changed: boolean; hashOk: boolean; name?: string; direction?: string | null; angle?: string; note?: string }
 
 interface SessionRow { id: string; setId: string; form: string; stage: string; createdAt: string; project: string }
 
 /** The line(s) the set revises, as the owner sees them, and whether the draft has changed since. */
 export interface OriginalView { source: string; lines: ReturnType<typeof originalLines>; stale: boolean }
+
+/** The draft behind the session, for the Draft view: its lines as a strike names them, and the strikes against it. */
+export interface DraftView {
+  source: string;
+  /** Hash of the normalised text now: what a strike is made against. */
+  hash: string;
+  /** Changes when the draft, its strikes, the brief or the original change: the page re-renders on it. */
+  rev: string;
+  /** False once the session is shipped or abandoned: the view is read only. */
+  editable: boolean;
+  lines: Array<{ ref: string; start: number; end: number; text: string; speaker?: string; strikable: boolean; why?: string; break?: boolean }>;
+  truncated?: boolean;
+  strikes: Array<{ id: string; ref: string; text: string; speaker?: string; reason: string; note?: string; at: string; stale: boolean }>;
+  applied: null | { id: string; count: number; at: string };
+}
+
+/** Lines the Draft view lists at most. */
+export const MAX_DRAFT_LINES = 2000;
+/** Draft extensions the strike routes will name (the CLI checks again). */
+const DRAFT_FILE = /\.(?:fountain|md|markdown|dialog\.ya?ml|ya?ml)$/i;
+const normText = (s: string): string => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
 export interface SessionPayload {
   session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null; brief: ReturnType<typeof briefView> | null; original: OriginalView | null };
@@ -351,6 +382,8 @@ export interface SessionPayload {
   /** The direction vocabulary the refine screen offers. */
   directions: string[];
   reveal: { shipped: boolean };
+  /** The round-0 set's draft with its strikes, or null when it cannot be shown (missing, outside the project, unreadable). */
+  draft: DraftView | null;
 }
 
 /**
@@ -470,12 +503,16 @@ export class ReadingServer {
   /** Parsed sets by set.json path, valid while its (mtime, size) is unchanged. */
   private draftCache = new Map<string, { key: string; hash: string | null }>();
   private setCache = new Map<string, { key: string; set: PromptSet }>();
+  /** A draft's text, hash and verified strike lines by file path, valid while (mtime, size, format, form) are unchanged. */
+  private strikeDrafts = new Map<string, { key: string; text: string; hash: string; lines: StrikeLine[]; format: PromptSet['format']; form: string }>();
+  /** A strike log's rows by directory, valid while events.jsonl is unchanged. */
+  private strikeLogs = new Map<string, { key: string; events: StrikeEvent[] }>();
   /** A variant's checked text by file path, valid while the file's (mtime, size) and the frozen hash are unchanged. */
-  private textCache = new Map<string, { key: string; text: string | null; hashOk: boolean; layout?: ReturnType<typeof layoutOf> }>();
+  private textCache = new Map<string, { key: string; text: string | null; hashOk: boolean; layout?: ReturnType<typeof layoutOf>; struck?: number[] }>();
   /** One /api/sessions row per session, valid while session.json and events.jsonl are unchanged. */
   private rowCache = new Map<string, { key: string; row: SessionRow | null }>();
-  /** How many variant files were read and hashed (a poll that finds nothing changed adds none); for tests. */
-  readonly reads = { variants: 0, drafts: 0 };
+  /** How many variant files were read and hashed, drafts hashed for the existing line, strike logs parsed, and draft files parsed for the Draft view (a poll that finds nothing changed adds none); for tests. */
+  readonly reads = { variants: 0, drafts: 0, strikes: 0, lines: 0 };
   /** The taste model and candidate vectors behind the duel the page asks (cached; loaded with async fs). */
   private taste = new TasteDuels(() => logError('taste model unavailable; using the default pairing', 'E_TASTE'));
   /** Taste loads so far (models fitted, candidate vectors computed); for tests. */
@@ -490,7 +527,10 @@ export class ReadingServer {
       { method: 'GET', re: /^\/api\/sessions$/, handler: c => this.json(c.res, 200, { sessions: this.listSessions() }) },
       { method: 'GET', re: /^\/api\/session\/([a-z0-9-]+)$/, handler: async c => this.json(c.res, 200, await this.payloadAsync(c.match[1])) },
       { method: 'GET', re: /^\/api\/session\/([a-z0-9-]+)\/reveal$/, handler: c => this.json(c.res, 200, this.reveal(c.match[1])) },
+      { method: 'GET', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/preview$/, handler: c => this.json(c.res, 200, this.strikePreview(c.match[1])) },
       { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/event$/, handler: c => this.postEvent(c) },
+      { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike$/, handler: c => this.postStrike(c, 'add') },
+      { method: 'POST', re: /^\/api\/session\/([a-z0-9-]+)\/strike\/clear$/, handler: c => this.postStrike(c, 'clear') },
     ];
   }
 
@@ -596,9 +636,9 @@ export class ReadingServer {
    * remembered per (file, mtime, size, frozen hash), so a poll stats the file instead of reading and hashing it again;
    * `fresh` (the note check, before a write) skips the memory and looks at the file itself.
    */
-  private variantText(root: string, setId: string, index: number, frozen: string | undefined, fresh = false): { set: PromptSet | null; text: string | null; hashOk: boolean; layout: UnitLayout | null } {
+  private variantText(root: string, setId: string, index: number, frozen: string | undefined, fresh = false): { set: PromptSet | null; text: string | null; hashOk: boolean; layout: UnitLayout | null; struck: number[] } {
     const set = this.setOf(root, setId, fresh);
-    const none = { set, text: null, hashOk: false, layout: null };
+    const none = { set, text: null, hashOk: false, layout: null, struck: [] };
     try {
       const v = set?.variants.find(x => x.index === index);
       if (!set || !v || !frozen) return none;
@@ -613,8 +653,18 @@ export class ReadingServer {
       }
       if (entry.text === null) return none;
       entry.layout ??= layoutOf(entry.text, set.format, set.form);
-      return { set, text: entry.text, hashOk: true, layout: entry.layout };
+      entry.struck ??= this.struckUnits(entry.text, set);
+      return { set, text: entry.text, hashOk: true, layout: entry.layout, struck: entry.struck };
     } catch { return none; }
+  }
+
+  /** The units of a variant that are lines struck before the set was made, left exactly as written (shown struck, never edited). */
+  private struckUnits(text: string, set: PromptSet): number[] {
+    if (!set.excluded) return [];
+    try {
+      const gone = new Set(set.excluded.map(e => normText(e.text)));
+      return strikeLines(text, set.format, set.form).filter(l => gone.has(normText(l.text))).flatMap(l => l.units);
+    } catch { return []; }
   }
 
   /**
@@ -654,9 +704,10 @@ export class ReadingServer {
     const make = (index: number): Candidate => {
       const c = byIndex.get(index)!;
       const setId = maps.roundSet.get(c.round) ?? session.setId;
-      const { set, hashOk, layout } = this.variantText(root, setId, variantOf(c), frozenHash(root, session, maps, c));
+      const { set, hashOk, layout, struck } = this.variantText(root, setId, variantOf(c), frozenHash(root, session, maps, c));
       const out: Candidate = { index, label: labelOf(plan.sequence.indexOf(index)), changed: !hashOk, hashOk };
       if (layout !== null) Object.assign(out, layout);
+      if (struck.length) out.struck = struck;
       if (state.peeked.includes(index)) {
         // The owner opened "what changed?" for this one: the direction and the agent's own description of the angle.
         const v = set?.variants.find(x => x.index === variantOf(c));
@@ -674,7 +725,133 @@ export class ReadingServer {
       pair: nextPair(state, choose),
       directions: KNOWN_DIRECTIONS,
       reveal: { shipped: state.shipped !== null },
+      draft: this.draftView(root, session, state, maps),
     };
+  }
+
+  // ---- the draft and its strikes ----
+
+  /**
+   * The draft file behind a set, or null: the source comes from set.json (never from the client), must stay inside the
+   * registered project once symbolic links are resolved, must be a regular file (not a link: the CLI refuses those) and
+   * must have a draft extension.
+   */
+  private draftFile(root: string, source: string): string | null {
+    try {
+      if (!DRAFT_FILE.test(source)) return null;
+      const file = resolve(root, source);
+      const rel = relative(root, file);
+      if (rel === '' || rel.startsWith('..') || isAbsolute(rel) || rel.split(sep)[0] === '.agent-prose') return null;
+      if (!lstatSync(file).isFile()) return null;
+      const real = relative(realpathSync(root), realpathSync(file));
+      return real.startsWith('..') || isAbsolute(real) ? null : file;
+    } catch { return null; }
+  }
+
+  /** The draft as the strike routes see it, parsed again only when the file or its set's format changed. Null when it cannot be read. */
+  private strikeDraft(file: string, set: PromptSet) {
+    let key: string;
+    try { key = `${statKey(file)}|${set.format}|${set.form}`; } catch { return null; }
+    const hit = this.strikeDrafts.get(file);
+    if (hit?.key === key) return hit;
+    this.reads.lines++;
+    try {
+      const text = readFileSync(file, 'utf8');
+      const doc = parseDocument(file, text, { form: set.form });
+      const entry = { key, text, hash: draftHash(text), lines: verifiedLines(text, set.format, set.form, strikeLines(text, set.format, set.form)), format: doc.format, form: doc.form };
+      remember(this.strikeDrafts, file, entry);
+      return entry;
+    } catch { this.strikeDrafts.delete(file); return null; }
+  }
+
+  /** The strike log of a draft, parsed again only when events.jsonl changed (one stat per poll). */
+  private strikeEvents(root: string, source: string): StrikeEvent[] {
+    const dir = strikeDir(root, strikeKey(source));
+    const log = join(dir, 'events.jsonl');
+    let key = 'none';
+    try { key = statKey(log); } catch { /* no log yet */ }
+    const hit = this.strikeLogs.get(dir);
+    if (hit?.key === key) return hit.events;
+    this.reads.strikes++;
+    let events: StrikeEvent[] = [];
+    try { events = parseStrikeLog(readFileSync(log, 'utf8')).events; } catch { /* absent or unreadable: no strikes */ }
+    remember(this.strikeLogs, dir, { key, events });
+    return events;
+  }
+
+  private draftView(root: string, session: Session, state: SessionState, maps: ReturnType<typeof roundMaps>): DraftView | null {
+    const set = this.setOf(root, session.setId, false);
+    if (!set) return null;
+    const file = this.draftFile(root, set.source);
+    const draft = file ? this.strikeDraft(file, set) : null;
+    if (!draft) return null;
+    const fold = foldStrikes(this.strikeEvents(root, set.source), draft.hash);
+    const last = undoableApply(fold, draft.hash);
+    const strikes = fold.pending.map(p => ({ id: p.id, ref: p.ref, text: p.text, ...(p.speaker ? { speaker: p.speaker } : {}), reason: p.reason, ...(p.note ? { note: p.note } : {}), at: p.at, stale: p.stale }));
+    const editable = state.stage !== 'shipped' && state.stage !== 'abandoned';
+    const applied = last ? { id: last.id, count: last.strikes.length, at: last.at } : null;
+    const rev = createHash('sha256').update(JSON.stringify([draft.hash, editable, strikes.map(s => [s.id, s.reason, s.note ?? null, s.stale]), applied, this.briefOf(root, maps), set.original?.lines ?? null])).digest('hex').slice(0, 16);
+    const lines = draft.lines.slice(0, MAX_DRAFT_LINES).map(l => ({
+      ref: l.ref, start: l.start, end: l.end, text: l.text, ...(l.speaker ? { speaker: l.speaker } : {}),
+      strikable: l.strikable, ...(l.why ? { why: l.why } : {}), ...(l.break ? { break: true } : {}),
+    }));
+    return { source: set.source, hash: draft.hash, rev, editable, lines, ...(draft.lines.length > MAX_DRAFT_LINES ? { truncated: true } : {}), strikes, applied };
+  }
+
+  /** The removal the pending strikes would make, computed here and read only (no lock, nothing written). The page's apply review will use it in a later version. */
+  private strikePreview(id: string): unknown {
+    const root = this.findSession(id);
+    const session = readSession(root, id);
+    const set = this.setOf(root, session.setId, false);
+    const file = set ? this.draftFile(root, set.source) : null;
+    const draft = set && file ? this.strikeDraft(file, set) : null;
+    if (!set || !draft) throw new ProseError('E_NOT_FOUND', 'the draft is not available', { hint: 'The draft may have moved or been deleted' });
+    const fold = foldStrikes(this.strikeEvents(root, set.source), draft.hash);
+    if (fold.pending.length === 0) throw new ProseError('E_CONFLICT', 'nothing is struck', { hint: 'Strike a line first' });
+    const stale = fold.pending.filter(p => p.stale);
+    if (stale.length) throw new ProseError('E_CONFLICT', `${stale.length} of the struck lines were struck against an older draft`, { hint: 'Undo them and strike again' });
+    const strikes = fold.pending.map(p => ({ id: p.id, ref: p.ref, reason: p.reason, note: p.note, line: draft.lines.find(l => l.ref === p.ref) }));
+    const missing = strikes.find(s => !s.line);
+    if (missing) throw new ProseError('E_CONFLICT', `${missing.id} no longer names a line of the draft`, { hint: 'Undo it and strike again' });
+    const plan = planRemoval(draft.text, draft.format, draft.form, draft.hash, strikes.map(s => ({ id: s.id, ref: s.ref, reason: s.reason, line: s.line! })));
+    const by = new Map(strikes.map(s => [s.id, s]));
+    return {
+      digest: plan.digest, count: plan.count, bytes: plan.bytes,
+      removed: plan.removed.map(r => ({
+        start: r.start, end: r.end, kind: r.kind, text: r.raw.replace(/\r\n$|\r$|\n$/, ''),
+        ...(r.strike ? { strike: r.strike, reason: by.get(r.strike)?.reason, ...(by.get(r.strike)?.note ? { note: by.get(r.strike)!.note } : {}) } : {}),
+      })),
+    };
+  }
+
+  /** Record a strike or clear one: validated here, then the CLI does the write (locks, dedupe, stale and overlap rules live there). */
+  private async postStrike(c: Ctx, kind: 'add' | 'clear'): Promise<void> {
+    const id = c.match[1];
+    const root = this.findSession(id);
+    const text = await readBody(c.req, MAX_BODY);
+    let raw: unknown;
+    try { raw = JSON.parse(text); } catch { throw new ProseError('E_USAGE', 'the request body is not valid JSON', { hint: 'Send one JSON object' }); }
+    const parsed = kind === 'add' ? StrikeBody.safeParse(raw) : ClearBody.safeParse(raw);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new ProseError('E_SCHEMA', `Invalid strike request: ${issue.path.length ? `${issue.path.join('.')}: ` : ''}${issue.message}`.slice(0, 200), { hint: 'See the strike request shapes the page sends' });
+    }
+    const body = parsed.data;
+    const out = await this.serial(id, async () => {
+      const session = readSession(root, id);
+      const stage = foldSession(session, readEvents(root, id)).stage;
+      if (stage === 'shipped' || stage === 'abandoned') throw new ProseError('E_CONFLICT', `the session is ${stage}, so strikes can no longer change`, { hint: 'Open a new reading session' });
+      const set = this.setOf(root, session.setId, true);
+      const file = set ? this.draftFile(root, set.source) : null;
+      if (!set || !file) throw new ProseError('E_NOT_FOUND', 'the draft is not available', { hint: 'The draft may have moved or been deleted' });
+      const run = this.opts.runProse ?? runProse;
+      const argv = 'ref' in body
+        ? ['strike', 'add', file, '--line', body.ref, '--reason', body.reason, ...(body.note !== undefined ? [`--note=${body.note}`] : []), '--draft-hash', body.draftHash, `--event-id=${body.eventId}`, '--dir', root]
+        : ['strike', 'clear', file, body.strike, `--event-id=${body.eventId}`, '--dir', root];
+      const result = await run(argv, { cwd: root }) as { duplicate?: boolean };
+      return { ok: true, ...(result?.duplicate ? { duplicate: true } : {}), state: await this.payloadAsync(id) };
+    });
+    this.json(c.res, 200, out);
   }
 
   private reveal(id: string): unknown {

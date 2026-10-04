@@ -147,3 +147,28 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 8px; border: 2
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .pulse { opacity: 1; }
 }
+/* Strikes: the Draft view, struck lines kept in place, the picker, and the pending bar. Text only; nothing here is a style attribute. */
+.views { max-width: 70ch; margin: 0.5rem auto 0; padding: 0 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+body:has(main.wide) .views { max-width: 72rem; }
+.views[hidden] { display: none; }
+.views button { border-radius: 999px; }
+.dock { position: sticky; bottom: 0; background: var(--bg); margin-top: 1rem; border-top: 1px solid var(--line); }
+.dock .actionbar { position: static; margin-top: 0; border-top: 0; }
+.pendingbar { padding: 0.6rem 0; display: flex; flex-wrap: wrap; gap: 0.1rem 0.75rem; align-items: center; }
+.pendingbar .quiet { flex: 1 1 14rem; }
+.draft-block { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.25rem 1rem; margin: 1rem 0; }
+.draft-line { padding: 0.6rem 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
+.draft-line:last-child { border-bottom: 0; }
+.line-ref { display: inline-block; min-width: 2.5rem; color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.line-text { font-family: var(--serif); font-size: 1.1rem; line-height: 1.6; }
+.struck, .unit.struck { text-decoration: line-through; color: var(--muted); }
+.strike-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; align-items: center; margin: 0.25rem 0 0 2.5rem; }
+.chip { border: 1px solid var(--accent); border-radius: 999px; padding: 0.1rem 0.7rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+.strike-note { color: var(--muted); font-style: italic; }
+.strike-btn { margin: 0.4rem 0 0 2.5rem; }
+.why { display: block; margin-left: 2.5rem; font-size: 0.85rem; }
+.picker { border: 2px solid var(--accent); border-radius: 10px; padding: 0.75rem; margin: 0.5rem 0 0.25rem; background: var(--bg); }
+.picker textarea { width: 100%; min-height: 4rem; padding: 0.6rem; border: 2px solid var(--line); border-radius: 8px; background: var(--surface); }
+.stale-strikes { border: 2px dashed var(--warn); border-radius: 12px; padding: 0 1rem 0.5rem; margin: 1rem 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 480px) { .strike-meta, .strike-btn, .why { margin-left: 0; } }

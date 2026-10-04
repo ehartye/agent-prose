@@ -307,7 +307,7 @@ describe('GET /api/session/<id>', () => {
     const { info } = await start({ projects: [s.project] });
     const r = await api(info, '/api/session/read-1');
     expect(r.status).toBe(200);
-    expect(Object.keys(r.body).sort()).toEqual(['candidates', 'directions', 'order', 'pair', 'reveal', 'session', 'state']);
+    expect(Object.keys(r.body).sort()).toEqual(['candidates', 'directions', 'draft', 'order', 'pair', 'reveal', 'session', 'state']);
     expect(r.body.session).toEqual({ id: 'read-1', setId: 'demo', form: 'speech-small', register: 'plain', prompt: 'the bridge speech', target: { minutes: 3 }, wpm: 150, brief: null, original: null });
     expect(r.body.reveal).toEqual({ shipped: false });
     expect(r.body.state).toMatchObject({ stage: 'lineup', round: 0, lineup: [1, 2, 3], peeked: [] });

@@ -114,6 +114,9 @@ function judge(dir: string, deadGraceMs: number, hardStaleMs: number): Judgement
   return { stale: (age > deadGraceMs && dead) || age > hardStaleMs, token: owner?.token ?? null, mtimeMs };
 }
 
+/** The command that lists what a lock guards, for the not-found hint. */
+const LISTING: Record<string, string> = { set: 'prose set list', session: 'prose reading list', strikes: 'prose strike list --all' };
+
 /** What a lock guards, for messages: `Set demo` or `Session read-1`. */
 const named = (noun: string, id: string) => `${noun[0].toUpperCase()}${noun.slice(1)} ${id}`;
 
@@ -194,7 +197,7 @@ function attempt(p: Plan, token: string): 'held' | 'now' | number {
   try { mkdirSync(lock); made = true; }
   catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code === 'ENOENT') throw new ProseError('E_NOT_FOUND', `No ${noun} ${id} in ${project}`, { hint: `prose ${noun === 'set' ? 'set list' : 'reading list'} shows the ${noun}s` });
+    if (err.code === 'ENOENT') throw new ProseError('E_NOT_FOUND', `No ${noun} ${id} in ${project}`, { hint: `${LISTING[noun] ?? `the ${noun} folder is missing`} shows the ${noun.endsWith('s') ? noun : `${noun}s`}` });
     if (err.code !== 'EEXIST' && err.code !== 'EPERM') throw e; // EPERM: Windows, a lock that is being deleted
   }
   if (made) {
