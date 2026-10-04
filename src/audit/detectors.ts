@@ -775,6 +775,7 @@ const SUBSTITUTES = /\b(?:serves?|stands?|functions?|operates?|acts?)\s+as\b|\b(
 export const MEASURED_NOTES = [
   'Em dash rates run from 0.0 to 9.1 per 1,000 words across models, so a rate says little by itself.',
   'Reported for context only; none of these values is flagged.',
+  `The triplet-density hallmark fires above ${TRIPLET_DENSITY_PER_1000} lists per 1,000 words, the 95th percentile of the human samples; their median is 0.`,
   'The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies.',
 ];
 

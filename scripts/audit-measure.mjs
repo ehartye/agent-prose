@@ -25,11 +25,18 @@ const HARD = FAMILIES.filter(f => f.tier === 'hard').map(f => f.id);
 
 const LABELS = { arxiv: 'arXiv abstracts, 2018 to 2021', wikiintro: 'Wikipedia introductions, before 2023' };
 
+const USAGE = `Usage:
+  node scripts/audit-measure.mjs <dataDir> [--seed N] [--json]
+  node scripts/audit-measure.mjs --data name=<dir> [--data name=<dir>] --write-rates <outFile> [--date YYYY-MM-DD]
+
+--date stamps the generated rates file (default: today, UTC). --help prints this text.`;
+
 function parseArgs(argv) {
   const o = { dir: undefined, seed: DEFAULT_SEED, json: false, data: [], writeRates: undefined, date: undefined };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--json') o.json = true;
+    if (a === '--help' || a === '-h') { console.log(USAGE); process.exit(0); }
+    else if (a === '--json') o.json = true;
     else if (a === '--seed') o.seed = Number(argv[++i]);
     else if (a === '--data') {
       const m = /^([a-z][a-z0-9-]*)=(.+)$/.exec(argv[++i] ?? '');
