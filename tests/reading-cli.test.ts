@@ -69,8 +69,10 @@ describe('prose serve', () => {
     expect(out.notice).toBe(LOCAL_NOTICE); // a local server must not say the network can read it
     expect(NOTICE).toMatch(/anyone on this network who has the link can read the drafts in the projects registered with this server/i);
     expect(NOTICE).toContain('--local');
-    expect(NOTICE).toMatch(/mark their lines as struck \(a record; no draft text is removed yet\)/);
-    expect(LOCAL_NOTICE).toMatch(/can also mark lines of those drafts as struck/);
+    expect(NOTICE).toMatch(/and delete lines from them \(strike them, then apply/);
+    expect(NOTICE).not.toMatch(/no draft text is removed/);
+    expect(LOCAL_NOTICE).toMatch(/can also delete lines from those drafts/);
+    expect(LOCAL_NOTICE).toMatch(/confirm the exact text/);
     expect(out.urls[0]).toMatchObject({ via: 'local', url: expect.stringContaining('http://127.0.0.1:') });
     expect(out).not.toHaveProperty('token');
     const token = readServerInfo()!.token;
