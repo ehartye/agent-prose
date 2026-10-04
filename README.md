@@ -337,7 +337,7 @@ and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Craft guides
 
-A craft reference guide for each family of forms lives in `craft/guides/`, and `prose guide` prints it. Every guide has the same eight sections: what the form is and who reads it, anatomy and conventions, length and timing, what good looks like, common failures and the habits behind them, how to revise, the rules that apply (generated from `craft/rules.json`, so it cannot drift) and numbered sources. Conventions are marked as conventions and unsourced advice as maintainer judgement. Read the section you need, not the whole guide, for example `prose guide barks --section anatomy --text`. The first guide is game dialogue; the rest are listed by `prose guide` with `written: false` until they exist. To add one, see [Adding a craft guide](craft/GUIDE.md#adding-a-craft-guide).
+A craft reference guide for each family of forms lives in `craft/guides/`, and `prose guide` prints it. Every guide has the same eight sections: what the form is and who reads it, anatomy and conventions, length and timing, what good looks like, common failures and the habits behind them, how to revise, the rules that apply (generated from `craft/rules.json`, so it cannot drift) and numbered sources. Conventions are marked as conventions and unsourced advice as maintainer judgement. Read the section you need, not the whole guide, for example `prose guide barks --section anatomy --text`. All eight guides are available: game dialogue, instructions and technical docs, academic and professional prose, screen and stage scripts, YouTube scripts, speeches, poetry and verse forms, and song lyrics. To add one, see [Adding a craft guide](craft/GUIDE.md#adding-a-craft-guide).
 
 
 ## Honesty notes
