@@ -34,8 +34,8 @@ const WAIT_STEP_MS = 200;
 const ACTIONABLE = new Set(['refine', 'ship', 'abandon']);
 
 /** Said on every serve and every open: what the link exposes. */
-export const LOCAL_NOTICE = 'This server listens on this machine only (127.0.0.1): nothing else on the network can reach the link.';
-export const NOTICE = 'Anyone on this network who has the link can read the drafts in the projects registered with this server. Use --local to keep it on this machine.';
+export const LOCAL_NOTICE = 'This server listens on this machine only (127.0.0.1): nothing else on the network can reach the link. Whoever opens the link can also mark lines of those drafts as struck (a record; no draft text is removed).';
+export const NOTICE = 'Anyone on this network who has the link can read the drafts in the projects registered with this server, and mark their lines as struck (a record; no draft text is removed yet). Use --local to keep it on this machine.';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
