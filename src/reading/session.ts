@@ -57,6 +57,8 @@ export const SessionSchema = z.strictObject({
   candidates: z.array(SessionCandidateSchema).min(1),
   /** False for a session opened with --no-predict (the agent sealed no guess); absent in a session older than the flag. */
   predicted: z.boolean().optional(),
+  /** The batch queue this session is an item of (written only for a child session); absent for every single-set session. */
+  queue: z.string().optional(),
 });
 export type Session = z.infer<typeof SessionSchema>;
 

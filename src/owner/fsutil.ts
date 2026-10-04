@@ -115,7 +115,7 @@ function judge(dir: string, deadGraceMs: number, hardStaleMs: number): Judgement
 }
 
 /** The command that lists what a lock guards, for the not-found hint. */
-const LISTING: Record<string, string> = { set: 'prose set list', session: 'prose reading list', strikes: 'prose strike list --all' };
+const LISTING: Record<string, string> = { set: 'prose set list', session: 'prose reading list', queue: 'prose reading list', strikes: 'prose strike list --all' };
 
 /** What a lock guards, for messages: `Set demo` or `Session read-1`. */
 const named = (noun: string, id: string) => `${noun[0].toUpperCase()}${noun.slice(1)} ${id}`;

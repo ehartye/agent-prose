@@ -35,7 +35,7 @@ function seedMany(count: number, lines: number, over: { original?: string } = {}
 const variantKeys = (compare: any) => [...new Set(compare.rows.flatMap((r: any) => Object.keys(r.cells ?? {})))].sort();
 
 describe('compare in the session payload', () => {
-  it('does not change the server API level (the payload only gained a field)', () => { expect(SERVER_API).toBe(4); });
+  it('the queue routes took the API level to 5 (the compare payload alone did not change it)', () => { expect(SERVER_API).toBe(5); });
 
   it('has rows keyed by candidate index in the lineup, without a Current column when the set has no original', async () => {
     const s = seed();
