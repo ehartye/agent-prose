@@ -28,6 +28,8 @@ export interface CheckResult {
   ok: boolean;
   keep: number[];
   rejected: Array<{ index: number; reasons: string[] }>;
+  /** Set-level warnings (not about one variant): they never reject anything. */
+  warnings: string[];
   variants: VariantCheck[];
   next: string;
 }
@@ -100,11 +102,15 @@ export function checkSet(project: string, set: PromptSet): CheckResult {
     }
   }
 
+  // The check judges variants; whether the owner agreed to the brief they were written against cannot be verified here.
+  const warnings = set.brief && !set.brief.confirmedAt
+    ? ['brief-unconfirmed: the owner has not confirmed the brief these variants were written against (prose set brief ' + set.id + ' --confirmed, once they agree)']
+    : [];
   const keep = variants.filter(v => v.status === 'ok').map(v => v.index);
   const rejected = variants.filter(v => v.status === 'rejected').map(v => ({ index: v.index, reasons: v.reasons }));
   const ok = keep.length >= MIN_VARIANTS;
   return {
-    set: set.id, ok, keep, rejected, variants,
+    set: set.id, ok, keep, rejected, warnings, variants,
     next: ok
       ? `Seal your guess before the owner sees anything: prose predict --set ${set.id} --pick <n> --why "..."; then present the kept variants (${keep.join(', ')})`
       : `Only ${keep.length} variant(s) survive; a set needs at least ${MIN_VARIANTS}. Rewrite the rejected ones (${rejected.map(r => r.index).join(', ') || 'none'}) and run prose set check ${set.id} again`,

@@ -47,6 +47,26 @@ describe('prose-review reading page', () => {
   });
 });
 
+describe('the brief', () => {
+  const flat = (skill: string) => readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8').replaceAll('\r\n', '\n').replace(/\s+/g, ' ');
+  it('prose-review has the owner confirm the brief before any variant is written', () => {
+    const text = flat('prose-review');
+    for (const needle of ['Draft the brief from the draft', '--character', '--context', 'Show it to the owner', '--brief-confirmed', 'never write variants against a brief the owner has not confirmed', 'prose set brief <id>', 'brief-unconfirmed']) {
+      expect(text, needle).toContain(needle);
+    }
+    expect(text.indexOf('--brief-confirmed')).toBeLessThan(text.indexOf('Rewrite each variant file in place'));
+    expect(text).toContain('not a taste signal');
+  });
+  it('prose-review carries the brief into a refine round', () => {
+    expect(flat('prose-review')).toContain('prose set new <champion file> --brief-from <previous-set>');
+  });
+  it('prose-dialog and prose-script say what the character and the context are for their form', () => {
+    expect(flat('prose-dialog')).toMatch(/Character: how this speaker talks.*Context: the trigger, the box size and how often it is heard/);
+    expect(flat('prose-script')).toMatch(/the character is how the speaker talks.*the context is the scene and who is listening/);
+    for (const skill of ['prose-dialog', 'prose-script']) expect(flat(skill), skill).toContain('--brief-confirmed');
+  });
+});
+
 describe('the plugin stands alone', () => {
   // docs/ may show Fountain note syntax (double brackets), so only the plugin's own files get the wikilink check.
   const docFiles = ['docs'].flatMap(p => readdirSync(join(root, p), { recursive: true }).map(f => join(root, p, String(f))).filter(f => /\.(md|json)$/.test(f)));

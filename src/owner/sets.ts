@@ -7,7 +7,7 @@ import { ProseError } from '../errors.ts';
 import { FORMATS } from '../kinds.ts';
 import { assertDirections } from './directions.ts';
 import { writeFileAtomic } from './fsutil.ts';
-import { newId, setDir, setsDir, validId } from './paths.ts';
+import { ID_RE, newId, setDir, setsDir, validId } from './paths.ts';
 
 export const MIN_VARIANTS = 2;
 export const MAX_VARIANTS = 6;
@@ -40,6 +40,23 @@ export const VariantSchema = z.strictObject({
   note: z.string().min(1).optional(),
 });
 
+/** Free text for the brief: line endings folded, trimmed, then bounded; control characters (other than tab and newline) are refused. */
+const BriefText = (max: number) => z.string()
+  .transform(s => s.replace(/\r\n?/g, '\n').trim())
+  .pipe(z.string().min(1).max(max).refine(s => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(s), 'no control characters'));
+
+/** Who speaks and where the line lands, so a rewrite is judged with its brief in view. Not a taste signal. */
+export const BriefSchema = z.strictObject({
+  /** Personality summary (inline text). */
+  character: BriefText(600).optional(),
+  /** RESERVED for a later voice-bible link: parsed and shown, never written or acted on yet. */
+  characterRef: z.string().regex(ID_RE).max(64).optional(),
+  /** Where and how the lines are delivered. */
+  context: BriefText(400).optional(),
+  /** The owner confirmed this brief (ISO time). A tool cannot verify it; it is recorded and warned about. */
+  confirmedAt: z.string().optional(),
+}).refine(b => b.character !== undefined || b.context !== undefined || b.characterRef !== undefined, 'a brief needs a character or a context');
+
 export const SetSchema = z.strictObject({
   schema: z.literal('prose/set@1'),
   id: z.string().regex(/^[a-z0-9-]+$/),
@@ -55,10 +72,68 @@ export const SetSchema = z.strictObject({
   variants: z.array(VariantSchema).min(MIN_VARIANTS).max(MAX_VARIANTS),
   picked: z.number().int().optional(),
   pickedAt: z.string().optional(),
+  brief: BriefSchema.optional(),
 });
 
 export type Variant = z.infer<typeof VariantSchema>;
 export type PromptSet = z.infer<typeof SetSchema>;
+export type Brief = z.infer<typeof BriefSchema>;
+
+/** What a caller may say about a brief; `confirmed` stamps `confirmedAt` with the current time. */
+export interface BriefInput { character?: string; context?: string; confirmed?: boolean }
+
+/** The brief as `set show`, `set new` and `set brief` print it: every field present, `confirmed` a boolean. */
+export const briefView = (b: Brief) => ({ character: b.character ?? null, characterRef: b.characterRef ?? null, context: b.context ?? null, confirmed: b.confirmedAt !== undefined });
+
+/** A validated brief from the caller's words; a bad one is E_USAGE (it came from the command line, not from disk). */
+function newBrief(input: BriefInput, now: Date): Brief {
+  const { character, context, confirmed } = input;
+  const parsed = BriefSchema.safeParse({
+    ...(character !== undefined ? { character } : {}), ...(context !== undefined ? { context } : {}),
+    ...(confirmed ? { confirmedAt: now.toISOString() } : {}),
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const where = issue.path.join('.');
+    throw new ProseError('E_USAGE', `The brief is not usable${where ? ` (${where})` : ''}: ${issue.message}`, {
+      hint: 'A brief needs a character (at most 600 characters) or a context (at most 400); both are plain text without control characters',
+    });
+  }
+  return parsed.data;
+}
+
+export interface BriefEdit { character?: string; context?: string; clearCharacter?: boolean; clearContext?: boolean; confirmed?: boolean }
+
+/**
+ * The brief after an edit: new text clears the confirmation (the owner confirmed other words) unless `confirmed` is passed
+ * again, and emptying both fields removes the brief. Text for the character drops `characterRef`, which names where the old
+ * text came from. Returns undefined when nothing is left.
+ */
+export function editedBrief(current: Brief | undefined, edit: BriefEdit, now: Date): Brief | undefined {
+  const textEdited = edit.character !== undefined || edit.context !== undefined || edit.clearCharacter || edit.clearContext;
+  if (!textEdited && !edit.confirmed) throw new ProseError('E_USAGE', 'Nothing to change', { hint: 'Pass --character, --context, --clear-character, --clear-context or --confirmed' });
+  if ((edit.character !== undefined && edit.clearCharacter) || (edit.context !== undefined && edit.clearContext)) {
+    throw new ProseError('E_USAGE', 'A field cannot be set and cleared in one command', { hint: 'Drop --clear-character or --clear-context, or the text it contradicts' });
+  }
+  if (!current && !textEdited) throw new ProseError('E_USAGE', 'This set has no brief to confirm', { hint: 'Give it one: prose set brief <id> --character <text> --context <text>' });
+  const characterChanged = edit.character !== undefined || edit.clearCharacter;
+  const character = edit.clearCharacter ? undefined : (edit.character ?? current?.character);
+  const context = edit.clearContext ? undefined : (edit.context ?? current?.context);
+  const characterRef = characterChanged ? undefined : current?.characterRef;
+  if (character === undefined && context === undefined && characterRef === undefined) return undefined;
+  const confirmedAt = edit.confirmed ? now.toISOString() : (textEdited ? undefined : current?.confirmedAt);
+  const parsed = BriefSchema.safeParse({
+    ...(character !== undefined ? { character } : {}), ...(characterRef !== undefined ? { characterRef } : {}),
+    ...(context !== undefined ? { context } : {}), ...(confirmedAt !== undefined ? { confirmedAt } : {}),
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new ProseError('E_USAGE', `The brief is not usable (${issue.path.join('.') || 'brief'}): ${issue.message}`, {
+      hint: 'A character is at most 600 characters and a context at most 400, as plain text without control characters',
+    });
+  }
+  return parsed.data;
+}
 
 const setFile = (project: string, id: string) => join(setDir(project, id), 'set.json');
 
@@ -90,7 +165,13 @@ function relSource(project: string, draft: string): string {
   return (rel.startsWith('..') || isAbsolute(rel) ? basename(draft) : rel).split(sep).join('/');
 }
 
-export interface CreateOptions { directions?: string[]; count?: number; now?: Date; id?: string }
+export interface CreateOptions {
+  directions?: string[]; count?: number; now?: Date; id?: string;
+  /** The brief to record: new words, or (a refine round) another set's brief taken whole, confirmation included. */
+  brief?: BriefInput | Brief;
+}
+
+const isBrief = (b: BriefInput | Brief): b is Brief => 'confirmedAt' in b || 'characterRef' in b;
 
 /** Copy `draft` into a new set: a base file and one identical variant file per slot for the agent to rewrite. */
 export function createSet(project: string, draft: string, opts: CreateOptions = {}): PromptSet {
@@ -103,6 +184,8 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
   if (directions.length > count) {
     throw new ProseError('E_USAGE', `${directions.length} directions but only ${count} variants`, { hint: `Raise --count (at most ${MAX_VARIANTS}) or name fewer directions` });
   }
+  const now = opts.now ?? new Date();
+  const brief = opts.brief === undefined ? undefined : isBrief(opts.brief) ? opts.brief : newBrief(opts.brief, now);
   const id = opts.id ? validId(opts.id, 'Set id') : newId('set', opts.now);
   const dir = setDir(project, id);
   if (existsSync(dir)) throw new ProseError('E_CONFLICT', `Set ${id} already exists`);
@@ -119,8 +202,8 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
       return { index: k + 1, file: `v${k + 1}${ext}`, direction: directions.length ? directions[k % directions.length] : null };
     });
     const set = SetSchema.parse({
-      schema: 'prose/set@1', id, uid: randomBytes(6).toString('hex'), createdAt: (opts.now ?? new Date()).toISOString(), form: doc.form, format: doc.format,
-      source: relSource(project, draft), base: `base${ext}`, directions, variants,
+      schema: 'prose/set@1', id, uid: randomBytes(6).toString('hex'), createdAt: now.toISOString(), form: doc.form, format: doc.format,
+      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}),
     });
     writeFileAtomic(join(tmp, 'set.json'), JSON.stringify(set, null, 2) + '\n');
     renameSync(tmp, dir);

@@ -12,7 +12,7 @@ import { assertDirections } from '../owner/directions.ts';
 import { EVENT_ID_RE, setDir } from '../owner/paths.ts';
 import { withSetLock } from '../owner/fsutil.ts';
 import { predictWithModel, repairModelPrediction } from '../taste/prediction.ts';
-import { createSet, listSetsDetailed, readSet, variantPath, writeSet } from '../owner/sets.ts';
+import { briefView, createSet, editedBrief, listSetsDetailed, readSet, variantPath, writeSet, type Brief, type BriefInput } from '../owner/sets.ts';
 
 const whole = (text: string, what: string): number => {
   if (!/^\d+$/.test(text.trim())) throw new ProseError('E_USAGE', `${what} must be a whole number`, { hint: `Got "${text}"` });
@@ -33,9 +33,23 @@ export function registerSetCommands(program: Command, io: Io): void {
     .option('--directions <list>', 'comma-separated directions, assigned to variants in turn (e.g. punchier,drier)')
     .option('--count <n>', 'number of variants, 2-6 (default: one per direction, at least 3)')
     .option('--id <id>', 'set id (default: generated)')
-    .action((draft: string, opts: { directions?: string; count?: string; id?: string }) => {
+    .option('--character <text>', 'the brief: who speaks and how they talk (at most 600 characters), shown to the owner above the variants')
+    .option('--context <text>', 'the brief: where and how the lines are heard (at most 400 characters)')
+    .option('--brief-confirmed', 'the owner agreed to this brief; without it the set records the brief as unconfirmed and set check warns')
+    .option('--brief-from <set-id>', "copy another set's brief, confirmation included (a refine round); not with --character or --context")
+    .action((draft: string, opts: { directions?: string; count?: string; id?: string; character?: string; context?: string; briefConfirmed?: boolean; briefFrom?: string }) => {
       const project = needProject(dirname(resolve(draft)));
+      let brief: BriefInput | Brief | undefined;
+      if (opts.briefFrom !== undefined) {
+        if (opts.character !== undefined || opts.context !== undefined) throw new ProseError('E_USAGE', '--brief-from copies a brief, so it cannot be mixed with --character or --context', { hint: 'Edit afterwards with prose set brief <id>' });
+        const from = readSet(project, opts.briefFrom).brief;
+        if (!from) throw new ProseError('E_USAGE', `Set ${opts.briefFrom} has no brief to copy`, { hint: 'Pass --character and --context instead' });
+        brief = opts.briefConfirmed ? { ...from, confirmedAt: new Date().toISOString() } : from;
+      } else if (opts.character !== undefined || opts.context !== undefined || opts.briefConfirmed) {
+        brief = { character: opts.character, context: opts.context, confirmed: opts.briefConfirmed };
+      }
       const s = createSet(project, draft, {
+        ...(brief ? { brief } : {}),
         directions: csv(opts.directions),
         ...(opts.count !== undefined ? { count: Number(opts.count) } : {}),
         ...(opts.id ? { id: opts.id } : {}),
@@ -43,8 +57,32 @@ export function registerSetCommands(program: Command, io: Io): void {
       io.emit({
         set: s.id, dir: setDir(project, s.id), form: s.form, base: s.base,
         variants: s.variants.map(v => ({ index: v.index, file: v.file, direction: v.direction })),
-        next: `Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
+        brief: s.brief ? briefView(s.brief) : null,
+        next: `${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
       });
+    });
+
+  set.command('brief')
+    .description('Edit the brief of a set (character and context). New text clears the confirmation unless --confirmed is passed again; a picked set is refused')
+    .argument('<id>', 'set id')
+    .option('--character <text>', 'who speaks and how they talk (at most 600 characters)')
+    .option('--context <text>', 'where and how the lines are heard (at most 400 characters)')
+    .option('--clear-character', 'remove the character')
+    .option('--clear-context', 'remove the context')
+    .option('--confirmed', 'the owner agreed to the brief as it now stands')
+    .option('--dir <dir>', 'where to start looking for the project (default: the current directory)')
+    .action((id: string, opts: { character?: string; context?: string; clearCharacter?: boolean; clearContext?: boolean; confirmed?: boolean; dir?: string }) => {
+      const project = needProject(opts.dir ?? process.cwd());
+      const brief = withSetLock(project, id, ctx => {
+        const s = readSet(project, id);
+        if (s.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${id} is already picked, so its brief cannot change`, { hint: 'The owner chose with the old brief on screen; start a new set for new words' });
+        const next = editedBrief(s.brief, opts, new Date());
+        const { brief: _old, ...rest } = s;
+        ctx.heartbeat();
+        writeSet(project, next ? { ...rest, brief: next } : rest);
+        return next;
+      });
+      io.emit({ set: id, brief: brief ? briefView(brief) : null });
     });
 
   set.command('list')
@@ -55,7 +93,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       const { sets, problems } = listSetsDetailed(project);
       io.emit({
         project,
-        sets: sets.map(s => ({ id: s.id, form: s.form, createdAt: s.createdAt, variants: s.variants.length, picked: s.picked ?? null })),
+        sets: sets.map(s => ({ id: s.id, form: s.form, createdAt: s.createdAt, variants: s.variants.length, picked: s.picked ?? null, brief: s.brief !== undefined })),
         ...(problems.length ? { problems } : {}),
       });
     });
@@ -70,6 +108,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       const check = checkSet(project, s);
       io.emit({
         set: s.id, project, form: s.form, directions: s.directions, picked: s.picked ?? null,
+        brief: s.brief ? briefView(s.brief) : null,
         prediction: existsSync(`${setDir(project, id)}/prediction.json`),
         keep: check.keep, next: presentNext(check.keep, check.next),
         variants: s.variants.map(v => {

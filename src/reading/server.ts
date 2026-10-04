@@ -20,7 +20,7 @@ import { writeFileAtomic } from '../owner/fsutil.ts';
 import { ID_RE, projectKey, proseHome, sessionDir, sessionsDir, setDir, validId } from '../owner/paths.ts';
 import { KNOWN_DIRECTIONS } from '../owner/directions.ts';
 import { readPrediction, textHash } from '../owner/prediction.ts';
-import { readSet, variantPath, type PromptSet } from '../owner/sets.ts';
+import { briefView, readSet, variantPath, type PromptSet } from '../owner/sets.ts';
 import {
   CLIENT_EVENTS, EventSchema, appendEventAsync, checkTransition, foldSession, nextPair, readEvents, readReveal, readSession, variantOf, writeRevealAsync,
   type PairChooser, type Session, type SessionCandidate, type SessionEvent, type SessionState, type StoredEvent,
@@ -338,7 +338,7 @@ interface Candidate { index: number; label: string; units?: string[]; layout?: L
 interface SessionRow { id: string; setId: string; form: string; stage: string; createdAt: string; project: string }
 
 export interface SessionPayload {
-  session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null };
+  session: { id: string; setId: string; form: string; register: string | null; prompt: string; target: Session['target']; wpm: number | null; brief: ReturnType<typeof briefView> | null };
   state: Omit<SessionState, 'candidates'>;
   candidates: Candidate[];
   order: number[];
@@ -554,6 +554,15 @@ export class ReadingServer {
     } catch { return null; }
   }
 
+  /** The brief the owner sees: that of the latest round's set that has one, else null. Read live (stat-keyed), so an edit shows on the next poll. */
+  private briefOf(root: string, maps: ReturnType<typeof roundMaps>): ReturnType<typeof briefView> | null {
+    for (const n of [...maps.roundSet.keys()].sort((a, b) => b - a)) {
+      const brief = this.setOf(root, maps.roundSet.get(n)!, false)?.brief;
+      if (brief) return briefView(brief);
+    }
+    return null;
+  }
+
   /**
    * One candidate's text, checked against the hash frozen when the prediction was sealed. Never throws. The check is
    * remembered per (file, mtime, size, frozen hash), so a poll stats the file instead of reading and hashing it again;
@@ -630,7 +639,7 @@ export class ReadingServer {
     const shown = [...plan.order, ...plan.sequence.filter(i => !plan.order.includes(i))];
     const { candidates: _hidden, ...publicState } = state;
     return {
-      session: { id: session.id, setId: session.setId, form: session.form, register: session.register, prompt: session.prompt, target: session.target, wpm: session.wpm },
+      session: { id: session.id, setId: session.setId, form: session.form, register: session.register, prompt: session.prompt, target: session.target, wpm: session.wpm, brief: this.briefOf(root, maps) },
       state: publicState,
       candidates: shown.map(make),
       order: plan.order,

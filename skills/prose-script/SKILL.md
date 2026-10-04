@@ -51,6 +51,12 @@ conventions; [references/youtube.md](references/youtube.md) for segments, hooks 
 - Open on the viewer's misconception when explaining; end the window on a forward question,
   not a re-promise of what you just covered.
 
+## When the owner will choose between rewrites
+
+Write the brief first (prose-review): the character is how the speaker talks and what they want in
+the scene; the context is the scene and who is listening. Confirm it with the owner before
+`prose set new ... --brief-confirmed`.
+
 ## Check, then report numbers
 
 1. Run `prose lint <file>`. Fix errors; fix each warning or say why it stays.
