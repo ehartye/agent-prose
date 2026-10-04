@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { run } from './helpers.ts';
-import { SECTIONS } from '../src/craft/guides.ts';
+import { FAMILIES, SECTIONS, writtenGuides } from '../src/craft/guides.ts';
 import { FORMS } from '../src/forms.ts';
 
 const cli = join(import.meta.dirname, '..', 'scripts', 'prose.mjs');
@@ -17,7 +17,7 @@ describe('prose guide', () => {
     expect(game.forms).toEqual(['quest-dialog', 'barks', 'conversation']);
     expect(game.description).toMatch(/barks/);
     expect(game.written).toBe(true);
-    expect(out.families.find((f: any) => f.id === 'song').written).toBe(false);
+    expect(out.families.find((f: any) => f.id === 'song').written).toBe(true);
   });
 
   it('prints one guide by family id, and by form id (resolved to its family)', async () => {
@@ -68,11 +68,13 @@ describe('prose guide', () => {
   });
 
   it('says plainly when a family has no guide yet', () => {
-    const r = prose('guide', 'song');
+    const unwritten = FAMILIES.find(f => !writtenGuides().includes(f.id));
+    if (!unwritten) return; // every family has a guide: nothing left to report as missing
+    const r = prose('guide', unwritten.id);
     expect(r.status).toBe(1);
     const e = JSON.parse(r.stderr.trim()).error;
     expect(e.code).toBe('E_NOT_FOUND');
-    expect(e.message).toMatch(/song guide is not written yet/);
+    expect(e.message).toContain(`The ${unwritten.id} guide is not written yet`);
     expect(e.hint).toContain('game-dialogue');
   });
 
