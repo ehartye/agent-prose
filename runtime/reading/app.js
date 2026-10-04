@@ -902,7 +902,7 @@
     if (!sum) return null;
     return h('div', { class: 'pendingbar removedbar', role: 'status' },
       h('strong', { text: sum.text }),
-      h('span', { class: 'quiet', text: ' The lines are out of the draft file. Undo removal puts them back exactly as they were.' }),
+      h('span', { class: 'quiet', text: ' Undo puts them back.' }),
       btn('Undo removal', () => undoRemoval(data.draft.applied), 'primary', { 'data-gate': '1' }));
   }
 
