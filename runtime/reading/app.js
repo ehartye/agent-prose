@@ -381,7 +381,7 @@
   const noteLength = note => String(note || '').trim().length;
   /** Send back needs at least one reason or a note, and a note within the limit (counted after trimming, as the server does). */
   const noneReady = d => (d.reasons.length > 0 || noteLength(d.note) > 0) && noteLength(d.note) <= MAX_NONE_NOTE;
-  const noneHelp = d => (noteLength(d.note) > MAX_NONE_NOTE ? 'The note is ' + (noteLength(d.note) - MAX_NONE_NOTE) + ' characters too long.'
+  const noneHelp = d => (noteLength(d.note) > MAX_NONE_NOTE ? 'The note is ' + (noteLength(d.note) - MAX_NONE_NOTE) + (noteLength(d.note) - MAX_NONE_NOTE === 1 ? ' character' : ' characters') + ' too long.'
     : d.reasons.length || noteLength(d.note) ? '' : 'Choose a reason or write a note to send this back.');
   const premiseHint = d => d.reasons.includes('premise-wrong');
   /** The drafts the "closest" question offers: the ones on offer in this lineup (a pinned champion of an earlier round is another set's). */
@@ -2041,7 +2041,12 @@
     $('desk').removeAttribute('aria-hidden');
   }
 
-  const dialogFocusables = root => Array.prototype.filter.call(root.querySelectorAll('button, input, textarea, a[href], [tabindex="0"]'), el => !el.disabled && !el.hidden && el.offsetParent !== null);
+  /** The tab stops inside a panel, in order. A radio group is one stop (its checked radio), as the browser treats it. */
+  const dialogFocusables = root => Array.prototype.filter.call(root.querySelectorAll('button, input, textarea, a[href], [tabindex="0"]'), el => {
+    if (el.disabled || el.hidden || el.offsetParent === null) return false;
+    if (el.type === 'radio') { const group = Array.prototype.filter.call(root.querySelectorAll('input[type="radio"]'), r => r.name === el.name); const on = group.find(r => r.checked) || group[0]; return el === on; }
+    return true;
+  });
 
   function showNone() {
     const n = ui.none;
@@ -2068,11 +2073,12 @@
     refs.send = btn('Send back', submitNone, 'primary', { 'data-key': 'none-send' });
     const cancel = btn('Cancel', () => closeNone(false), '', { 'data-key': 'none-cancel' });
     const dialog = h('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'none-h' },
-      h('h2', { id: 'none-h', tabindex: '-1', text: 'None of these' }),
-      h('p', { class: 'quiet', text: 'Tell your writer why none of the drafts work. This set is closed, and they write a new one.' }),
-      closest, chips, refs.hint,
-      h('div', { class: 'fs' }, h('label', { for: 'none-note', text: 'Anything to add? (optional if you chose a reason)' }), refs.note, h('div', { class: 'counter' }, refs.count)),
-      refs.help, refs.err,
+      h('div', { class: 'dlg-body' },
+        h('h2', { id: 'none-h', tabindex: '-1', text: 'None of these' }),
+        h('p', { class: 'quiet', text: 'Tell your writer why none of the drafts work. This set is closed, and they write a new one.' }),
+        closest, chips, refs.hint,
+        h('div', { class: 'fs' }, h('label', { for: 'none-note', text: 'Anything to add? (optional if you chose a reason)' }), refs.note, h('div', { class: 'counter' }, refs.count)),
+        refs.help, refs.err),
       h('div', { class: 'row dlg-actions' }, refs.send, cancel));
     $('dialog-root').replaceChildren(h('div', { class: 'scrim' }, dialog));
     $('desk').setAttribute('inert', '');
