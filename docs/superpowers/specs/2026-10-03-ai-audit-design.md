@@ -20,7 +20,7 @@ So: **no score, no probability, no "AI-written" label.** Findings are tied to sp
 1. **Findings, not verdicts.** The words "likely AI", "AI-generated" or any percentage never appear as a conclusion about a text. A report says `reads like default model prose in N places` only when a cluster is present, and `no cluster of default-model habits found; this does not show a person wrote it` otherwise.
 2. **Weak tells are not flagged.** Perfect grammar, formal register, plain or constrained wording, isolated transitions, "robotic" tone: never. The report says that plain wording and non-native writing trigger some detectors in published research and that this audit does not treat them as findings.
 3. **Hard artifacts first, as defects.** They are defects in finished text whoever wrote it, so they are reported as errors with the exact span and no inference about authorship.
-4. **Soft tells count together.** One or two are coincidence; the cluster rule needs several distinct families. The threshold is a convention set from measured human false-positive rates on a held-out sample (see "Measuring it"), not taken from a source.
+4. **Soft tells count together.** (Superseded by v2 below: no cluster rule.) One or two are coincidence; the cluster rule needed several distinct families. The threshold was a convention set from measured human false-positive rates on a held-out sample (see "Measuring it"), not taken from a source.
 5. **Revision, not evasion.** The audit points at generic spans and suggests specific directions (add the fact, name the source, cut the formula). It says nothing about passing a detector and the skill never promises that.
 6. **Versioned and dated.** Every lexicon entry has an era or model tag; the structural patterns carry their source; the report prints the lexicon's review date.
 
@@ -57,7 +57,7 @@ Before the audit is described as useful, measure what it flags.
 
 ## Testing
 
-Pure tests for each detector (matches, near-misses, a human-writing counter-example per family, markdown versus plain text, code blocks and quotations excluded), the cluster rule, the tier output shape, the `--text` rendering and the standing limits text (a test asserts the words "authorship" and "does not" appear and that no verdict phrases do). A golden audit of a model-like paragraph and of a human abstract. The measurement harness is a script plus the published numbers, not a unit test of the data.
+Pure tests for each detector (matches, near-misses, a human-writing counter-example per family, markdown versus plain text, code blocks and quotations excluded), the tier output shape, the `--text` rendering and the standing limits text (a test asserts the words "authorship" and "does not" appear and that no verdict phrases do). A golden audit of a model-like paragraph and of a human abstract. The measurement harness is a script plus the published numbers, not a unit test of the data.
 
 ## Out of scope
 
@@ -65,7 +65,7 @@ Authorship probabilities, any numeric "AI-ness" score, detecting a specific mode
 
 ## Risks
 
-- **Misuse as an accusation.** Mitigated by wording, the standing limits text and the cluster rule; not removable. The report must be unattractive as evidence.
+- **Misuse as an accusation.** Mitigated by wording and the standing limits text; not removable. The report must be unattractive as evidence.
 - **Goodhart.** Writers (and agents) can chase the findings and produce new tells. The skill says to add specifics and cut formulas, not to swap words, and the report says a clean result proves nothing.
 - **Decay.** Vocabulary and formatting habits move with each model generation. Era tags and the review date make staleness visible; the threshold is recalibrated with the sample when the lexicon changes.
 - **Narrow measurement.** One text genre, one model family for the model sample. Stated in the write-up.

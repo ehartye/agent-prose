@@ -127,7 +127,7 @@ Most frequent soft spans in the human group: *serves as* (4), *additionally* (4)
 
 ### What the two samples say together
 
-- **No sensitivity was measured, in either genre or for either model.** In both samples the share of texts with any soft finding is higher for the human text than for the model text, and the cluster rule fires for neither. The audit does not distinguish these model samples from human writing and must not be read as if it did.
+- **No sensitivity was measured, in either genre or for either model.** In both samples the share of texts with any soft finding is higher for the human text than for the model text, and the cluster rule fires for neither. (This was the v1 result. In v2 the `triplet-density` threshold was set from the same human data, so its model-versus-human gap is not an independent sensitivity measure either.) The audit does not distinguish these model samples from human writing and must not be read as if it did.
 - **The false-positive side is reassuring but narrow.** With the cluster rule at 0 of 350 (both halves, abstracts) and 0 of 350 (introductions), human writing in these two genres did not meet it. That says the cluster rule is conservative; it does not say a single family is safe, since individual families flagged between 1% and 10% of human texts.
 - **The samples do not include the models the word lists describe.** The vocabulary and phrase lists are dated to GPT-4, GPT-4o and GPT-5 era output. The two model samples are a current Claude model and an old small GPT model. Claude text in particular shows almost none of the listed habits. Whether the audit detects GPT-4-era prose, longer pieces, marketing copy or prompts that elicit chatty output is unmeasured here.
 - **What this means for the tool.** It is a revision aid for prose that is generic or formulaic where those patterns are present, and it can say nothing useful about who wrote a text. The summary sentence, the standing limits text and the skill all say so. A quiet report is not evidence of anything.
@@ -165,13 +165,14 @@ Added with audit v2, which has no cluster rule and instead prints, beside every 
 | worth-noting | 0/351 (0.0%; 0.0% to 1.1%) | 0/351 (0.0%; 0.0% to 1.1%) | 0/350 (0.0%; 0.0% to 1.1%) | 0/350 (0.0%; 0.0% to 1.1%) |
 | marketing-verbs | 13/351 (3.7%; 2.2% to 6.2%) | 2/351 (0.6%; 0.2% to 2.1%) | 0/350 (0.0%; 0.0% to 1.1%) | 2/350 (0.6%; 0.2% to 2.1%) |
 | restating-closer | 0/351 (0.0%; 0.0% to 1.1%) | 0/351 (0.0%; 0.0% to 1.1%) | 0/350 (0.0%; 0.0% to 1.1%) | 0/350 (0.0%; 0.0% to 1.1%) |
+| triplet-density | 6/351 (1.7%; 0.8% to 3.7%) | 33/351 (9.4%; 6.8% to 12.9%) | 18/350 (5.1%; 3.3% to 8.0%) | 23/350 (6.6%; 4.4% to 9.7%) |
 
 Reading the table:
 
 - **Hard families** (artifact, chat-residue, knowledge-cutoff) were found in none of the 1,402 texts in any column; the upper end of each interval is 1.1%.
 - **Families the table shows at 0 of N in every column** have not been observed in these samples, so their human rate is below about 1% here. That is a statement about these two genres, not a measurement of how rare the phrases are elsewhere: the v2 families came from reader reports and baseline audits of chat-style writing, which neither genre resembles.
 - **The commonest human families.** In the abstracts: vocabulary 8.0%, marketing-verbs 3.7%, negative-parallelism 2.0%, triplet-density 1.7%, from-to-range 1.1%. In the introductions: triplet-density 5.1%, vocabulary 3.1%, copula-avoidance 1.7%, promotional 1.1%, then trailing-participle and negative-parallelism at 0.6% each. These are the families a report should be read most carefully for, since a finding of one is the least unusual in human text.
-- **Triplet density** is the one family whose model sample exceeds the human one in both genres (abstracts 9.4% against 1.7%, introductions 6.6% against 5.1%). Its human rate is low by construction, because its threshold is the human 95th percentile (below).
+- **Triplet density** is the one family whose model sample exceeds the human one in both genres (abstracts 9.4% against 1.7%, introductions 6.6% against 5.1%). Its human rate is low by construction, because its threshold is the human 95th percentile (below). The gap is also partly an artifact of that choice: the threshold was set from this same human data, and the human median is 0 lists per 1,000 words against a threshold of 10.9.
 
 ## The triplet-density threshold
 
@@ -186,7 +187,7 @@ The larger human value is 10.849, so the threshold is 10.9 per 1,000 words (it r
 
 ## Limits
 
-- **Two genres.** Scientific abstracts and encyclopedia introductions. Blog posts, emails, marketing copy, fiction, speech and chat answers are not measured, and the families the v2 additions target (openers, announcements, roadmap sentences, "whether you're") mostly live there. The line printed with each family says "other genres may differ" for this reason.
+- **Two genres.** Scientific abstracts and encyclopedia introductions. Blog posts, emails, marketing copy, fiction, speech and chat answers are not measured, and the families the v2 additions target (openers, announcements, roadmap sentences, "whether you're") probably live there (an inference from where readers reported them, not something measured here). The line printed with each family says "other genres may differ" for this reason.
 - **One model family plus an older model.** The abstract model sample is one current Claude model with a plain prompt; the introduction sample is one old, small GPT model. Neither is the kind of model the word lists describe, so the model columns say little about those models.
 - **Nativeness is unknown.** arXiv authors include many non-native English writers, and the Wikipedia introductions come from editors of unknown background. The rates describe these samples and cannot be split by writer.
 - **These samples only.** A rate is the share of texts in a sample of about 350 with at least one finding, with an interval that is wide for small counts (for 0 of 350, up to 1.1%). It is not a probability about any passage, and the audit does not use it as one: it reports the rate so a reader can see how ordinary a finding is in human writing.
