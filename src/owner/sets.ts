@@ -6,6 +6,7 @@ import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
 import { FORMATS } from '../kinds.ts';
 import { assertDirections } from './directions.ts';
+import { OriginalSchema, SourcePath, snapshotOriginal } from './original.ts';
 import { writeFileAtomic } from './fsutil.ts';
 import { ID_RE, newId, setDir, setsDir, validId } from './paths.ts';
 
@@ -25,12 +26,6 @@ const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 const SetFileName = z.string().min(1).max(100)
   .regex(SET_FILE_RE, 'must be a plain file name (letters, digits, dot, dash, underscore; no folders)')
   .refine(n => !n.includes('..') && !n.endsWith('.') && !WINDOWS_DEVICE.test(n.split('.')[0]), 'must be a plain file name (no "..", no trailing dot, no device name)');
-/** The draft a set was made from: a project-relative path (folders allowed), but never absolute, never with `..`, never a NUL. */
-const SourcePath = z.string().min(1).refine(
-  v => !v.includes('\u0000') && !isAbsolute(v) && !/^[A-Za-z]:/.test(v) && !v.split(/[\\/]/).includes('..'),
-  'must be a relative path inside the project',
-);
-
 export const VariantSchema = z.strictObject({
   index: z.number().int().min(1),
   file: SetFileName,
@@ -73,6 +68,8 @@ export const SetSchema = z.strictObject({
   picked: z.number().int().optional(),
   pickedAt: z.string().optional(),
   brief: BriefSchema.optional(),
+  /** The line(s) this set revises, snapshotted when the set was made. Context only: never a candidate, never scored. */
+  original: OriginalSchema.optional(),
 });
 
 export type Variant = z.infer<typeof VariantSchema>;
@@ -169,6 +166,8 @@ export interface CreateOptions {
   directions?: string[]; count?: number; now?: Date; id?: string;
   /** The brief to record: new words, or (a refine round) another set's brief taken whole, confirmation included. */
   brief?: BriefInput | Brief;
+  /** Line refs ("12", "12-13", comma list) of the draft this set revises: snapshotted as `original`. */
+  lines?: string;
 }
 
 const isBrief = (b: BriefInput | Brief): b is Brief => 'confirmedAt' in b || 'characterRef' in b;
@@ -191,6 +190,7 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
   if (existsSync(dir)) throw new ProseError('E_CONFLICT', `Set ${id} already exists`);
   const ext = EXT[doc.format];
   const text = readFileSync(draft, 'utf8');
+  const original = opts.lines === undefined ? undefined : snapshotOriginal(relSource(project, draft), text, doc.format, doc.form, opts.lines);
   // Build in a temp directory and rename when complete, so a failure never leaves a half-built set.
   const tmp = join(setsDir(project), `.tmp-${id}`);
   rmSync(tmp, { recursive: true, force: true });
@@ -203,7 +203,7 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
     });
     const set = SetSchema.parse({
       schema: 'prose/set@1', id, uid: randomBytes(6).toString('hex'), createdAt: now.toISOString(), form: doc.form, format: doc.format,
-      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}),
+      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}),
     });
     writeFileAtomic(join(tmp, 'set.json'), JSON.stringify(set, null, 2) + '\n');
     renameSync(tmp, dir);
