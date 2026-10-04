@@ -12,6 +12,7 @@ import { assertDirections } from '../owner/directions.ts';
 import { EVENT_ID_RE, setDir } from '../owner/paths.ts';
 import { withSetLock } from '../owner/fsutil.ts';
 import { predictWithModel, repairModelPrediction } from '../taste/prediction.ts';
+import { isStale, originalLines } from '../owner/original.ts';
 import { briefView, createSet, editedBrief, listSetsDetailed, readSet, variantPath, writeSet, type Brief, type BriefInput } from '../owner/sets.ts';
 
 const whole = (text: string, what: string): number => {
@@ -37,7 +38,8 @@ export function registerSetCommands(program: Command, io: Io): void {
     .option('--context <text>', 'the brief: where and how the lines are heard (at most 400 characters)')
     .option('--brief-confirmed', 'the owner agreed to this brief; without it the set records the brief as unconfirmed and set check warns')
     .option('--brief-from <set-id>', "copy another set's brief, confirmation included (a refine round); not with --character or --context")
-    .action((draft: string, opts: { directions?: string; count?: string; id?: string; character?: string; context?: string; briefConfirmed?: boolean; briefFrom?: string }) => {
+    .option('--lines <refs>', 'the existing line(s) this set revises: source line numbers or ranges of the draft, e.g. 12 or 12-13,20; shown to the owner beside the variants (omit for a new line)')
+    .action((draft: string, opts: { directions?: string; count?: string; id?: string; character?: string; context?: string; briefConfirmed?: boolean; briefFrom?: string; lines?: string }) => {
       const project = needProject(dirname(resolve(draft)));
       let brief: BriefInput | Brief | undefined;
       if (opts.briefFrom !== undefined) {
@@ -50,6 +52,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       }
       const s = createSet(project, draft, {
         ...(brief ? { brief } : {}),
+        ...(opts.lines !== undefined ? { lines: opts.lines } : {}),
         directions: csv(opts.directions),
         ...(opts.count !== undefined ? { count: Number(opts.count) } : {}),
         ...(opts.id ? { id: opts.id } : {}),
@@ -58,6 +61,7 @@ export function registerSetCommands(program: Command, io: Io): void {
         set: s.id, dir: setDir(project, s.id), form: s.form, base: s.base,
         variants: s.variants.map(v => ({ index: v.index, file: v.file, direction: v.direction })),
         brief: s.brief ? briefView(s.brief) : null,
+        original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: false } : null,
         next: `${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
       });
     });
@@ -109,6 +113,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       io.emit({
         set: s.id, project, form: s.form, directions: s.directions, picked: s.picked ?? null,
         brief: s.brief ? briefView(s.brief) : null,
+        original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: isStale(project, s.original) } : null,
         prediction: existsSync(`${setDir(project, id)}/prediction.json`),
         keep: check.keep, next: presentNext(check.keep, check.next),
         variants: s.variants.map(v => {

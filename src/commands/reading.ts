@@ -15,6 +15,7 @@ import { withDirLockAsync } from '../owner/fsutil.ts';
 import { newId, proseHome, sessionDir, sessionsDir } from '../owner/paths.ts';
 import { predictionProblem } from '../owner/pick.ts';
 import { readPrediction, textHash, variantHash } from '../owner/prediction.ts';
+import { isStale, originalLines } from '../owner/original.ts';
 import { basePath, readSet, variantPath } from '../owner/sets.ts';
 import {
   ReadingServer, SERVER_API, displayPlan, frozenHash, labelOf, probe, rankAddresses, isStopped, readServerInfo, recordStopped, registerProject, roundMaps,
@@ -195,10 +196,16 @@ function describe(l: Loaded, event: StoredEvent) {
   });
   const champion = locate(l, event.champion).file;
   const like = event.like === null ? null : locate(l, event.like).file;
+  // The line the owner is revising (context for the next round; never a candidate). Null for a new line or an unreadable set.
+  let original: { source: string; lines: ReturnType<typeof originalLines>; stale: boolean } | null = null;
+  try {
+    const o = readSet(l.project, l.session.setId).original;
+    if (o) original = { source: o.source, lines: originalLines(o), stale: isStale(l.project, o) };
+  } catch { /* the session still reads without it */ }
   const directions = event.directions.length ? ` toward ${event.directions.join(', ')}` : '';
   return {
     event: 'refine', champion: event.champion, championLabel: label(event.champion), championFile: champion,
-    directions: event.directions, like: event.like, ...(like ? { likeFile: like } : {}), notes,
+    directions: event.directions, like: event.like, ...(like ? { likeFile: like } : {}), notes, original,
     next: `write a new set from the champion${directions}${notes.length ? ' using the notes' : ''}: prose set new ${champion ?? '<champion draft>'}${event.directions.length ? ` --directions ${event.directions.join(',')}` : ''}; then prose reading round --id ${id} --set <new-set>`,
   };
 }

@@ -9,6 +9,10 @@ import { BARELY_CHANGED_AT, DUPLICATE_AT, SIMILAR_AT, similarity } from './simil
 import { basePath, variantPath, type PromptSet } from './sets.ts';
 import { MIN_VARIANTS } from './sets.ts';
 import { round2 } from '../text.ts';
+import { readFileSync } from 'node:fs';
+import { originalRefs } from './original.ts';
+import { unitsOf } from '../reading/units.ts';
+import { unitSpans } from '../strike/spans.ts';
 
 export interface VariantCheck {
   index: number;
@@ -37,6 +41,29 @@ export interface CheckResult {
 const proseText = (doc: Doc) => doc.blocks.filter(b => PROSE_KINDS.has(b.kind)).map(b => b.text).join('\n');
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
+/**
+ * For a revision (a set with an `original`): the base lines outside the selection, as normalised text. A variant that no
+ * longer holds each of them (counted, so a deleted repeat counts) changed something it was not asked to.
+ */
+function outsideSelection(base: string, set: PromptSet): string[] {
+  if (!set.original) return [];
+  const refs = originalRefs(set.original);
+  const units = unitsOf(base, set.format, set.form);
+  return unitSpans(base, set.format, set.form).filter(s => !refs.has(s.ref)).map(s => norm(units[s.index]));
+}
+
+/** How many of the lines outside the selection are gone from the variant, and the first of them. */
+function changedOutside(outside: string[], variantText: string, set: PromptSet): { count: number; first: string } | null {
+  const have = new Map<string, number>();
+  for (const u of unitsOf(variantText, set.format, set.form)) { const k = norm(u); have.set(k, (have.get(k) ?? 0) + 1); }
+  const lost: string[] = [];
+  for (const u of outside) {
+    const n = have.get(u) ?? 0;
+    if (n > 0) have.set(u, n - 1); else lost.push(u);
+  }
+  return lost.length ? { count: lost.length, first: lost[0] } : null;
+}
+
 interface Loaded { doc: Doc; text: string; vec: FeatureVector }
 
 export function checkSet(project: string, set: PromptSet): CheckResult {
@@ -44,6 +71,8 @@ export function checkSet(project: string, set: PromptSet): CheckResult {
   const baseText = proseText(baseDoc);
   const baseVec = featureVector(baseDoc);
   const baseErrors = new Set(lint(baseDoc).errors.map(f => f.rule));
+  let outside: string[] = [];
+  try { outside = outsideSelection(readFileSync(basePath(project, set), 'utf8'), set); } catch { /* a base that cannot be read has no selection to protect */ }
 
   const loaded = new Map<number, Loaded>();
   const variants: VariantCheck[] = set.variants.map(v => {
@@ -77,6 +106,12 @@ export function checkSet(project: string, set: PromptSet): CheckResult {
       const score = round2(directionScore(baseVec, vec, v.direction));
       out.movement = { direction: v.direction, score, moved: score >= moveMin(v.direction) };
       if (!out.movement.moved && out.reasons.length === 0) out.warnings.push(`weak-direction: ${v.direction} moved ${score} (needs at least ${moveMin(v.direction)})`);
+    }
+    if (outside.length) {
+      try {
+        const lost = changedOutside(outside, readFileSync(variantPath(project, set, v), 'utf8'), set);
+        if (lost) out.warnings.push(`outside-selection-changed: ${lost.count} line${lost.count === 1 ? '' : 's'} outside the selection changed or went missing (first: "${lost.first.slice(0, 60)}")`);
+      } catch { /* the parse above already decided this variant */ }
     }
     if (out.reasons.length) out.status = 'rejected';
     return out;

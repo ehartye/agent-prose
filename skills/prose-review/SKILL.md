@@ -28,6 +28,13 @@ taste is yours. This skill puts the choice with the owner and makes the options 
    It describes the speaker and the setting; it is not a taste signal and changes no ranking.
    Name the directions, one per variant:
    `prose set new <draft> --directions punchier,drier,warmer --count 4 --character "<who>" --context "<where>" --brief-confirmed`
+   When you are improving a line that exists, name it with `--lines <refs>`: source line numbers or
+   ranges of the draft (`--lines 12`, `--lines 12-13,20`). The page shows them above the variants as
+   "The current line", so the owner judges each rewrite against what is there. It is context only: the
+   owner cannot pick it and it is never scored or learned from. Leave `--lines` off for a new line,
+   and in a refine round (the page keeps the first set's line). `set show` says `stale: true` when
+   the draft changed since; `set check` warns `outside-selection-changed` when a variant altered
+   a line you did not select.
    Change the words later with `prose set brief <id> --character ... --context ...` (it clears the
    confirmation until the owner agrees again and you pass `--confirmed`); a picked set refuses edits.
    Directions: punchier, shorter, longer, warmer, drier, more-formal, less-formal, plainer,
@@ -83,7 +90,7 @@ depend on chat. After step 6:
 3. Give the owner BOTH links it prints, the hostname one and the IP one: phones often cannot
    resolve the hostname. If Windows Firewall blocks a phone, give them the port from the output.
 4. End your turn, or run `prose reading wait --id <id>` in the background. It returns when the
-   owner asks to refine, ships or abandons.
+   owner asks to refine, ships or abandons; a refine request carries `original` (the current line, if any).
 5. On a refine request, write a new set from the champion toward the directions and notes
    (`prose set new <champion file> --brief-from <previous-set> --directions ...`, which carries the
    confirmed brief), rewrite, check and predict as above, then

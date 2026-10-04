@@ -67,6 +67,17 @@ describe('the brief', () => {
   });
 });
 
+describe('the existing line', () => {
+  const flat = (skill: string) => readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8').replaceAll('\r\n', '\n').replace(/\s+/g, ' ');
+  it('prose-review says when to pass --lines, what the page shows, and that it is context only', () => {
+    const text = flat('prose-review');
+    for (const needle of ['--lines <refs>', 'The current line', 'context only', 'never scored or learned from', 'Leave `--lines` off for a new line', 'outside-selection-changed', 'stale: true']) {
+      expect(text, needle).toContain(needle);
+    }
+    expect(text.indexOf('--lines <refs>')).toBeLessThan(text.indexOf('Rewrite each variant file in place'));
+  });
+});
+
 describe('the plugin stands alone', () => {
   // docs/ may show Fountain note syntax (double brackets), so only the plugin's own files get the wikilink check.
   const docFiles = ['docs'].flatMap(p => readdirSync(join(root, p), { recursive: true }).map(f => join(root, p, String(f))).filter(f => /\.(md|json)$/.test(f)));
