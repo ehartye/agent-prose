@@ -90,7 +90,8 @@ The owner reads, hears and compares the kept variants in a browser, so the choic
 depend on chat. After step 6:
 
 1. Tell the owner the link will be visible to anyone on the home network, and that whoever has it can
-   also mark lines of the draft as struck (a record: the page removes no text), and offer local-only
+   also delete lines from the draft (the page shows the exact text and asks the owner to confirm; an
+   undo puts them back), and offer local-only
    (this machine): `prose reading open --set <id> --local`. Wait for their answer if they hesitate.
 2. Run `prose reading open --set <id>` (or the `--local` form; add `--prompt "<what they are reading for>"`).
    A server that is already running is reused as it is, local or not; the output's notice says which.

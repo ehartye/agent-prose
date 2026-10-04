@@ -92,6 +92,34 @@ export function withoutRows(text: string, rows: Removed[]): string {
   return rawLines(text).filter((_, k) => !gone.has(k + 1)).join('');
 }
 
+/**
+ * The inverse of `withoutRows`: put each row's raw lines back at the line number it came from (numbers are pre-removal, so
+ * rows go in ascending order and every other line keeps its place). Refuses rows that are out of order, overlap, or whose
+ * raw text is not the number of lines they claim, so a damaged log row restores nothing.
+ */
+export function restoreRows(text: string, rows: Removed[]): string | null {
+  const sorted = [...rows].sort((a, b) => a.start - b.start);
+  const parts = new Map<number, string>();
+  let prev = 0;
+  for (const r of sorted) {
+    const lines = rawLines(r.raw);
+    if (r.start <= prev || r.end < r.start || lines.length !== r.end - r.start + 1) return null;
+    lines.forEach((l, k) => parts.set(r.start + k, l));
+    prev = r.end;
+  }
+  const current = rawLines(text);
+  const total = current.length + parts.size;
+  const out: string[] = [];
+  let at = 0;
+  for (let n = 1; n <= total; n++) {
+    const back = parts.get(n);
+    if (back !== undefined) out.push(back);
+    else if (at < current.length) out.push(current[at++]);
+    else return null;
+  }
+  return at === current.length ? out.join('') : null;
+}
+
 export type Simulation = { ok: true; removed: Removed[]; after: string } | { ok: false; why: string };
 
 const WHY_CHANGED = 'removing it would change other lines of the draft';

@@ -270,9 +270,7 @@ describe('prose strike list', () => {
 describe('prose capabilities and the real CLI', () => {
   it('lists the strike commands', async () => {
     const out = await run('capabilities');
-    expect(out.commands).toEqual(expect.arrayContaining(['strike add', 'strike clear', 'strike list']));
-    expect(out.commands).not.toContain('strike apply');
-    expect(out.commands).not.toContain('strike undo');
+    expect(out.commands).toEqual(expect.arrayContaining(['strike add', 'strike clear', 'strike list', 'strike apply', 'strike undo']));
   });
 
   it('two processes striking different lines at once both land, with unique ids and contiguous seq (the lock)', async () => {

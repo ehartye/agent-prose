@@ -160,7 +160,7 @@
 
   /**
    * The pending bar's words: how many lines are struck and, when some were struck against an older draft, that they can
-   * only be undone. Null when nothing is struck. Nothing is removed from the draft by a strike, and the bar says so.
+   * only be undone. Null when nothing is struck. Nothing is removed from the draft by a strike: that takes Review and apply.
    */
   function pendingSummary(draft) {
     const n = draft && Array.isArray(draft.strikes) ? draft.strikes.length : 0;
@@ -171,9 +171,33 @@
       text: n === 1 ? '1 line struck' : n + ' lines struck',
       note: stale
         ? 'The draft changed since ' + stale + ' of these ' + (stale === 1 ? 'was' : 'were') + ' struck. Undo ' + (stale === 1 ? 'it' : 'them') + ' and strike again.'
-        : 'Struck lines stay in the draft until your writer applies them.',
+        : 'Struck lines stay in the draft until you review and apply them.',
     };
   }
+
+  /** True when the strikes can be applied: some are struck, none is stale, and the draft can still change. */
+  const applyReady = draft => !!(draft && draft.editable && Array.isArray(draft.strikes) && draft.strikes.length > 0 && !draft.strikes.some(s => s.stale));
+
+  /** The latest removal that can still be undone ("Removed 3 lines"), or null: the server only sends it while the draft is as that apply left it. */
+  function appliedSummary(draft) {
+    const a = draft && draft.editable ? draft.applied : null;
+    return a ? { id: a.id, text: 'Removed ' + a.count + (a.count === 1 ? ' line' : ' lines') } : null;
+  }
+
+  /** One row of the apply plan as words: where, the exact text, why, and what else goes with it. The text is shown as text, never parsed. */
+  function removalParts(row) {
+    const where = row.start === row.end ? 'Line ' + row.start : 'Lines ' + row.start + '-' + row.end;
+    const text = row.kind === 'blank' ? '' : String(row.text);
+    let extra = null;
+    if (row.kind === 'cue') extra = 'Also removes the speaker cue ' + text.trim();
+    else if (row.kind === 'blank') extra = 'Also removes a blank line, so the spacing stays even';
+    else if (row.kind === 'key') extra = 'Also removes the list heading ' + text.trim() + ' that is left empty';
+    return { where, text, extra, reason: row.reason ? reasonLabel(row.reason) : null, note: row.note || null };
+  }
+
+  /** The heading and the button of a plan: how many struck lines go. */
+  const planTitle = plan => 'Remove ' + plan.count + (plan.count === 1 ? ' line' : ' lines') + ' from the draft?';
+  const planButton = plan => 'Remove ' + plan.count + (plan.count === 1 ? ' line' : ' lines');
 
   /** The body of a strike request, or null when the pick is not complete (no reason, a note that is too long). The draft path never goes to the server. */
   function strikeBody(draft, pick, eventId) {
@@ -195,7 +219,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED };
     return;
   }
 
@@ -215,7 +239,7 @@
   const ui = {
     marks: {}, marksRound: -1, selected: null, noteDraft: '', rate: 1, directions: [], like: '', confirmShip: false,
     showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: true, originalOpen: true,
-    view: 'variants', pick: null,
+    view: 'variants', pick: null, plan: null,
   };
 
   const $ = id => document.getElementById(id);
@@ -290,6 +314,8 @@
     data = p;
     if (quiet) { renderedSig = signature(p); return; }
     if (changed) render();
+    // The plan on screen belongs to one draft and one set of strikes; when either moves, show the new plan instead of a stale one.
+    if (ui.plan && !ui.plan.busy && !ui.plan.loading && p.draft && ui.plan.rev !== p.draft.rev) openPlan('The draft or the strikes changed, so this is the new list. Nothing has been removed.');
   }
 
   async function load() {
@@ -355,6 +381,49 @@
     }
   }
   const clearStrike = id => strikeSend('/clear', { strike: id, eventId: newEventId(window.crypto) });
+  const undoRemoval = applied => strikeSend('/undo', { apply: applied.id, eventId: newEventId(window.crypto) });
+
+  /**
+   * Ask the server for the plan (the exact text each strike would remove) and show it. Nothing is removed here: the plan
+   * is read only. `why` says why the owner is looking at a new plan.
+   */
+  async function openPlan(why) {
+    if (!data || !data.draft) return;
+    const rev = data.draft.rev;
+    ui.plan = { loading: true, rev, why: why || null, busy: false, plan: null };
+    render();
+    try {
+      const res = await request('GET', '/api/session/' + sessionId + '/strike/preview');
+      if (!ui.plan) return;
+      if (res.ok && res.body) { ui.plan = { loading: false, rev, why: why || null, busy: false, plan: res.body }; hideNotice(); }
+      else { ui.plan = null; showProblem(res); await load(); }
+    } catch { ui.plan = null; showBanner(true); }
+    render();
+  }
+
+  /** Remove the lines the plan shows: the digest of that exact plan goes to the server, which hands it to the CLI. */
+  async function confirmPlan() {
+    const cur = ui.plan;
+    if (!cur || !cur.plan || busy) return;
+    busy = true; setBusy(true); cur.busy = true;
+    try {
+      const res = await post('/api/session/' + sessionId + '/strike/apply', JSON.stringify({ digest: cur.plan.digest, eventId: newEventId(window.crypto) }));
+      if (res.ok && res.body && res.body.state) { hideNotice(); showBanner(false); ui.plan = null; ui.view = 'draft'; apply(res.body.state); render(); return; }
+      cur.busy = false;
+      busy = false; setBusy(false);
+      const msg = res.body && res.body.error && res.body.error.message;
+      if (res.status === 409) { await openPlan((msg ? msg + '. ' : '') + 'Here is the current list; nothing was removed.'); return; }
+      showProblem(res);
+    } catch { cur.busy = false; showBanner(true); }
+    finally { busy = false; setBusy(false); }
+  }
+
+  function closePlan() {
+    ui.plan = null;
+    render();
+    const again = app.querySelector('[data-role="review"]');
+    if (again) again.focus();
+  }
 
   // ---- read-aloud ----
 
@@ -790,7 +859,7 @@
     setTitle('The draft', draft ? draft.source : '');
     if (!draft) return [h('p', { class: 'quiet', text: 'The draft is not available. It may have moved, been deleted, or no longer be readable.' })];
     const out = [h('p', { class: 'quiet', text: draft.editable
-      ? 'Strike a line you want gone and say why. Striking only records it: nothing is removed from the draft.'
+      ? 'Strike a line you want gone and say why. Striking only records it: nothing leaves the draft until you review and apply.'
       : 'This session is closed, so strikes can no longer change.' })];
     const stale = staleStrikes(draft);
     if (stale.length) {
@@ -823,7 +892,44 @@
       h('strong', { text: sum.text }),
       h('span', { class: 'quiet', text: ' ' + sum.note }),
       sum.stale && data.draft.editable ? btn(stale.length === 1 ? 'Undo it' : 'Undo them', async () => { for (const st of stale) { if (!(await clearStrike(st.id))) break; } }, 'link', { 'data-gate': '1' }) : null,
+      applyReady(data.draft) ? btn('Review and apply', () => openPlan(), 'primary', { 'data-gate': '1', 'data-role': 'review' }) : null,
       ui.view !== 'draft' ? btn('See the draft', () => { ui.view = 'draft'; render(); }, 'link') : null);
+  }
+
+  /** After an apply, while it can still be undone: what was removed and the way back. */
+  function removedBar() {
+    const sum = data && data.draft ? appliedSummary(data.draft) : null;
+    if (!sum) return null;
+    return h('div', { class: 'pendingbar removedbar', role: 'status' },
+      h('strong', { text: sum.text }),
+      h('span', { class: 'quiet', text: ' Undo puts them back.' }),
+      btn('Undo removal', () => undoRemoval(data.draft.applied), 'primary', { 'data-gate': '1' }));
+  }
+
+  /** The apply review: every line that would go, as text, and the explicit confirmation. Replaces the screen while it is open. */
+  function planScreen() {
+    const cur = ui.plan;
+    setTitle('Review before removing', data.draft ? data.draft.source : '');
+    if (cur.loading || !cur.plan) return [h('p', { class: 'quiet', text: 'Working out exactly what would be removed...' })];
+    const plan = cur.plan;
+    const rows = plan.removed.map(row => {
+      const part = removalParts(row);
+      return h('div', { class: 'plan-row plan-' + row.kind },
+        h('div', { class: 'plan-where' }, h('strong', { text: part.where }), part.reason ? h('span', { class: 'chip', text: part.reason }) : null),
+        part.extra ? h('p', { class: 'quiet', text: part.extra }) : null,
+        row.kind === 'blank' ? null : h('pre', { class: 'plan-text', text: part.text }),
+        part.note ? h('p', { class: 'strike-note', text: part.note }) : null);
+    });
+    return [
+      h('h2', { class: 'plan-title', tabindex: '-1', text: planTitle(plan) }),
+      cur.why ? h('p', { class: 'plan-why', role: 'status', text: cur.why }) : null,
+      h('p', { class: 'warn', text: 'This link can delete lines from the draft.' }),
+      h('p', { class: 'quiet', text: 'These are the exact lines that will be removed from ' + (data.draft ? data.draft.source : 'the draft') + '. Undo removal puts them back as long as the draft is not edited meanwhile.' }),
+      h('div', { class: 'plan-rows' }, rows),
+      h('div', { class: 'row plan-actions' },
+        btn(planButton(plan), confirmPlan, 'primary danger', { 'data-gate': '1', 'data-role': 'confirm' }),
+        btn('Not yet', closePlan, '', { 'data-gate': '1' })),
+    ];
   }
 
   /** The switch between the variants and the draft, in the header: only when the session has a draft to show. */
@@ -873,7 +979,8 @@
     viewBar();
     app.className = stage === 'duel' && !(ui.view === 'draft' && data.draft) ? 'wide' : '';
     let screen;
-    if (ui.view === 'draft' && data.draft) screen = draftScreen();
+    if (ui.plan) screen = planScreen();
+    else if (ui.view === 'draft' && data.draft) screen = draftScreen();
     else if (stage === 'lineup') screen = lineupScreen();
     else if (stage === 'duel') screen = duelScreen();
     else if (stage === 'refine') screen = refineScreen();
@@ -882,7 +989,8 @@
     else { setTitle('This session is closed', ''); screen = [h('p', { text: 'Thanks for reading. Your writer closed this session, so there is nothing more to do here.' })]; }
     const prompt = data.session.prompt && stage !== 'shipped' && stage !== 'abandoned' ? h('p', { class: 'quiet', text: data.session.prompt }) : null;
     const items = [prompt, ...screen].flat(2).filter(Boolean);
-    const bar = pendingBar();
+    const bars = ui.plan ? [] : [pendingBar(), removedBar()].filter(Boolean);
+    const bar = bars.length ? h('div', { class: 'bars' }, bars) : null;
     if (bar) {
       // One sticky dock at the bottom: the pending bar above the screen's own action bar, so the two never overlap.
       const at = items.findIndex(el => el.classList && el.classList.contains('actionbar'));
@@ -891,6 +999,7 @@
     }
     app.replaceChildren(...items);
     updatePlayState();
+    if (ui.plan && ui.plan.plan && !ui.plan.focused) { ui.plan.focused = true; const t = app.querySelector('.plan-title'); if (t) t.focus(); }
   }
 
   // ---- start ----
