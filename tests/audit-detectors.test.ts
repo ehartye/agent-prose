@@ -384,6 +384,20 @@ describe('new hallmark families on whole drafts', () => {
     expect(famOf(BLOG, 'stock-opener').map(f => f.text)).toEqual(['Every team']);
     expect(famOf(BLOG, 'roadmap-sentence').map(f => f.text)).toEqual(['In this post, we’ll look at']);
   });
+  describe('stock-opener after headings and frontmatter', () => {
+    const P = 'Every team makes hundreds of decisions each quarter. Most are never written down.';
+    const spans = (t: string) => famOf(t, 'stock-opener').map(f => f.text);
+    it('flags the opener below a title heading', () => expect(spans(`# Why Your Team Should Write Down Its Decisions\n\n${P}`)).toEqual(['Every team']));
+    it('flags the opener below H1 then H2', () => expect(spans(`# Decisions\n\n## Why write them down\n\n${P}`)).toEqual(['Every team']));
+    it('flags the opener below frontmatter then a heading', () => expect(spans(`---\ntitle: Decisions\n---\n\n# Decisions\n\n${P}`)).toEqual(['Every team']));
+    it('does not flag when the first body block after the heading is a list', () => expect(spans(`# Decisions\n\n- one\n- two\n\n${P}`)).toEqual([]));
+    it('does not flag when a block quote opens the body', () => expect(spans(`# Decisions
+
+> A quote.
+
+${P}`)).toEqual([]));
+    it('keeps the lab-report near-miss', () => expect(spans('# Methods\n\nSoil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.')).toEqual([]));
+  });
   it('finds several new families in the announcement post', () => {
     const fams = families(POST);
     expect(fams).toEqual(expect.arrayContaining(['announcement-filler', 'marketing-verbs', 'from-to-range', 'restating-closer']));

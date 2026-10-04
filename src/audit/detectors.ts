@@ -157,7 +157,7 @@ const CLOSING = /^(?:Overall|In conclusion),\s/u;
 /**
  * Group 1: openers and announcements. All reader-reported: readers and our baseline audits named them; no published source.
  *
- * Stock opener: only the first sentence of the passage's first paragraph, and only the opening words are the span.
+ * Stock opener: only the first sentence of the first prose paragraph (headings and frontmatter before it are skipped), and only the opening words are the span.
  * "Every <noun>" skips time words ("Every Monday", "Every year"), which open ordinary letters and diaries.
  */
 const TIME_WORDS = String.raw`(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|day|morning|afternoon|evening|night|week|weekend|month|year|summer|winter|spring|autumn|fall|time|once|other|now|one)`;
@@ -171,7 +171,10 @@ const STOCK_OPENER = new RegExp([
 ].join('|'), 'iu');
 
 function stockOpener(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
-  if (u.kind !== 'paragraph' || units.findIndex(x => x.kind === 'paragraph') !== i) return [];
+  // The opener is the first body block after any headings (frontmatter is not a block). A list item, step or
+  // block quote before the paragraph means the passage did not open with prose, and a quote leaves a gap in the block indexes.
+  if (u.kind !== 'paragraph' || units.slice(0, i).some(x => x.kind !== 'heading')) return [];
+  if (units.slice(0, i + 1).some((x, n) => x.index !== units[0].index + n) || units[0].index !== 0) return [];
   const first = sentenceRanges(u.text)[0];
   if (!first) return [];
   const m = STOCK_OPENER.exec(u.text.slice(first[0], first[1]));
