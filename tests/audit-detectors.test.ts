@@ -4,14 +4,19 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseDocument } from '../src/document.ts';
-import { buildReport, LIMITS, renderText } from '../src/audit/report.ts';
-import { clusterOf, DEFAULT_THRESHOLD } from '../src/audit/cluster.ts';
-import { AUDIT_SOURCES, FAMILIES, MEASURED_NOTES, type Finding } from '../src/audit/detectors.ts';
+import { buildReport, EVIDENCE_WORDS, LIMITS, renderText } from '../src/audit/report.ts';
+import { AUDIT_SOURCES, detect, FAMILIES, MEASURED_NOTES, TRIPLET_DENSITY_PER_1000, TRIPLET_FALLBACK_PER_1000, tripletThreshold, unitsOf, type Finding } from '../src/audit/detectors.ts';
+import { RATES_PATH } from '../src/audit/rates.ts';
 import { REFERENCES } from '../src/craft/rules.ts';
 
 const report = (text: string, name = 'draft.md', form?: string) => buildReport(parseDocument(name, text, form ? { form } : {}), text);
 const all = (r: ReturnType<typeof report>) => [...r.tiers.hard, ...r.tiers.soft];
 const famOf = (text: string, family: string, name = 'draft.md') => all(report(text, name)).filter(f => f.family === family);
+
+/** Passages for the density family: 14 filler sentences (112 words) plus triplet sentences of 6 words, so the rate is known. */
+const FILLER = 'We met on Tuesday and walked home together. ';
+const TRIPLET_SENTENCE = 'We bought apples, pears, and plums. ';
+const passage = (triplets: number, filler = 14) => (FILLER.repeat(filler) + TRIPLET_SENTENCE.repeat(triplets)).trim();
 
 /** Each family: texts it must flag, near-misses it must not, and ordinary human writing it must not. */
 const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> = {
@@ -97,6 +102,59 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
     miss: ['Use the **--force** flag once.', '**One** and **two**.'],
     human: ['Some **bold** word and nothing else.'],
   },
+  // group 1: openers and announcements (reader-reported)
+  'stock-opener': {
+    hit: ['Every team makes hundreds of decisions each quarter.', 'In an era of cheap storage, nobody deletes anything.', 'Imagine a kitchen where nothing is labelled.', 'Have you ever wondered why bread rises?', 'In a world where shops close daily, owners worry.', 'In today’s market, tools change quickly.', 'Every business needs a plan.'],
+    miss: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.', 'Every Monday we meet at the pool.', 'We tested the model.\n\nImagine the result.', 'The first line is plain. Have you ever wondered why?', 'Every bolt must be torqued to 40 Nm before the next step.', 'Every ingredient should be at room temperature.', 'Every sample was weighed twice.', 'Imagine my surprise when the door opened.', 'In today’s meeting we agreed on the budget.'],
+    human: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery model was tested twice.'],
+  },
+  'announcement-filler': {
+    hit: ['We’re excited to share some news about the studio.', 'I am thrilled to announce our new office.', 'We are so proud to introduce the new line.', 'I\'m delighted to unveil the plan.'],
+    miss: ['We’re excited about the trip.', 'I’m excited to see you on Saturday.', 'We are proud to serve the town since 1950.', 'We are pleased to share the recipe with you.'],
+    human: ['I am pleased to report that the test passed on the second try.'],
+  },
+  'roadmap-sentence': {
+    hit: ['In this post, we’ll look at what a record contains.', 'In this guide I will walk through the setup.', 'Here’s what we’ll cover.'],
+    miss: ['In this paper, we propose a method for sorting.', 'In this section, we show that the bound holds.', 'Below is the wiring table.', 'Below is a breakdown of the costs by month.', 'Below are the results for each plot.', 'Below, we list the parts we used.', 'Below we walk down the stairs.', 'Here’s what happened next.'],
+    human: ['In this chapter the author argues that the harbour failed.'],
+  },
+  'dive-in': {
+    hit: ['Let’s dive in.', 'Let’s unpack the problem.', 'This is a deep dive into the budget.', 'The talk dives into pricing.', 'Let’s unpack what went wrong.', 'Let’s unpack.', 'Let’s delve into the data.'],
+    miss: ['She dove into the pool.', 'The divers dive into the quarry at noon.', 'He dived into the lake.', 'She dove into the cold sea.', 'The seals dive into the deep dark water.', 'Divers dive into the Mariana trench.', 'Let’s explore the park.', 'Let’s unpack the suitcase.', 'Let’s unpack the groceries.'],
+    human: ['The kids jumped into the lake and swam to the raft.'],
+  },
+  // group 2: phrasing patterns
+  'whether-youre': {
+    hit: ['Whether you’re a seasoned pro or a complete beginner, this guide helps.', 'Whether you are building a startup or running a large team, tools matter.', 'We help everyone. Whether you’re new to the city or a lifelong resident, we welcome you.'],
+    miss: ['Whether you’re coming or not, we start at nine.', 'I wonder whether you’re a member or a guest.', 'Whether we win or lose, the picnic is on Saturday.'],
+    human: ['Please tell me whether you are free on Friday or Saturday.'],
+  },
+  'from-to-range': {
+    hit: ['We serve clients from startups to enterprises.', 'From small startups to global enterprises, teams rely on it.', 'The course suits learners from beginners to experts.'],
+    miss: ['Prices rose from 5 to 10 percent.', 'The train runs from Paris to Lyon.', 'The pipe runs from boilers to radiators.', 'Seeds were collected from plants to trays.', 'Parcels were delivered from depots to shops.', 'Look from the left to the right.', 'Samples were moved from vials to plates.'],
+    human: ['Transfer the cookies from trays to racks and let them cool.'],
+  },
+  'worth-noting': {
+    hit: ['It’s worth noting that the rule changed.', 'It is also worth mentioning the delay.', 'It’s important to remember that costs vary.', 'It is important to understand that results differ.'],
+    miss: ['It is important to read the label before use.', 'It is worth the trip.', 'The notes are worth reading.'],
+    human: ['Note that the valve must stay closed while the tank fills.'],
+  },
+  'marketing-verbs': {
+    hit: ['We leverage our data to grow.', 'The tool streamlines onboarding.', 'A seamless checkout is the goal.', 'Unlock the full potential of your team.', 'It will elevate your brand.', 'We empower teams.', 'Tools that empower your developers.', 'This is a game-changer.', 'They harness the power of wind.', 'Navigating the complexities of tax law is hard.', 'A cutting-edge lab opened.', 'We offer best-in-class support.'],
+    miss: ['The lever gave us leverage over the bolt.', 'Unlock the door and enter.', 'Elevate the patient’s legs on a pillow.', 'The board is empowered to sign.', 'A leveraged buyout closed.', 'Seamless steel pipe was used.', 'The cutting edge of the saw is sharp.', 'Harness the horse before dawn.', 'They harnessed the river for a mill.', 'Harness the wind with a kite.', 'The tenant is empowered by this lease.', 'The board shall empower the clerk.', 'The seamless join was invisible.', 'The position was leveraged at 5 to 1.', 'The fund was leveraged by its lender.'],
+    human: ['Unlock the door with the brass key and leave the lights off.'],
+  },
+  'restating-closer': {
+    hit: ['First point.\n\nIn summary, the plan works.', 'First point.\n\nUltimately, the garden is a success.', 'Point one.\n\nAt the end of the day, it comes down to trust.', 'Point one.\n\nTo sum up, we agree.', 'Point one.\n\nIn short, it works.', 'Point one.\n\nIn essence, the town agreed.'],
+    miss: ['In summary, we agree.\n\nThe next point follows.', 'First point.\n\nThe result was, in short, a draw.', 'First point.\n\nIn conclusion, the plan works.', 'In summary, the plan works.'],
+    human: ['Thanks again for the lamp.\n\nSee you on Sunday.'],
+  },
+  // group 3: density
+  'triplet-density': {
+    hit: [passage(2), passage(3), passage(2, 16)],
+    miss: [passage(1), passage(0), passage(3, 2), 'Mix flour, sugar, and salt. Add eggs, milk, and butter. Stir well. Bake for forty minutes.'],
+    human: ['We dried the soil at 60 C for 24 hours. Each sample was weighed twice on the same balance, and the readings agreed to 0.01 g. The cores came from three plots, which we sampled in March, and the log lists plots, depths, and dates. Nothing else changed between runs.'],
+  },
 };
 
 describe('detectors', () => {
@@ -109,8 +167,11 @@ describe('detectors', () => {
       for (const text of c.hit) it(`flags ${JSON.stringify(text)}`, () => {
         const found = famOf(text, family);
         expect(found.length).toBeGreaterThan(0);
+        // Raw span length from the family's own detector: the finding's text is already squeezed to 120 and proves nothing.
+        const units = unitsOf(parseDocument('d.md', text, {}), [text]);
+        const raw = units.flatMap((u, i) => FAMILIES.find(x => x.id === family)!.find(u, { markdown: true, limited: false }, units, i));
+        for (const s of raw) expect(s.end - s.start, `${family} span`).toBeLessThanOrEqual(120);
         for (const f of found) {
-          expect(f.text.length).toBeLessThanOrEqual(120);
           expect(f.line).toBeGreaterThanOrEqual(1);
           expect(f.why.length).toBeGreaterThan(10);
           expect(f.direction.length).toBeGreaterThan(10);
@@ -199,6 +260,176 @@ describe('detectors', () => {
   });
 });
 
+describe('dive-in does not double-report the vocabulary word', () => {
+  it('leaves a bare "delve into" to the vocabulary family only', () => {
+    expect(all(report('We delve into the data.')).map(f => [f.family, f.text])).toEqual([['vocabulary', 'delve']]);
+  });
+  it('reports "Let’s delve" once, as dive-in, not also as vocabulary', () => {
+    expect(all(report('Let’s delve into the data.')).map(f => [f.family, f.text])).toEqual([['dive-in', 'Let’s delve']]);
+  });
+  it('reports "In today’s fast-paced world" once, as undue-significance, not also as stock-opener', () => {
+    expect(all(report('In today’s fast-paced digital world, shops close.')).map(f => f.family)).toEqual(['undue-significance']);
+  });
+});
+
+describe('group 2 interactions', () => {
+  it('does not report restating-closer where closing-opener already reports the paragraph', () => {
+    for (const t of ['First point.\n\nIn conclusion, the plan works.', 'First point.\n\nOverall, the plan works.'])
+      expect(all(report(t)).map(f => f.family), t).toEqual(['closing-opener']);
+  });
+  it('never reports a marketing verb on a span that vocabulary or promotional already reports', () => {
+    const text = 'We leverage a seamless, groundbreaking and vibrant platform. It will streamline and elevate your brand, and harness the pivotal power.';
+    const found = all(report(text));
+    const m = found.filter(f => f.family === 'marketing-verbs').map(f => f.text);
+    const others = found.filter(f => ['vocabulary', 'promotional'].includes(f.family)).map(f => f.text);
+    expect(m.length).toBeGreaterThan(1);
+    expect(others.length).toBeGreaterThan(1);
+    for (const x of m) for (const o of others) expect(x.includes(o) || o.includes(x), `${x} / ${o}`).toBe(false);
+  });
+});
+
+describe('triplet-density', () => {
+  it('reads the threshold from the rates file: the larger human 95th percentile, rounded up to one decimal', () => {
+    const rates = JSON.parse(readFileSync(RATES_PATH, 'utf8'));
+    const p95s = Object.values<any>(rates.datasets).map(d => d.human.tripletP95);
+    expect(TRIPLET_DENSITY_PER_1000).toBe(Math.ceil(Math.max(...p95s) * 10 - 1e-9) / 10);
+    expect(TRIPLET_DENSITY_PER_1000).not.toBe(TRIPLET_FALLBACK_PER_1000);
+  });
+  it('falls back to a fixed constant when the file is missing or unreadable', () => {
+    expect(TRIPLET_FALLBACK_PER_1000).toBe(9);
+    const dir = mkdtempSync(join(tmpdir(), 'prose-rates-'));
+    try {
+      expect(tripletThreshold(join(dir, 'absent.json'))).toBe(TRIPLET_FALLBACK_PER_1000);
+      writeFileSync(join(dir, 'bad.json'), 'not json');
+      expect(tripletThreshold(join(dir, 'bad.json'))).toBe(TRIPLET_FALLBACK_PER_1000);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('uses the value in an injected rates file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'prose-rates-'));
+    try {
+      const make = (name: string, a: number, b: number) => {
+        const rates = structuredClone(JSON.parse(readFileSync(RATES_PATH, 'utf8')));
+        rates.datasets.arxiv.human.tripletP95 = a;
+        rates.datasets.wikiintro.human.tripletP95 = b;
+        const p = join(dir, name);
+        writeFileSync(p, JSON.stringify(rates));
+        return p;
+      };
+      const low = make('low.json', 1.01, 2.04), high = make('high.json', 40, 50);
+      expect(tripletThreshold(low)).toBe(2.1);
+      const flagged = (text: string, ratesPath?: string) => detect(unitsOf(parseDocument('d.md', text, {})), { markdown: true, limited: false, ...(ratesPath ? { ratesPath } : {}) }).filter(f => f.family === 'triplet-density');
+      expect(flagged(passage(1))).toEqual([]);
+      expect(flagged(passage(1), low)).toHaveLength(1);
+      expect(flagged(passage(1), low)[0].why).toContain('above the 2.1 per 1,000');
+      expect(flagged(passage(2), high)).toEqual([]);
+      expect(flagged(passage(2))).toHaveLength(1);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('with the committed file, a passage just below and just above the threshold behave', () => {
+    const above = passage(2, 21); // 180 words, two lists: 11.11 per 1,000
+    const below = passage(2, 22); // 188 words, two lists: 10.64 per 1,000
+    expect(report(above).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+    expect(report(below).measured.tripletListsPer1000).toBeLessThanOrEqual(TRIPLET_DENSITY_PER_1000);
+    expect(famOf(above, 'triplet-density')).toHaveLength(1);
+    expect(famOf(below, 'triplet-density')).toEqual([]);
+  });
+  it('reports nothing just below the threshold and one finding just above it, in a passage of about 120 words', () => {
+    const below = passage(1); // 118 words, one list: 8.47 per 1,000
+    const above = passage(2); // 124 words, two lists: 16.13 per 1,000
+    expect(report(below).words).toBeGreaterThanOrEqual(100);
+    expect(report(above).words).toBe(124);
+    expect(report(below).measured.tripletListsPer1000).toBeLessThan(TRIPLET_DENSITY_PER_1000);
+    expect(report(above).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+    expect(famOf(below, 'triplet-density')).toEqual([]);
+    expect(famOf(above, 'triplet-density')).toHaveLength(1);
+  });
+  it('says how many lists there are and the rate, and marks the first list only', () => {
+    const [f] = famOf(passage(2), 'triplet-density');
+    expect(f.text).toBe('We bought apples, pears, and plums');
+    expect(f.why).toMatch(/2 three-item lists/);
+    expect(f.why).toMatch(/16\.1 per 1,000 words/);
+  });
+  it('reads the same quantity as the measured value', () => {
+    const r = report(passage(3));
+    const [f] = r.tiers.soft.filter(x => x.family === 'triplet-density');
+    expect(f.why).toContain(`${r.measured.tripletListsPer1000!.toFixed(1)} per 1,000 words`);
+  });
+  it('needs 100 words: a short passage dense with lists reports nothing', () => {
+    const t = passage(3, 2);
+    expect(report(t).words).toBeLessThan(100);
+    expect(report(t).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+    expect(famOf(t, 'triplet-density')).toEqual([]);
+  });
+  it('does not run on Fountain drafts', () => {
+    const text = 'Title: T\nForm: tv-drama\n\nINT. GARDEN - DAY\n\n' + passage(3) + '\n';
+    expect(all(report(text, 'g.fountain')).filter(f => f.family === 'triplet-density')).toEqual([]);
+  });
+});
+
+describe('new hallmark families on whole drafts', () => {
+  const BLOG = [
+    'Every team makes hundreds of decisions each quarter. Which vendor to choose, how to structure a database, whether to delay a launch for one more round of testing. Most of these choices are made in meetings or chat threads, and within a few months almost nobody can say exactly why they were made.',
+    'A decision record is a short note kept next to the work. It is worth noting that it does not need to be long, and that a paragraph is usually enough. Whether you’re running a team of five or a department of fifty, the same problem shows up.',
+    'Our own records began as a single shared page that we filled in after each meeting. In this post, we’ll look at what a useful decision record contains, how to keep the habit light enough that people actually follow it, and what we’ve learned from doing it ourselves.',
+  ].join('\n\n');
+  const POST = [
+    'We’re excited to share some news: Harbor & Pine, our small design studio, has launched a brand-identity service built specifically for local restaurants.',
+    'The package covers a logo, a colour palette, and a menu layout, and it leverages everything we have learned from logos to storefronts over the years. Prices start at $900 and a first draft takes two weeks.',
+    'In short, we would love to work with you. Send us a message or comment below, and let’s make your brand taste as good as your food.',
+  ].join('\n\n');
+  const PLAIN = 'The boiler was serviced on 12 March, and the engineer replaced the pressure valve. The flat has been warm since. Mina wants the radiators bled before November; I will do the two upstairs on Saturday and leave the kitchen one for her. The bill was $214, which the landlord has agreed to split with us.';
+  const NEW = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in', 'whether-youre', 'from-to-range', 'worth-noting', 'marketing-verbs', 'restating-closer', 'triplet-density'];
+  const families = (t: string) => [...new Set(all(report(t)).map(f => f.family).filter(f => NEW.includes(f)))];
+
+  it('finds several new families, with the expected spans, in the blog introduction', () => {
+    const fams = families(BLOG);
+    expect(fams).toEqual(expect.arrayContaining(['stock-opener', 'worth-noting', 'whether-youre', 'roadmap-sentence']));
+    expect(famOf(BLOG, 'stock-opener').map(f => f.text)).toEqual(['Every team']);
+    expect(famOf(BLOG, 'roadmap-sentence').map(f => f.text)).toEqual(['In this post, we’ll look at']);
+  });
+  describe('stock-opener after headings and frontmatter', () => {
+    const P = 'Every team makes hundreds of decisions each quarter. Most are never written down.';
+    const spans = (t: string) => famOf(t, 'stock-opener').map(f => f.text);
+    it('flags the opener below a title heading', () => expect(spans(`# Why Your Team Should Write Down Its Decisions\n\n${P}`)).toEqual(['Every team']));
+    it('flags the opener below H1 then H2', () => expect(spans(`# Decisions\n\n## Why write them down\n\n${P}`)).toEqual(['Every team']));
+    it('flags the opener below frontmatter then a heading', () => expect(spans(`---\ntitle: Decisions\n---\n\n# Decisions\n\n${P}`)).toEqual(['Every team']));
+    it('does not flag when the first body block after the heading is a list', () => expect(spans(`# Decisions\n\n- one\n- two\n\n${P}`)).toEqual([]));
+    it('does not flag when a block quote opens the body', () => expect(spans(`# Decisions
+
+> A quote.
+
+${P}`)).toEqual([]));
+    it('keeps the lab-report near-miss', () => expect(spans('# Methods\n\nSoil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.')).toEqual([]));
+    describe('plain-text title line', () => {
+      const TITLE = 'Why Your Team Should Write Down Its Decisions';
+      it('skips a plain title line and flags the next paragraph', () => expect(spans(`${TITLE}
+
+${P}`)).toEqual(['Every team']));
+      it('does not treat a 15-word first line as a title', () => expect(spans(`Why your team should write down its decisions before the next quarter begins and ends
+
+${P}`)).toEqual([]));
+      it('does not treat a first line ending in a period as a title', () => expect(spans(`${TITLE}.
+
+${P}`)).toEqual([]));
+      it('never skips the only paragraph', () => expect(spans('Every team makes hundreds of decisions each quarter')).toEqual(['Every team']));
+      it('does not hit when the title line is followed by a list', () => expect(spans(`${TITLE}
+
+- one
+- two
+
+${P}`)).toEqual([]));
+    });
+  });
+  it('finds several new families in the announcement post', () => {
+    const fams = families(POST);
+    expect(fams).toEqual(expect.arrayContaining(['announcement-filler', 'marketing-verbs', 'from-to-range', 'restating-closer']));
+    expect(famOf(POST, 'announcement-filler').map(f => f.text)).toEqual(['We’re excited to share']);
+  });
+  it('finds none in a plain human paragraph', () => {
+    expect(all(report(PLAIN))).toEqual([]);
+  });
+});
+
 describe('inline-header bullets, narrowed', () => {
   const list = (...labels: string[]) => labels.map(l => `- **${l}:** text`).join('\n');
   const hits = (text: string) => famOf(text, 'inline-header-bullets').length;
@@ -253,6 +484,41 @@ const SPANS: Array<[family: string, text: string, spans: string[]]> = [
   ['emoji-lead', '- ✅ Tests pass', ['✅ Tests pass']],
   ['title-case-heading', '## Understanding the Role of Technology in Modern Education', ['Understanding the Role of Technology in Modern Education']],
   ['mechanical-bold', 'Use **a**, then **b**, then **c**, then **d**. We met on Tuesday and walked home together.', ['**a**, then **b**, then **c**, then **d**']],
+  ['triplet-density', passage(2), ['We bought apples, pears, and plums']],
+  ['whether-youre', 'Whether you’re a seasoned pro or a complete beginner, this guide helps.', ['Whether you’re a seasoned pro or a complete beginner']],
+  ['whether-youre', 'Whether you are building a startup or running a large team, tools matter.', ['Whether you are building a startup or running a large team']],
+  ['from-to-range', 'We serve clients from startups to enterprises.', ['from startups to enterprises']],
+  ['from-to-range', 'From small startups to global enterprises, teams rely on it.', ['From small startups to global enterprises']],
+  ['from-to-range', 'The course suits learners from beginners to experts.', ['from beginners to experts']],
+  ['worth-noting', 'It’s worth noting that the rule changed.', ['It’s worth noting that']],
+  ['worth-noting', 'It is also worth mentioning the delay.', ['It is also worth mentioning']],
+  ['worth-noting', 'It’s important to remember that costs vary.', ['It’s important to remember that']],
+  ['marketing-verbs', 'We leverage our data to grow.', ['leverage']],
+  ['marketing-verbs', 'The tool streamlines onboarding.', ['streamlines']],
+  ['marketing-verbs', 'A seamless checkout is the goal.', ['seamless']],
+  ['marketing-verbs', 'Unlock the full potential of your team.', ['Unlock the full']],
+  ['marketing-verbs', 'It will elevate your brand.', ['elevate your brand']],
+  ['marketing-verbs', 'We empower teams.', ['empower']],
+  ['marketing-verbs', 'This is a game-changer.', ['game-changer']],
+  ['marketing-verbs', 'They harness the power of wind.', ['harness the']],
+  ['marketing-verbs', 'Navigating the complexities of tax law is hard.', ['Navigating the complexities']],
+  ['marketing-verbs', 'A cutting-edge lab opened.', ['cutting-edge']],
+  ['marketing-verbs', 'We offer best-in-class support.', ['best-in-class']],
+  ['restating-closer', 'First point.\n\nIn summary, the plan works.', ['In summary,']],
+  ['restating-closer', 'First point.\n\nAt the end of the day, it comes down to trust. We met on Tuesday.', ['At the end of the day,']],
+  ['stock-opener', 'Every team makes hundreds of decisions each quarter.', ['Every team']],
+  ['stock-opener', 'Imagine a kitchen where nothing is labelled.', ['Imagine']],
+  ['stock-opener', 'In an era of cheap storage, nobody deletes anything.', ['In an era of']],
+  ['stock-opener', 'Have you ever wondered why bread rises?', ['Have you ever wondered']],
+  ['stock-opener', 'In today’s market, tools change quickly.', ['In today’s']],
+  ['announcement-filler', 'We’re excited to share some news about the studio.', ['We’re excited to share']],
+  ['announcement-filler', 'I am thrilled to announce our new office.', ['I am thrilled to announce']],
+  ['roadmap-sentence', 'In this post, we’ll look at what a record contains.', ['In this post, we’ll look at']],
+  ['roadmap-sentence', 'Here’s what we’ll cover.', ['Here’s what we’ll cover']],
+  ['dive-in', 'Let’s dive in.', ['Let’s dive in']],
+  ['dive-in', 'This is a deep dive into the budget.', ['deep dive']],
+  ['dive-in', 'The talk dives into pricing.', ['dives into']],
+  ['dive-in', 'Let’s delve into the data.', ['Let’s delve']],
 ];
 
 describe('matched spans', () => {
@@ -321,75 +587,53 @@ describe('measured values', () => {
   });
 });
 
-describe('cluster rule', () => {
-  const f = (family: string, tier: 'hard' | 'soft' = 'soft'): Finding => ({ tier, family, line: 1, text: 'x', why: 'w', direction: 'd' });
-  const spread = (n: number, families: string[]) => Array.from({ length: n }, (_, i) => f(families[i % families.length]));
-
-  it('keeps the calibrated defaults in one exported constant', () => {
-    expect(DEFAULT_THRESHOLD).toEqual({ minFamilies: 3, minPerThousand: 4, minWords: 100 });
-  });
-  it('is met at exactly the threshold', () => {
-    const c = clusterOf(spread(4, ['a', 'b', 'c']), 1000);
-    expect(c).toMatchObject({ met: true, softPerThousand: 4, families: ['a', 'b', 'c'], threshold: DEFAULT_THRESHOLD });
-  });
-  it('is not met just below it', () => {
-    expect(clusterOf(spread(3, ['a', 'b', 'c']), 1000).met).toBe(false); // 3 per 1,000
-    expect(clusterOf(spread(40, ['a', 'b']), 1000).met).toBe(false); // two families
-    expect(clusterOf(spread(4, ['a', 'b', 'c']), 1001).met).toBe(false); // 3.996 per 1,000
-  });
-  it('counts only soft findings', () => {
-    const c = clusterOf([...spread(2, ['a', 'b']), f('x', 'hard'), f('y', 'hard'), f('z', 'hard')], 100);
-    expect(c.families).toEqual(['a', 'b']);
-    expect(c.met).toBe(false);
-  });
-  it('is never met under 100 words, and the summary says so', () => {
-    expect(clusterOf(spread(30, ['a', 'b', 'c']), 99).met).toBe(false);
-    expect(clusterOf(spread(30, ['a', 'b', 'c']), 100).met).toBe(true);
-    const r = report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place. Experts argue so.');
-    expect(r.words).toBeLessThan(100);
-    expect(r.cluster.met).toBe(false);
-    expect(r.summary).toMatch(/under 100 words/);
-  });
-});
-
 describe('summary, limits and forbidden wording', () => {
   const drafts = ['model-like.md', 'human-plain.md'];
   const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));
 
-  it('says exactly one of the two conclusions', () => {
-    const met = read('model-like.md');
-    expect(met.cluster.met).toBe(true);
-    expect(met.summary).toMatch(/^Reads like default model prose in \d+ places \(families: [a-z, -]+\)\. These are style findings, not evidence of who wrote it\./);
-    const no = read('human-plain.md');
-    expect(no.cluster.met).toBe(false);
-    expect(no.summary).toBe('No cluster of default-model habits found. This does not show a person wrote it.');
+  const HEAD = 'phrasing or structure hallmarks some readers associate with AI-generated text';
+  const TAIL = 'Human writers use these patterns too; this shows nothing about who wrote the passage.';
+  const NONE = 'No such hallmarks found. This shows nothing about who wrote the passage.';
+  it('has no cluster field and no cluster wording in the summary', () => {
+    for (const d of drafts) {
+      const r = read(d);
+      expect(r).not.toHaveProperty('cluster');
+      expect(r.summary).not.toMatch(/cluster/i);
+    }
   });
-  it('adds a hard-findings sentence when there are hard findings', () => {
-    const r = report('Certainly! Here is the draft. ' + 'We met on Tuesday and walked home together. '.repeat(3));
-    expect(r.summary).toMatch(/^No cluster of default-model habits found\. This does not show a person wrote it\. 1 hard artifact/);
+  it('says exactly one headline: a count in families, or none found', () => {
+    const m = read('model-like.md');
+    const fams = [...new Set(m.tiers.soft.map(f => f.family))];
+    expect(m.summary).toBe(`${m.tiers.soft.length} ${HEAD}, in ${fams.length} families (${fams.join(', ')}). ${TAIL}`);
+    expect(read('human-plain.md').summary).toBe(NONE);
   });
-  it('says the cluster rule was not applied for a short text with three or more soft families', () => {
-    const r = report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place. Experts argue so. Despite its charm, it faces challenges.');
-    expect(r.words).toBeLessThan(100);
-    expect(r.cluster.families.length).toBeGreaterThanOrEqual(3);
-    expect(r.summary).toBe('Cluster rule not applied (under 100 words). This does not show a person wrote it.');
-    expect(r.summary).not.toMatch(/No cluster/);
+  it('uses the singular for one hallmark in one family', () => {
+    const r = report('It stands as a testament to the garden and its people. ' + 'We met on Tuesday and walked home together. '.repeat(12));
+    expect(r.words).toBeGreaterThanOrEqual(100);
+    expect(r.tiers.soft).toHaveLength(1);
+    expect(r.summary).toBe(`1 ${HEAD.replace('hallmarks', 'hallmark')}, in 1 family (undue-significance). ${TAIL}`);
   });
-  it('keeps the hard-findings sentence after the not-applied sentence', () => {
-    const r = report('Certainly! Here is the draft.\n\nIt stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place. Experts argue so. Despite its charm, it faces challenges.');
-    expect(r.cluster.families.length).toBeGreaterThanOrEqual(3);
-    expect(r.summary).toMatch(/^Cluster rule not applied \(under 100 words\)\. This does not show a person wrote it\. 1 hard artifact/);
+  it('adds the hard-findings sentence, then the short-text sentence, after the headline', () => {
+    const long = report('Certainly! Here is the draft. ' + 'We met on Tuesday and walked home together. '.repeat(15));
+    expect(long.summary).toBe(`${NONE} 1 hard artifact found; these are defects in finished text whoever wrote it.`);
+    const short = report('Certainly! Here is the draft.\n\nWe met on Tuesday.');
+    expect(short.summary).toBe(`${NONE} 1 hard artifact found; these are defects in finished text whoever wrote it. The passage is under 100 words, so there is little to find.`);
   });
-  it('writes "1 family" and "2 families" in the text rendering', () => {
-    const text = 'It stands as a testament to the garden and its people. We met on Tuesday.';
-    const one = report(text);
-    expect(one.cluster.families.length).toBe(1);
-    expect(renderText(one)).toMatch(/in 1 family \(/);
-    expect(renderText(one)).not.toMatch(/in 1 families/);
-    expect(renderText(report('We met on Tuesday and walked home together.'))).toMatch(/in 0 families/);
+  it('says the passage is short when under 100 words, and not otherwise', () => {
+    const r = report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking, pivotal place.');
+    expect(r.summary).toMatch(/ The passage is under 100 words, so there is little to find\.$/);
+    expect(read('model-like.md').summary).not.toMatch(/under 100 words/);
+  });
+  it('keeps the skipped summary for a verse form', () => {
+    expect(report('A line.\n', 'p.md', 'limerick').summary).toBe('Skipped: verse forms are not audited.');
+  });
+  it('writes "1 family" and "N families" in the summary', () => {
+    expect(report('It stands as a testament to the garden and its people. We met on Tuesday.').summary).toMatch(/in 1 family \(/);
+    expect(report('It stands as a testament, serves as a hub, and is a vibrant, groundbreaking place. Experts argue so.').summary).toMatch(/in [2-9] families \(/);
   });
   it('states the standing limits', () => {
     const { limits } = read('human-plain.md');
+    expect(limits).toMatch(/hallmarks some readers associate with AI-generated text/);
     expect(limits).toMatch(/authorship/);
     expect(limits).toMatch(/does not/);
     expect(limits).toMatch(/clean result proves nothing/);
@@ -413,8 +657,13 @@ describe('summary, limits and forbidden wording', () => {
   const BANNED = /likely AI|AI-generated|AI-written|written by (?:an? )?(?:AI|person|human)|human-written|AI-ness|probab|\bscore\b|\d\s*%|\bdetectors?\b/i;
   /** The one sentence about detectors the audit may print: it says they misjudge plain and non-native writing, and claims nothing about a text. */
   const DETECTOR_LIMIT = 'Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them.';
+  /** The only place the phrase 'AI-generated text' may appear (the singular is allowed for the one-hallmark headline). */
+  const HALLMARKS = 'hallmarks some readers associate with AI-generated text';
+  /** The one sentence that may carry percentages: the measured share of human texts with a family, in a fixed form. */
+  const RATE_SENTENCE = /^\s*In our samples (?:(?:(?:about \d+%|under 1%) of human|none of \d+ human) (?:abstracts|introductions)(?: and )?){1,2} contain this \(n=\d+(?: and \d+)?\); other genres may differ\.$/;
   const bannedIn = (strings: string[]) => strings
-    .map(s => s.replace(DETECTOR_LIMIT, ''))
+    .filter(s => !RATE_SENTENCE.test(s))
+    .map(s => s.replace(DETECTOR_LIMIT, '').replace(new RegExp(HALLMARKS.replace('hallmarks', 'hallmarks?'), 'gi'), ''))
     .filter(s => BANNED.test(s) && !/^As an AI language model/.test(s));
 
   describe('every output surface', () => {
@@ -435,8 +684,7 @@ describe('summary, limits and forbidden wording', () => {
       '---\nform: limerick\n---\nA line.\n',
     ];
 
-    it('renderText has no authorship, probability or score wording for a cluster-met draft, a plain one, hard findings and a skipped form', () => {
-      expect(report(texts[0]).cluster.met).toBe(true);
+    it('renderText has no authorship, probability or score wording for a model-like draft, a plain one, hard findings and a skipped form', () => {
       for (const t of texts) {
         const out = renderText(report(t));
         expect(bannedIn(lines(out)), t.slice(0, 40)).toEqual([]);
@@ -453,13 +701,18 @@ describe('summary, limits and forbidden wording', () => {
           prose('audit', '--help'), prose('--help'),
         ];
         for (const o of outputs) expect(bannedIn(lines(o)), o.slice(0, 60)).toEqual([]);
-        expect(outputs[0]).toMatch(/Reads like default model prose/);
+        expect(outputs[0]).toMatch(/Hallmarks some readers associate with AI-generated text/);
       } finally { rmSync(dir, { recursive: true, force: true }); }
     });
     it('the guard catches the new phrases', () => {
       for (const s of ['This is human-written.', 'It was written by a person.', 'Written by a human.', 'The detector says so.', 'Detectors flag it.'])
         expect(bannedIn([s]), s).toHaveLength(1);
       expect(bannedIn([DETECTOR_LIMIT])).toEqual([]);
+      const rate = 'In our samples about 8% of human abstracts and none of 350 human introductions contain this (n=351 and 350); other genres may differ.';
+      expect(bannedIn([`    ${rate}`])).toEqual([]);
+      for (const s of [rate.replace('contain', 'likely contain'), `${rate} Probably AI.`, 'About 8% of this passage is flagged.']) expect(bannedIn([s]), s).toHaveLength(1);
+      expect(bannedIn([`These are ${HALLMARKS}.`])).toEqual([]);
+      for (const x of ['This reads as AI-generated text.', 'It is likely AI.', 'A probability of 80%.', 'AI-generated hallmarks.', 'Written by AI.']) expect(bannedIn([x]), x).toHaveLength(1);
     });
   });
   it('prints the lexicon review date', () => {
@@ -467,13 +720,90 @@ describe('summary, limits and forbidden wording', () => {
   });
 });
 
+/** The v2 families that rest on readers and our baseline audits, not on a published source. Grows by group. */
+const READER_REPORTED = ['stock-opener', 'announcement-filler', 'roadmap-sentence', 'dive-in', 'whether-youre', 'from-to-range', 'worth-noting', 'marketing-verbs', 'restating-closer'];
+
+describe('evidence tiers', () => {
+  const read = (n: string) => report(readFileSync(new URL(`./fixtures/audit/${n}`, import.meta.url), 'utf8'));
+  it('gives every family an evidence tier', () => {
+    for (const f of FAMILIES) expect(['corpus', 'field-guide', 'reader-reported'], f.id).toContain(f.evidence);
+  });
+  it('assigns vocabulary to corpus studies, the v1 families to the field guide and the v2 hallmarks as listed', () => {
+    expect(FAMILIES.filter(f => f.evidence === 'corpus').map(f => f.id)).toEqual(['vocabulary']);
+    expect(FAMILIES.filter(f => f.evidence === 'reader-reported').map(f => f.id)).toEqual(READER_REPORTED);
+    expect(FAMILIES.filter(f => f.evidence === 'field-guide')).toHaveLength(FAMILIES.length - 1 - READER_REPORTED.length);
+  });
+  it('says in plain words that a reader-reported family has no published source', () => {
+    expect(EVIDENCE_WORDS['reader-reported']).toMatch(/no published source/);
+  });
+  it('lists evidence and sources for each family that has findings in a top-level families map', () => {
+    const r = read('model-like.md');
+    const found = [...new Set([...r.tiers.hard, ...r.tiers.soft].map(f => f.family))];
+    expect(Object.keys(r.families)).toEqual(found);
+    for (const id of found) {
+      const def = FAMILIES.find(f => f.id === id)!;
+      expect(r.families[id]).toEqual({ evidence: def.evidence, sources: def.sources, humanRate: expect.any(Object) });
+    }
+    expect(r.families.vocabulary.evidence).toBe('corpus');
+    expect(read('human-plain.md').families).toEqual({});
+  });
+  it('states the evidence on one line per family in the text output', () => {
+    const out = renderText(read('model-like.md'));
+    expect(out).toMatch(/Evidence: corpus studies/);
+    expect(out).toMatch(/Evidence: field guide \(Wikipedia's descriptive, informational writing\)/);
+    const families = Object.keys(read('model-like.md').families).length;
+    expect(out.split('\n').filter(l => /^ {4}Evidence: /.test(l))).toHaveLength(families);
+  });
+});
+
 describe('sources', () => {
   it('cites only known references from every family, and the limits and measured notes', () => {
     const ids = new Set(REFERENCES.map(r => r.id));
     for (const entry of AUDIT_SOURCES) {
-      expect(entry.sources.length, entry.id).toBeGreaterThan(0);
+      const def = FAMILIES.find(f => f.id === entry.id);
+      // A reader-reported family has no published source; every other entry cites at least one.
+      if (def?.evidence !== 'reader-reported') expect(entry.sources.length, entry.id).toBeGreaterThan(0);
       for (const s of entry.sources) expect(ids, `${entry.id} -> ${s}`).toContain(s);
     }
     for (const f of FAMILIES) expect(AUDIT_SOURCES.map(e => e.id)).toContain(f.id);
+  });
+});
+
+describe('wide-span families do not repeat another family’s words', () => {
+  const TEXT = `${'We met on Tuesday and walked home together. '.repeat(14)}${'Teams value streamlining, planning, and testing. '.repeat(3)}`.trim();
+  it('has a density finding to lose (the list rate is above the threshold)', () => {
+    expect(report(TEXT).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+  });
+  it('reports "streamlining" once when it sits inside a three-item list', () => {
+    const found = all(report(TEXT));
+    expect(found.filter(f => f.family === 'marketing-verbs')).toHaveLength(3);
+    expect(found.filter(f => f.family === 'triplet-density' && f.text.includes('streamlining'))).toEqual([]);
+    expect(found.some(f => f.family === 'marketing-verbs')).toBe(true);
+  });
+  it('restating-closer marks only the opening words', () => {
+    expect(famOf('First point.\n\nIn summary, we leverage the data and streamline it.', 'restating-closer').map(f => f.text)).toEqual(['In summary,']);
+  });
+});
+
+describe('wide-span families contain no other family’s finding', () => {
+  const longPost = [
+    'Point one.', 'We leverage a seamless, groundbreaking platform to streamline work, planning, and reviews.',
+    'Teams value streamlining, planning, and testing. '.repeat(30) + 'We delve into the data.',
+    'In summary, we pivotal-ly delve and streamline, leverage the data, and elevate your brand.',
+  ].join('\n\n');
+  it('never has a restating-closer or triplet-density span that holds another family’s span', () => {
+    const units = unitsOf(parseDocument('d.md', longPost, {}), [longPost]);
+    const spansOf = (id: string) => units.map((u, i) => FAMILIES.find(f => f.id === id)!.find(u, { markdown: true, limited: false }, units, i).map(s => ({ i, ...s })));
+    const wide = ['restating-closer', 'triplet-density'].flatMap(id => spansOf(id).flat().map(s => ({ id, ...s })));
+    expect(wide.length).toBeGreaterThan(0);
+    const found = detect(units, { markdown: true, limited: false });
+    const lines = (f: Finding) => f.line;
+    for (const w of wide) {
+      const reported = found.filter(f => f.family === w.id);
+      // Whatever the detector marks, the report does not also list another family inside it: check by text and line.
+      for (const r of reported) for (const o of found.filter(x => x.family !== w.id && lines(x) === lines(r))) {
+        expect(r.text.includes(o.text) && o.text.length > 0, `${w.id} holds ${o.family} "${o.text}"`).toBe(false);
+      }
+    }
   });
 });

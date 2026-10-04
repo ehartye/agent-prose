@@ -134,6 +134,158 @@
       }
     ]
   },
+  "families": {
+    "title-case-heading": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai",
+        "freeburg-last-fingerprint"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0,
+          "n": 350
+        }
+      }
+    },
+    "vocabulary": {
+      "evidence": "corpus",
+      "sources": [
+        "wikipedia-signs-ai",
+        "kobak-excess-vocabulary",
+        "juzek-ward-delve",
+        "liang-mapping-llm-use"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0.0798,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0.0314,
+          "n": 350
+        }
+      }
+    },
+    "undue-significance": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0.0028,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0.0029,
+          "n": 350
+        }
+      }
+    },
+    "trailing-participle": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai",
+        "reinhart-llm-style"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0.0085,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0.0057,
+          "n": 350
+        }
+      }
+    },
+    "negative-parallelism": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0.0199,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0.0057,
+          "n": 350
+        }
+      }
+    },
+    "weasel-attribution": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0.0029,
+          "n": 350
+        }
+      }
+    },
+    "despite-challenges": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0,
+          "n": 350
+        }
+      }
+    },
+    "inline-header-bullets": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai",
+        "freeburg-last-fingerprint"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0,
+          "n": 350
+        }
+      }
+    },
+    "closing-opener": {
+      "evidence": "field-guide",
+      "sources": [
+        "wikipedia-signs-ai"
+      ],
+      "humanRate": {
+        "arxiv": {
+          "rate": 0,
+          "n": 351
+        },
+        "wikiintro": {
+          "rate": 0,
+          "n": 350
+        }
+      }
+    }
+  },
   "measured": {
     "emDashesPer1000": 0,
     "sentenceLengthVariation": 0.33,
@@ -142,31 +294,28 @@
     "notes": [
       "Em dash rates run from 0.0 to 9.1 per 1,000 words across models, so a rate says little by itself.",
       "Reported for context only; none of these values is flagged.",
-      "The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies."
-    ]
-  },
-  "cluster": {
-    "met": true,
-    "families": [
-      "title-case-heading",
-      "vocabulary",
-      "undue-significance",
-      "trailing-participle",
-      "negative-parallelism",
-      "weasel-attribution",
-      "despite-challenges",
-      "inline-header-bullets",
-      "closing-opener"
+      "The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies.",
+      "The triplet-density hallmark fires above 10.9 lists per 1,000 words, the 95th percentile of the human samples; their median is 0 in arXiv abstracts, 2018 to 2021; 0 in Wikipedia introductions, before 2023."
     ],
-    "softPerThousand": 107.91,
-    "threshold": {
-      "minFamilies": 3,
-      "minPerThousand": 4,
-      "minWords": 100
+    "humanMedians": {
+      "arxiv": {
+        "label": "arXiv abstracts, 2018 to 2021",
+        "emDashesPer1000": 0,
+        "sentenceLengthVariation": 0.32,
+        "tripletListsPer1000": 0,
+        "isAreShare": 1
+      },
+      "wikiintro": {
+        "label": "Wikipedia introductions, before 2023",
+        "emDashesPer1000": 0,
+        "sentenceLengthVariation": 0.42,
+        "tripletListsPer1000": 0,
+        "isAreShare": 1
+      }
     }
   },
-  "summary": "Reads like default model prose in 15 places (families: title-case-heading, vocabulary, undue-significance, trailing-participle, negative-parallelism, weasel-attribution, despite-challenges, inline-header-bullets, closing-opener). These are style findings, not evidence of who wrote it.",
-  "limits": "Style alone cannot show authorship: this audit does not say who wrote a text. A clean result proves nothing, because removing these habits is easy. Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them. Thresholds and word lists are conventions that date, which is why the lexicon review date is printed.",
+  "summary": "15 phrasing or structure hallmarks some readers associate with AI-generated text, in 9 families (title-case-heading, vocabulary, undue-significance, trailing-participle, negative-parallelism, weasel-attribution, despite-challenges, inline-header-bullets, closing-opener). Human writers use these patterns too; this shows nothing about who wrote the passage.",
+  "limits": "Style alone cannot show authorship: this audit reports hallmarks some readers associate with AI-generated text and does not say who wrote a text. A clean result proves nothing, because removing these hallmarks is easy. Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them. Word lists date and are conventions, which is why the lexicon review date is printed.",
   "lexicon": {
     "reviewed": "2026-10-03"
   }

@@ -1,0 +1,994 @@
+{
+  "schema": "prose/audit-rates@1",
+  "generated": "2026-10-04",
+  "datasets": {
+    "arxiv": {
+      "label": "arXiv abstracts, 2018 to 2021",
+      "n": 351,
+      "human": {
+        "families": {
+          "artifact": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "chat-residue": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "knowledge-cutoff": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "vocabulary": {
+            "count": 28,
+            "n": 351,
+            "rate": 0.0798,
+            "ci": [
+              0.0558,
+              0.1129
+            ]
+          },
+          "copula-avoidance": {
+            "count": 1,
+            "n": 351,
+            "rate": 0.0028,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "promotional": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "undue-significance": {
+            "count": 1,
+            "n": 351,
+            "rate": 0.0028,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "trailing-participle": {
+            "count": 3,
+            "n": 351,
+            "rate": 0.0085,
+            "ci": [
+              0.0029,
+              0.0248
+            ]
+          },
+          "negative-parallelism": {
+            "count": 7,
+            "n": 351,
+            "rate": 0.0199,
+            "ci": [
+              0.0097,
+              0.0406
+            ]
+          },
+          "weasel-attribution": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "despite-challenges": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "closing-opener": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "inline-header-bullets": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "emoji-lead": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "title-case-heading": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "mechanical-bold": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "stock-opener": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "announcement-filler": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "roadmap-sentence": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "dive-in": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "whether-youre": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "from-to-range": {
+            "count": 4,
+            "n": 351,
+            "rate": 0.0114,
+            "ci": [
+              0.0044,
+              0.0289
+            ]
+          },
+          "worth-noting": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "marketing-verbs": {
+            "count": 13,
+            "n": 351,
+            "rate": 0.037,
+            "ci": [
+              0.0218,
+              0.0623
+            ]
+          },
+          "restating-closer": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "triplet-density": {
+            "count": 6,
+            "n": 351,
+            "rate": 0.0171,
+            "ci": [
+              0.0079,
+              0.0368
+            ]
+          }
+        },
+        "tripletP95": 6.9,
+        "medians": {
+          "emDashesPer1000": 0,
+          "sentenceLengthVariation": 0.32,
+          "tripletListsPer1000": 0,
+          "isAreShare": 1
+        }
+      },
+      "model": {
+        "families": {
+          "artifact": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "chat-residue": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "knowledge-cutoff": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "vocabulary": {
+            "count": 15,
+            "n": 351,
+            "rate": 0.0427,
+            "ci": [
+              0.0261,
+              0.0693
+            ]
+          },
+          "copula-avoidance": {
+            "count": 1,
+            "n": 351,
+            "rate": 0.0028,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "promotional": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "undue-significance": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "trailing-participle": {
+            "count": 2,
+            "n": 351,
+            "rate": 0.0057,
+            "ci": [
+              0.0016,
+              0.0205
+            ]
+          },
+          "negative-parallelism": {
+            "count": 2,
+            "n": 351,
+            "rate": 0.0057,
+            "ci": [
+              0.0016,
+              0.0205
+            ]
+          },
+          "weasel-attribution": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "despite-challenges": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "closing-opener": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "inline-header-bullets": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "emoji-lead": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "title-case-heading": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "mechanical-bold": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "stock-opener": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "announcement-filler": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "roadmap-sentence": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "dive-in": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "whether-youre": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "from-to-range": {
+            "count": 3,
+            "n": 351,
+            "rate": 0.0085,
+            "ci": [
+              0.0029,
+              0.0248
+            ]
+          },
+          "worth-noting": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "marketing-verbs": {
+            "count": 2,
+            "n": 351,
+            "rate": 0.0057,
+            "ci": [
+              0.0016,
+              0.0205
+            ]
+          },
+          "restating-closer": {
+            "count": 0,
+            "n": 351,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0108
+            ]
+          },
+          "triplet-density": {
+            "count": 33,
+            "n": 351,
+            "rate": 0.094,
+            "ci": [
+              0.0677,
+              0.1291
+            ]
+          }
+        },
+        "tripletP95": 15.46,
+        "medians": {
+          "emDashesPer1000": 0,
+          "sentenceLengthVariation": 0.3,
+          "tripletListsPer1000": 4.57,
+          "isAreShare": 1
+        }
+      }
+    },
+    "wikiintro": {
+      "label": "Wikipedia introductions, before 2023",
+      "n": 350,
+      "human": {
+        "families": {
+          "artifact": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "chat-residue": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "knowledge-cutoff": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "vocabulary": {
+            "count": 11,
+            "n": 350,
+            "rate": 0.0314,
+            "ci": [
+              0.0176,
+              0.0554
+            ]
+          },
+          "copula-avoidance": {
+            "count": 6,
+            "n": 350,
+            "rate": 0.0171,
+            "ci": [
+              0.0079,
+              0.0369
+            ]
+          },
+          "promotional": {
+            "count": 4,
+            "n": 350,
+            "rate": 0.0114,
+            "ci": [
+              0.0045,
+              0.029
+            ]
+          },
+          "undue-significance": {
+            "count": 1,
+            "n": 350,
+            "rate": 0.0029,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "trailing-participle": {
+            "count": 2,
+            "n": 350,
+            "rate": 0.0057,
+            "ci": [
+              0.0016,
+              0.0206
+            ]
+          },
+          "negative-parallelism": {
+            "count": 2,
+            "n": 350,
+            "rate": 0.0057,
+            "ci": [
+              0.0016,
+              0.0206
+            ]
+          },
+          "weasel-attribution": {
+            "count": 1,
+            "n": 350,
+            "rate": 0.0029,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "despite-challenges": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "closing-opener": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "inline-header-bullets": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "emoji-lead": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "title-case-heading": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "mechanical-bold": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "stock-opener": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "announcement-filler": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "roadmap-sentence": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "dive-in": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "whether-youre": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "from-to-range": {
+            "count": 1,
+            "n": 350,
+            "rate": 0.0029,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "worth-noting": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "marketing-verbs": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "restating-closer": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "triplet-density": {
+            "count": 18,
+            "n": 350,
+            "rate": 0.0514,
+            "ci": [
+              0.0328,
+              0.0798
+            ]
+          }
+        },
+        "tripletP95": 10.849,
+        "medians": {
+          "emDashesPer1000": 0,
+          "sentenceLengthVariation": 0.42,
+          "tripletListsPer1000": 0,
+          "isAreShare": 1
+        }
+      },
+      "model": {
+        "families": {
+          "artifact": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "chat-residue": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "knowledge-cutoff": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "vocabulary": {
+            "count": 5,
+            "n": 350,
+            "rate": 0.0143,
+            "ci": [
+              0.0061,
+              0.033
+            ]
+          },
+          "copula-avoidance": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "promotional": {
+            "count": 5,
+            "n": 350,
+            "rate": 0.0143,
+            "ci": [
+              0.0061,
+              0.033
+            ]
+          },
+          "undue-significance": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "trailing-participle": {
+            "count": 1,
+            "n": 350,
+            "rate": 0.0029,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "negative-parallelism": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "weasel-attribution": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "despite-challenges": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "closing-opener": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "inline-header-bullets": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "emoji-lead": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "title-case-heading": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "mechanical-bold": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "stock-opener": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "announcement-filler": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "roadmap-sentence": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "dive-in": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "whether-youre": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "from-to-range": {
+            "count": 1,
+            "n": 350,
+            "rate": 0.0029,
+            "ci": [
+              0.0005,
+              0.016
+            ]
+          },
+          "worth-noting": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "marketing-verbs": {
+            "count": 2,
+            "n": 350,
+            "rate": 0.0057,
+            "ci": [
+              0.0016,
+              0.0206
+            ]
+          },
+          "restating-closer": {
+            "count": 0,
+            "n": 350,
+            "rate": 0,
+            "ci": [
+              0,
+              0.0109
+            ]
+          },
+          "triplet-density": {
+            "count": 23,
+            "n": 350,
+            "rate": 0.0657,
+            "ci": [
+              0.0442,
+              0.0967
+            ]
+          }
+        },
+        "tripletP95": 15.684,
+        "medians": {
+          "emDashesPer1000": 0,
+          "sentenceLengthVariation": 0.31,
+          "tripletListsPer1000": 0,
+          "isAreShare": 1
+        }
+      }
+    }
+  }
+}

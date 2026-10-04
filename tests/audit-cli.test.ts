@@ -30,10 +30,8 @@ describe('golden audit outputs', () => {
   it('finds several families in the model-like paragraph and none in the plain one', async () => {
     const m = await run('audit', MODEL);
     expect(new Set(m.tiers.soft.map((f: any) => f.family)).size).toBeGreaterThanOrEqual(6);
-    expect(m.cluster.met).toBe(true);
     const h = await run('audit', HUMAN);
     expect(h.tiers).toEqual({ hard: [], soft: [] });
-    expect(h.cluster.met).toBe(false);
   });
 });
 
@@ -41,9 +39,9 @@ describe('prose audit', () => {
   it('prints JSON with the documented shape', () => {
     const { status, json: r } = prose('audit', MODEL);
     expect(status).toBe(0);
-    expect(Object.keys(r)).toEqual(['path', 'form', 'words', 'tiers', 'measured', 'cluster', 'summary', 'limits', 'lexicon']);
+    expect(Object.keys(r)).toEqual(['path', 'form', 'words', 'tiers', 'families', 'measured', 'summary', 'limits', 'lexicon']);
     expect(Object.keys(r.tiers)).toEqual(['hard', 'soft']);
-    expect(Object.keys(r.cluster)).toEqual(['met', 'families', 'softPerThousand', 'threshold']);
+    expect(r).not.toHaveProperty('cluster');
     expect(r.lexicon.reviewed).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(r.form).toBe('professional');
     for (const f of r.tiers.soft) expect(Object.keys(f)).toEqual(expect.arrayContaining(['tier', 'family', 'line', 'text', 'why', 'direction']));
@@ -55,7 +53,9 @@ describe('prose audit', () => {
     expect(json).toBeUndefined();
     const heads = ['undue-significance', 'negative-parallelism', 'inline-header-bullets'].map(f => stdout.indexOf(f));
     expect(heads.every(i => i >= 0)).toBe(true);
-    expect(stdout).toMatch(/Reads like default model prose in \d+ places/);
+    expect(stdout).not.toMatch(/[Cc]luster/);
+    expect(stdout).toMatch(/^Hallmarks some readers associate with AI-generated text$/m);
+    expect(stdout).not.toMatch(/Soft findings by family/);
     expect(stdout).toMatch(/line \d+/);
     const limits = stdout.indexOf('Limits');
     expect(limits).toBeGreaterThan(stdout.indexOf('undue-significance'));
@@ -93,5 +93,19 @@ describe('prose audit', () => {
 
   it('is listed by capabilities', () => {
     expect(prose('capabilities').json.commands).toContain('audit');
+  });
+});
+
+describe('prose audit, plain-text title line', () => {
+  it('finds the stock opener below a title with no # marker', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'prose-audit-title-'));
+    try {
+      const file = join(dir, 'draft.md');
+      writeFileSync(file, 'Why Your Team Should Write Down Its Decisions\n\nEvery team makes hundreds of decisions each quarter. Which vendor to choose, which feature to ship, and who owns the follow-up are rarely written anywhere.\n');
+      const { status, json: r } = prose('audit', file);
+      expect(status).toBe(0);
+      const hits = [...r.tiers.hard, ...r.tiers.soft].filter((f: any) => f.family === 'stock-opener');
+      expect(hits.map((f: any) => f.text)).toEqual(['Every team']);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

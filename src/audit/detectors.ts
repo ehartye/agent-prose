@@ -1,5 +1,6 @@
 import type { BlockKind, Doc } from '../ir.ts';
 import { AI_TELLS } from '../measure/lexicon.ts';
+import { loadRates, type Rates } from './rates.ts';
 import { PROSE_KINDS } from '../kinds.ts';
 import { per1000, plain, round2, sentenceRanges, sentences, words } from '../text.ts';
 
@@ -43,6 +44,8 @@ export interface Ctx {
   markdown: boolean;
   /** Fountain and dialog drafts: only hard artifacts and vocabulary run (dialogue and stage directions read differently). */
   limited: boolean;
+  /** A rates file to read the triplet threshold from, in place of craft/audit-rates.json (tests inject one). */
+  ratesPath?: string;
 }
 
 interface Span {
@@ -53,10 +56,19 @@ interface Span {
   /** Offsets index `targets`. */
   inTargets?: boolean;
   eras?: string[];
+  /** A reason that names this span's own numbers, in place of the family's fixed sentence. */
+  why?: string;
 }
 
 type Scope = 'all' | 'prose' | 'markdown';
 type Target = 'body' | 'heading' | 'any';
+
+/**
+ * `corpus`: word lists from published corpus studies (abstract-only in our notes). `field-guide`: Wikipedia's
+ * descriptive field guide to informational writing. `reader-reported`: habits readers and our own baseline audits
+ * named, with no published source.
+ */
+export type Evidence = 'corpus' | 'field-guide' | 'reader-reported';
 
 export interface Family {
   id: string;
@@ -64,6 +76,8 @@ export interface Family {
   /** `all` runs on every format, `prose` skips Fountain and dialog, `markdown` runs on Markdown only. */
   scope: Scope;
   on: Target;
+  /** How well the pattern is documented: see Evidence. */
+  evidence: Evidence;
   sources: string[];
   why: string;
   direction: string;
@@ -139,6 +153,222 @@ const TRAILING_MARKER = new RegExp(String.raw`^\s*(?:${MARKER})`, 'u');
 const DESPITE = /\bDespite\s+(?:its|their|this|these|the)\b[^.!?]{0,120}?,\s+[^.!?]{0,80}?\b(?:faces|face|continues\s+to\s+face|continue\s+to\s+face|still\s+faces)\b[^.!?]{0,80}?\b(?:challenges?|obstacles?|hurdles?)\b/giu;
 
 const CLOSING = /^(?:Overall|In conclusion),\s/u;
+
+/**
+ * Group 1: openers and announcements. All reader-reported: readers and our baseline audits named them; no published source.
+ *
+ * Stock opener: only the first sentence of the first prose paragraph (headings and frontmatter before it are skipped), and only the opening words are the span.
+ * "Every <noun>" skips time words ("Every Monday", "Every year"), which open ordinary letters and diaries.
+ */
+/**
+ * Conservative rule: only the generic continuation counts, because the bare openers are ordinary in methods sections,
+ * recipes, manuals and stories. "Every" must be followed by a generic person or organisation noun ("Every team", "Every
+ * business"); "Every sample", "Every bolt" and "Every Monday" are left alone. "In today's" must lead into a stock scene
+ * word ("market", "world", "landscape", "digital age") after at most three buzz adjectives; "In today's meeting" is left
+ * alone. "Imagine" must be followed by a stock setup ("a ...", "an ...", "if", "you", "your", "being", "what", "how");
+ * "Imagine my surprise" is left alone.
+ */
+const GENERIC_SUBJECT = String.raw`(?:team|business(?:es)?|company|companies|organi[sz]ation|leader|manager|developer|engineer|customer|user|marketer|brand|startup|professional|entrepreneur|employee|student|creator|designer|owner|enterprise|successful\s+\p{L}+|great\s+\p{L}+|modern\s+\p{L}+)`;
+const SCENE_ADJ = String.raw`(?:fast-paced|digital|competitive|modern|ever-changing|rapidly\s+\p{L}+|busy|global|connected|data-driven|interconnected|hyper-connected|technology-driven|\p{L}+-\p{L}+)`;
+const SCENE_NOUN = String.raw`(?:world|landscape|era|age|market|marketplace|economy|environment|climate|society|workplace|business\s+world)`;
+const STOCK_OPENER = new RegExp([
+  String.raw`^Every\s+${GENERIC_SUBJECT}\b`,
+  String.raw`^In\s+today['’]s(?=(?:\s+${SCENE_ADJ}){0,3}\s+${SCENE_NOUN}\b)`,
+  String.raw`^In\s+an\s+era\s+of`,
+  String.raw`^In\s+a\s+world\s+where`,
+  String.raw`^Imagine(?=\s+(?:a|an|if|you|your|yourself|being|what|how)\b)`,
+  String.raw`^Have\s+you\s+ever\s+wondered`,
+].join('|'), 'iu');
+
+/** A plain-text title line: one line, at most 14 words, no sentence-final punctuation. */
+const titleLike = (u: Unit) => u.kind === 'paragraph' && !/\n/.test(u.text.trim()) && u.text.trim().split(/\s+/).length <= 14 && !/[.!?…]["'”’)\]]*$/.test(u.text.trim());
+
+function stockOpener(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
+  // The opener is the first body block after any headings (frontmatter is not a block). A list item, step or
+  // block quote before the paragraph means the passage did not open with prose, and a quote leaves a gap in the block indexes.
+  // A pasted draft's title may be a plain first line; that line is skipped when another paragraph follows it.
+  if (u.kind !== 'paragraph') return [];
+  let k = units.findIndex(x => x.kind !== 'heading');
+  if (k >= 0 && titleLike(units[k]) && units[k + 1]?.kind === 'paragraph') k += 1;
+  if (k !== i) return [];
+  if (units.slice(0, i + 1).some((x, n) => x.index !== units[0].index + n) || units[0].index !== 0) return [];
+  const first = sentenceRanges(u.text)[0];
+  if (!first) return [];
+  const m = STOCK_OPENER.exec(u.text.slice(first[0], first[1]));
+  return m ? [{ start: first[0], end: first[0] + m[0].length }] : [];
+}
+
+const ANNOUNCEMENT = /\b(?:We['’]re|We\s+are|I['’]m|I\s+am)\s+(?:(?:so|very|truly|really)\s+)?(?:excited|thrilled|delighted|proud)\s+to\s+(?:share|announce|introduce|unveil)\b/giu;
+
+const ROADMAP_VERBS = String.raw`(?:look\s+at|explore|cover|walk\s+through|dive\s+into|discuss|break\s+down)`;
+const ROADMAP = new RegExp([
+  String.raw`\bIn\s+this\s+(?:post|article|guide|piece|section|chapter),?\s+(?:we(?:['’]ll|\s+will)|I(?:['’]ll|\s+will))\s+${ROADMAP_VERBS}`,
+  String.raw`(?:^|(?<=[.!?]\s))Here(?:['’]s|\s+is)\s+what\s+(?:we(?:['’]ll|\s+will)|you(?:['’]ll|\s+will)|I(?:['’]ll|\s+will))\s+(?:cover|learn|find|explore|see|look\s+at)\b`,
+].join('|'), 'giu');
+
+/**
+ * "delve into" is not here: `delve` is already a vocabulary finding, and "let's delve" is one dive-in finding that swallows it (RANK).
+ * "Let's explore" is dropped (ordinary invitation). "Let's unpack" counts only as a bare or abstract roadmap ("Let's unpack.",
+ * "Let's unpack what went wrong", "Let's unpack the problem"), not "Let's unpack the suitcase". A physical dive into water
+ * is not a finding, with or without adjectives between ("dive into the cold sea").
+ */
+const WATER = String.raw`(?:water|waters|pool|lake|sea|ocean|river|quarry|waves?|trench|pond|surf|depths|harbou?r|bay|canal|reef|lagoon)`;
+const PHYSICAL_DIVE = String.raw`(?!\s+(?:(?:the|a|an|that|this|those|these|its|his|her|their|our|my)\s+)?(?:[\p{L}-]+\s+){0,2}${WATER}\b)`;
+const UNPACK_ABSTRACT = String.raw`(?=\s*(?:[.!?,:;—]|$)|\s+(?:what|how|why|this|that|it|these)\b|\s+(?:the|this|these|those|our|your)\s+(?:\p{L}+\s+)?(?:problem|issue|question|idea|topic|concept|numbers|findings|results|trend|trends|challenge|challenges|details|strategy|difference|differences)\b)`;
+const DIVE_IN = new RegExp([
+  String.raw`\blet['’]s\s+(?:dive\s+in|dive\s+into|delve)\b`,
+  String.raw`\blet['’]s\s+unpack\b${UNPACK_ABSTRACT}`,
+  String.raw`\bdeep[- ]dives?\b`,
+  String.raw`\b(?:dive|dives|diving)\s+(?:deep(?:ly)?\s+)?into\b${PHYSICAL_DIVE}`,
+].join('|'), 'giu');
+
+/**
+ * Group 2: phrasing patterns, all reader-reported. restating-closer resembles the field guide's closing summary but is not verified there.
+ */
+
+/** "Whether you're a ... or ...": the first clause must be a noun or activity ("a pro", "building"), so "Whether you're coming or not" is left alone. */
+const WHETHER = /\bWhether\s+you(?:['’]re|\s+are)\s+(?:a|an|the|new|just|looking|trying|building|planning|starting|running|managing|working)\b[^.!?,;]{1,80}?\s+or\s+[^.!?,;]{1,50}/gu;
+function whetherYoure(u: Unit): Span[] {
+  const spans = spansOf(WHETHER, u.text);
+  if (!spans.length) return [];
+  const starts = new Set(sentenceRanges(u.text).map(([a]) => a)); // once per unit, not once per match
+  return spans.filter(s => starts.has(s.start));
+}
+
+/**
+ * "from X to Y" as a range of examples: each side one or two lowercase words ending in a plural or abstract noun, no
+ * determiner, no number, no capitalised name; a verb of motion just before ("moved from vials to plates") is a real transfer.
+ */
+const FROM_TO = /\b[Ff]rom\s+(\p{Ll}[\p{Ll}-]*(?:\s+\p{Ll}[\p{Ll}-]*)?)\s+to\s+(\p{Ll}[\p{Ll}-]*(?:\s+\p{Ll}[\p{Ll}-]*)?)(?![\p{L}-])/gu;
+const DETERMINER = /^(?:the|a|an|this|that|these|those|my|our|your|its|their|his|her|one|each|every|some|any)$/;
+const NOUNISH = /(?:[^sui]s|ies|ity|ness|ment|tion|sion)$/;
+const MOTION = /\b(?:mov\w*|transferr?\w*|copi\w*|copy|pour\w*|ship\w*|carr\w+|convert\w*|translat\w*|switch\w*|go|goes|went|gone|chang\w*|pass\w*|flow\w*|migrat\w*|import\w*|export\w*|sent|send|draw\w*|drain\w*|shift\w*|collect\w*|deliver\w*|run|runs|ran|running|pipe\w*)\s+(?:\S+\s+){0,2}$/iu;
+function fromTo(u: Unit): Span[] {
+  const out: Span[] = [];
+  for (const m of u.text.matchAll(FROM_TO)) {
+    const x = m[1].split(/\s+/);
+    const yAll = m[2].split(/\s+/);
+    // Try the longer right side first, then the single word before it ("from startups to enterprises are ...").
+    const y = yAll.length === 2 && NOUNISH.test(yAll[1]) && !DETERMINER.test(yAll[0]) ? yAll : yAll.slice(0, 1);
+    if (!NOUNISH.test(x[x.length - 1]) || !NOUNISH.test(y[y.length - 1])) continue;
+    if (DETERMINER.test(x[0]) || DETERMINER.test(y[0])) continue;
+    if (MOTION.test(u.text.slice(Math.max(0, m.index - 40), m.index))) continue;
+    const rightStart = m.index + m[0].length - m[2].length;
+    out.push({ start: m.index, end: rightStart + y.join(' ').length });
+  }
+  return out;
+}
+
+const WORTH_NOTING = /\bit(?:['’]s|\s+is)(?:\s+also)?\s+(?:worth\s+(?:noting|mentioning|remembering)(?:\s+that)?|important\s+to\s+(?:note|remember|understand|recogni[sz]e|keep\s+in\s+mind)\s+that)\b/giu;
+
+/**
+ * Marketing verbs, exact words. "Elevate" counts only with a figurative object (your brand, the game), "unlock" only before
+ * power, potential or full, "empower" only before a promotional object (teams, users, you), "harness" only before power,
+ * potential and the like (not the horse or the river), "seamless" only as "seamlessly" or before a service noun, and
+ * "leverage" the verb needs an auxiliary or pronoun before it, or an object after it ("leveraged at 5 to 1" is finance).
+ */
+const MARKETING = new RegExp([
+  String.raw`\bleverag(?:es|ing|ed)\s+(?:the|a|an|our|your|their|its|his|her|my|these|those|this|that|existing|new|everything|data|insights?|AI|technology|expertise|resources|synerg\p{L}+)\b`,
+  String.raw`(?<=\b(?:to|will|can|could|would|should|must|we|you|they|I|and|or|that|which|who|helps?|lets?)\s)leverage\b`,
+  String.raw`\bstreamlin(?:e|es|ed|ing)\b`,
+  String.raw`\bseamlessly\b|\bseamless(?=\s+(?:integrations?|experiences?|workflows?|checkout|onboarding|transitions?|processes|process|connectivity|collaboration|access|setup|payments?|migration|interface|user|solutions?|platform|navigation|communication|operations?)\b)`,
+  String.raw`\bunlock(?:s|ed|ing)?\s+the\s+(?:power|potential|full)\b`,
+  String.raw`\belevat(?:e|es|ed|ing)\s+(?:your|their|our|its|the|his|her)\s+(?:\p{L}+\s+)?(?:brands?|business(?:es)?|game|experience|work|workflow|presence|strategy|content|style|cooking|skills|performance|marketing|teams?|results|dish(?:es)?|craft|writing|approach|standards)\b`,
+  String.raw`\bempower(?:s|ing)?(?=\s+(?:teams?|users?|businesses|customers|developers|you|your|employees|people|organi[sz]ations|everyone|individuals|creators|marketers|leaders|managers|students|learners|them|our|their)\b)`,
+  String.raw`\bharness(?:es|ed|ing)?\s+the(?=\s+(?:power|potential|full|capabilit(?:y|ies)|strengths?|magic|insights?|data)\b)`,
+  String.raw`\bnavigat(?:e|es|ed|ing)\s+the\s+complexit(?:y|ies)\b`,
+  String.raw`\bgame[- ]changers?\b`,
+  String.raw`\bcutting-edge\b|\bcutting\s+edge(?=\s+(?:technolog|research|solution|tool|platform|design|software|approach))`,
+  String.raw`\bbest-in-class\b`,
+].join('|'), 'giu');
+/** A word the vocabulary or promotional lists already report is theirs; the same span is not reported twice. */
+const marketingVerbs = (u: Unit): Span[] => {
+  const taken = lexiconSpans([...VOCABULARY, ...PROMOTIONAL], u.text);
+  return spansOf(MARKETING, u.text).filter(s => !taken.some(t => s.start < t.end && t.start < s.end));
+};
+
+const RESTATING = /^(?:In\s+summary|In\s+short|In\s+essence|To\s+sum\s+up|Ultimately|At\s+the\s+end\s+of\s+the\s+day),\s/u;
+/** Index of the last paragraph and the paragraph count, once per units array (not once per unit). */
+const paragraphTail = (() => {
+  const cache = new WeakMap<Unit[], { last: number; count: number }>();
+  return (units: Unit[]) => {
+    let hit = cache.get(units);
+    if (!hit) {
+      let last = -1, count = 0;
+      units.forEach((x, n) => { if (x.kind === 'paragraph') { last = n; count++; } });
+      cache.set(units, hit = { last, count });
+    }
+    return hit;
+  };
+})();
+/** The last paragraph, when another paragraph came before it. "In conclusion," and "Overall," belong to closing-opener. */
+function restatingCloser(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
+  if (u.kind !== 'paragraph' || !RESTATING.test(u.text)) return [];
+  const { last, count } = paragraphTail(units);
+  if (count < 2 || last !== i) return [];
+  // Only the opening words are the span, like stock-opener, so it never contains another family's finding.
+  return [{ start: 0, end: RESTATING.exec(u.text)![0].trimEnd().length }];
+}
+
+/**
+ * Group 3: density. The threshold is the rate of three-item lists ("A, B, and C") per 1,000 words above which a passage
+ * of at least 100 words gets one finding, on its first such list. It is the 95th percentile of the measured
+ * `tripletListsPer1000` among the human texts of 100 words or more, taken as the larger of the two datasets in
+ * craft/audit-rates.json (generated 2026-10-04: arXiv abstracts 6.9, Wikipedia introductions 10.849, so 10.9 once
+ * rounded up to one decimal). The value is read from the file, so regenerating the file moves the threshold. The measured
+ * `tripletListsPer1000` is the same quantity (same pattern, same word count), so the two always agree.
+ */
+export const TRIPLET_FALLBACK_PER_1000 = 9;
+
+/** The threshold from a rates file (the committed one by default); the fallback constant when it cannot be read. */
+export function tripletThreshold(ratesPath?: string): number {
+  return thresholdFromRates(loadRates(ratesPath));
+}
+
+/** The same threshold from rates already in hand. */
+export function thresholdFromRates(rates: Rates | undefined | null): number {
+  const p95s = Object.values(rates?.datasets ?? {}).map(d => d.human.tripletP95).filter(v => v > 0);
+  return p95s.length ? Math.ceil(Math.max(...p95s) * 10 - 1e-9) / 10 : TRIPLET_FALLBACK_PER_1000;
+}
+
+export const TRIPLET_DENSITY_PER_1000 = tripletThreshold();
+const DENSITY_MIN_WORDS = 100;
+
+const tripletStats = (() => {
+  const cache = new WeakMap<Unit[], { first?: { unit: number; start: number; end: number }; count: number; words: number }>();
+  return (units: Unit[]) => {
+    const hit = cache.get(units);
+    if (hit) return hit;
+    let count = 0, total = 0;
+    let first: { unit: number; start: number; end: number } | undefined;
+    units.forEach((u, n) => {
+      if (u.kind === 'heading') return;
+      total += words(u.text).length;
+      for (const m of u.text.matchAll(TRIPLET)) {
+        count++;
+        if (!first) {
+          const tail = /^[\p{L}'’-]*/u.exec(u.text.slice(m.index + m[0].length))![0];
+          first = { unit: n, start: m.index, end: m.index + m[0].length + tail.length };
+        }
+      }
+    });
+    const out = { first, count, words: total };
+    cache.set(units, out);
+    return out;
+  };
+})();
+
+function tripletDensity(_u: Unit, ctx: Ctx, units: Unit[], i: number): Span[] {
+  const { first, count, words: total } = tripletStats(units);
+  if (!first || first.unit !== i || total < DENSITY_MIN_WORDS) return [];
+  const rate = per1000(count, total);
+  const threshold = ctx.ratesPath === undefined ? TRIPLET_DENSITY_PER_1000 : tripletThreshold(ctx.ratesPath);
+  if (rate <= threshold) return [];
+  return [{
+    start: first.start, end: first.end,
+    why: `${count} three-item lists in ${total} words, ${rate.toFixed(1)} per 1,000 words, above the ${threshold} per 1,000 this audit uses; the first is marked.`,
+  }];
+}
 
 const INLINE_HEADER = /^\*\*([^*\n]{1,60}?)(?::\*\*|\*\*:)\s+\S/u;
 const EMOJI_LEAD = /^(?:\p{Emoji_Presentation}|\p{Extended_Pictographic}️)/u;
@@ -272,79 +502,79 @@ const closing = (u: Unit): Span[] => {
 /** Every family, in report order. `why` and `direction` are fixed sentences per family. */
 export const FAMILIES: Family[] = [
   {
-    id: 'artifact', tier: 'hard', scope: 'all', on: 'any', sources: [WIKI],
+    id: 'artifact', tier: 'hard', scope: 'all', on: 'any', evidence: 'field-guide', sources: [WIKI],
     why: 'Markup or a placeholder left over from a chat tool; it is a defect in finished text whoever wrote it.',
     direction: 'Remove the leaked markup, or fill in the real value.',
     find: u => [...lexiconSpans(ARTIFACTS, u.text), ...(u.targets ? lexiconSpans(ARTIFACTS, u.targets).map(s => ({ ...s, inTargets: true })) : [])],
   },
   {
-    id: 'chat-residue', tier: 'hard', scope: 'markdown', on: 'any', sources: [WIKI],
+    id: 'chat-residue', tier: 'hard', scope: 'markdown', on: 'any', evidence: 'field-guide', sources: [WIKI],
     why: 'A sentence addressed to a chat user rather than to the reader, found at the start or end of a prose paragraph, outside quotation marks.',
     direction: 'Cut the sentence; the document should end where its content does.',
     find: chatResidue,
   },
   {
-    id: 'knowledge-cutoff', tier: 'hard', scope: 'all', on: 'any', sources: [WIKI],
+    id: 'knowledge-cutoff', tier: 'hard', scope: 'all', on: 'any', evidence: 'field-guide', sources: [WIKI],
     why: 'A disclaimer about when a tool’s information stopped, which a reader of the document cannot use.',
     direction: 'State the date the facts were checked and name the source, or cut the disclaimer.',
     find: u => spansOf(CUTOFF, u.text),
   },
   {
-    id: 'vocabulary', tier: 'soft', scope: 'all', on: 'body', sources: [WIKI, 'kobak-excess-vocabulary', 'juzek-ward-delve', 'liang-mapping-llm-use'],
+    id: 'vocabulary', tier: 'soft', scope: 'all', on: 'body', evidence: 'corpus', sources: [WIKI, 'kobak-excess-vocabulary', 'juzek-ward-delve', 'liang-mapping-llm-use'],
     why: 'A word that appears far more often in default model prose than in earlier writing, so it reads generic on its own.',
     direction: 'Say the specific thing the word gestures at, or cut it if it adds no fact.',
     find: u => lexiconSpans(VOCABULARY, u.text),
   },
   {
-    id: 'copula-avoidance', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'copula-avoidance', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A showier verb stands where a plain is or are says the same thing.',
     direction: 'Say what the thing is, with the plain verb.',
     find: u => lexiconSpans(COPULA, u.text),
   },
   {
-    id: 'promotional', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'promotional', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A word that praises where a fact would show the same thing.',
     direction: 'State the fact and let it carry the weight; name the source of any praise.',
     find: u => lexiconSpans(PROMOTIONAL, u.text),
   },
   {
-    id: 'undue-significance', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'undue-significance', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'The sentence says the subject matters instead of saying what happened.',
     direction: 'Say what happened and what changed, with the date or the number.',
     find: u => spansOf(UNDUE, u.text),
   },
   {
-    id: 'trailing-participle', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI, 'reinhart-llm-style'],
+    id: 'trailing-participle', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI, 'reinhart-llm-style'],
     why: 'A trailing clause that comments on the sentence instead of adding a fact.',
     direction: 'Add the specific fact the clause points at, or cut the clause.',
     find: u => spansOf(PARTICIPLE, u.text),
   },
   {
-    id: 'negative-parallelism', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'negative-parallelism', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'The sentence sets up a claim only to deny it, so the real point arrives second.',
     direction: 'State the point directly, once.',
     find: u => [...spansOf(NEGATIVE, u.text), ...lexiconSpans(NOT_ONLY, u.text)],
   },
   {
-    id: 'weasel-attribution', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'weasel-attribution', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'The claim is credited to unnamed experts or studies that the reader cannot check.',
     direction: 'Name the source with a citation, or cut the attribution.',
     find: weasel,
   },
   {
-    id: 'despite-challenges', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'despite-challenges', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A formula that grants a strength, then names unspecified challenges without a single example.',
     direction: 'Name the actual problem and when it happened, or cut the formula.',
     find: u => spansOf(DESPITE, u.text),
   },
   {
-    id: 'closing-opener', tier: 'soft', scope: 'prose', on: 'body', sources: [WIKI],
+    id: 'closing-opener', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
     why: 'A paragraph that opens by announcing that it is a summary, then repeats earlier points.',
     direction: 'End on the last new fact, or say something the body has not.',
     find: closing,
   },
   {
-    id: 'inline-header-bullets', tier: 'soft', scope: 'markdown', on: 'body', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'inline-header-bullets', tier: 'soft', scope: 'markdown', on: 'body', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'Each bullet opens with a bolded label and a colon, a chat-style layout that breaks the prose into fragments.',
     direction: 'Write the items as sentences, or as a plain list whose labels earn their place.',
     find: (u, _ctx, units) => {
@@ -352,19 +582,19 @@ export const FAMILIES: Family[] = [
     },
   },
   {
-    id: 'emoji-lead', tier: 'soft', scope: 'markdown', on: 'any', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'emoji-lead', tier: 'soft', scope: 'markdown', on: 'any', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'An emoji opens the heading or bullet, a chat-style decoration the content does not need.',
     direction: 'Cut the emoji and let the words carry the point.',
     find: u => (u.kind === 'heading' || isListItem(u)) && EMOJI_LEAD.test(u.text) ? [{ start: 0, end: u.text.length }] : [],
   },
   {
-    id: 'title-case-heading', tier: 'soft', scope: 'markdown', on: 'heading', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'title-case-heading', tier: 'soft', scope: 'markdown', on: 'heading', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'Every major word of the heading is capitalised, a headline habit where sentence case is the norm.',
     direction: 'Write the heading in sentence case, unless your style guide says otherwise.',
     find: u => titleCase(u) ? [{ start: 0, end: u.text.length }] : [],
   },
   {
-    id: 'mechanical-bold', tier: 'soft', scope: 'markdown', on: 'body', sources: [WIKI, 'freeburg-last-fingerprint'],
+    id: 'mechanical-bold', tier: 'soft', scope: 'markdown', on: 'body', evidence: 'field-guide', sources: [WIKI, 'freeburg-last-fingerprint'],
     why: 'Several phrases in one paragraph are bold, so none of them stands out.',
     direction: 'Keep bold for the one term a reader must not miss, and cut the rest.',
     find: u => {
@@ -373,6 +603,67 @@ export const FAMILIES: Family[] = [
       // The span runs from the first bold phrase to the last, not over the whole paragraph.
       return bold.length >= 3 ? [{ start: bold[0].index, end: bold[bold.length - 1].index + bold[bold.length - 1][0].length, inRaw: true }] : [];
     },
+  },
+  {
+    id: 'stock-opener', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The passage opens with a formula that fits almost any topic instead of with its own first fact.',
+    direction: 'Open with the specific fact, example or number the passage is about.',
+    find: stockOpener,
+  },
+  {
+    id: 'announcement-filler', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence announces that the writer is pleased before saying what the news is.',
+    direction: 'Lead with the news itself and cut the feeling that introduces it.',
+    find: u => spansOf(ANNOUNCEMENT, u.text),
+  },
+  {
+    id: 'roadmap-sentence', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence tells the reader what the text will do instead of doing it.',
+    direction: 'Cut the roadmap and begin with the first point.',
+    find: u => spansOf(ROADMAP, u.text),
+  },
+  {
+    id: 'dive-in', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'A stock invitation to start, where the text could simply start.',
+    direction: 'Cut the invitation and begin with the first concrete point.',
+    find: u => spansOf(DIVE_IN, u.text),
+  },
+  {
+    id: 'whether-youre', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence addresses every possible reader at once, so it says nothing about the actual one.',
+    direction: 'Name the reader this is for, or start with what they get.',
+    find: whetherYoure,
+  },
+  {
+    id: 'from-to-range', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'A "from X to Y" pair stands for a whole range of cases instead of naming one.',
+    direction: 'Name the one or two cases that matter, with a detail for each.',
+    find: fromTo,
+  },
+  {
+    id: 'worth-noting', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The sentence announces that a point matters instead of making the point.',
+    direction: 'State the point itself, and say why it matters only if that is not obvious.',
+    find: u => spansOf(WORTH_NOTING, u.text),
+  },
+  {
+    id: 'marketing-verbs', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'A verb or label from promotional copy stands where a plain verb and a measurable result would do.',
+    direction: 'Say what the thing does, to what, with what result.',
+    find: marketingVerbs,
+  },
+  {
+    id: 'restating-closer', tier: 'soft', scope: 'prose', on: 'body', evidence: 'reader-reported', sources: [],
+    why: 'The last paragraph opens by announcing a wrap-up, then repeats earlier points.',
+    direction: 'End on the last new fact, or on the next step for the reader.',
+    find: restatingCloser,
+  },
+  {
+    // Evidence: the field guide lists the habit of grouping things in threes ("rule of three"); no source gives a rate.
+    id: 'triplet-density', tier: 'soft', scope: 'prose', on: 'body', evidence: 'field-guide', sources: [WIKI],
+    why: 'Three-item lists appear at a high rate in this passage, so the groupings read as a habit rather than a choice.',
+    direction: 'Keep the lists whose items are all needed; give the rest the number of items the facts have.',
+    find: tripletDensity,
   },
 ];
 
@@ -386,7 +677,7 @@ export const AUDIT_SOURCES: Array<{ id: string; sources: string[] }> = [
 // Higher rank wins where one span sits inside another from a different family (the vocabulary word inside the formula that holds it).
 const RANK: Record<string, number> = {
   'undue-significance': 3, 'trailing-participle': 3, 'negative-parallelism': 3, 'weasel-attribution': 3, 'despite-challenges': 3,
-  promotional: 2, 'copula-avoidance': 2, vocabulary: 1,
+  'dive-in': 3, promotional: 2, 'copula-avoidance': 2, vocabulary: 1,
 };
 
 const squeeze = (s: string) => {
@@ -436,7 +727,7 @@ export function detect(units: Unit[], ctx: Ctx): Finding[] {
           family, unit: i, span,
           finding: {
             tier: family.tier, family: family.id, line: lineAt(u, i, source, span), text: squeeze(source.slice(span.start, span.end)),
-            ...(span.eras ? { eras: span.eras } : {}), why: family.why, direction: family.direction,
+            ...(span.eras ? { eras: span.eras } : {}), why: span.why ?? family.why, direction: family.direction,
           },
         });
       }
@@ -466,6 +757,13 @@ export function detect(units: Unit[], ctx: Ctx): Finding[] {
         for (let r = rank + 1; r < maxEnd.length; r++) if ((maxEnd[r] ?? -1) >= list[k].span.end) { dropped.add(list[k]); break; }
       }
       i = j;
+    }
+  }
+  // A density finding spans a whole three-item list; when another family reports words inside it, that family owns them.
+  for (const list of byUnit.values()) {
+    for (const d of list) {
+      if (d.family.id !== 'triplet-density') continue;
+      if (list.some(o => o.family !== d.family && o.span.start >= d.span.start && o.span.end <= d.span.end)) dropped.add(d);
     }
   }
   const kept = found.filter(f => !dropped.has(f));
@@ -523,6 +821,17 @@ export const MEASURED_NOTES = [
   'Reported for context only; none of these values is flagged.',
   'The is/are share counts is and are against serves/stands/functions/operates/acts as, represents, constitutes, boasts and embodies.',
 ];
+
+/**
+ * The note on the triplet-density threshold, for a prose draft only (dialog and Fountain never run the family), and only
+ * when a rates file is loaded: the threshold and the human medians both come from that file.
+ */
+export function tripletNote(rates: Rates | undefined | null): string | undefined {
+  if (!rates) return undefined;
+  const meds = Object.values(rates.datasets).filter(d => d.human.medians.tripletListsPer1000 !== null);
+  if (!meds.length) return undefined;
+  return `The triplet-density hallmark fires above ${thresholdFromRates(rates)} lists per 1,000 words, the 95th percentile of the human samples; their median is ${meds.map(d => `${d.human.medians.tripletListsPer1000} in ${d.label}`).join('; ')}.`;
+}
 
 /** The context values for the body units, never flagged. `words` is the denominator. */
 export function measureUnits(units: Unit[]): { words: number; measured: Measured } {

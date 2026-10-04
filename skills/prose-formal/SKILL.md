@@ -1,7 +1,7 @@
 ---
 name: prose-formal
 description: Write and check academic and professional prose with agent-prose - abstracts, papers, reports, proposals, memos and professional email - with the main result first, only supported claims, explicit numbers or placeholders, and checks for sentence length, promotional words and AI-tell vocabulary.
-when_to_use: Use when asked for an abstract, paper section, research summary, report, executive summary, proposal, memo, briefing, cover letter or professional email, or when prose lint reports formal.*, ai.* or style.* findings on a professional or academic draft. User instructions are prose-instruct; speeches are prose-speech.
+when_to_use: Use when asked for an abstract, paper section, research summary, report, executive summary, proposal, memo, briefing, cover letter or professional email, or when prose lint reports formal.*, ai.* or style.* findings on a professional or academic draft. User instructions are prose-instruct; speeches are prose-speech. Asking whether text sounds like AI, or to rewrite it to sound less like AI, is prose-audit.
 ---
 # prose-formal
 
