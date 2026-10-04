@@ -11,6 +11,12 @@ directories above this file. If a command prints `E_RUNTIME_MISSING`, run the pr
 Language models are measurably better at judging and editing humor than at generating it, and
 left alone they converge on a few stock jokes. So: generate wide, then select hard.
 
+## Craft guide
+
+Craft guide: `prose guide screen-stage --text --section <name>` prints one section of the reference guide for
+scripts. For jokes read `anatomy` (the comic craft part) and `good`; `failures` and `revise` when a draft is being
+fixed. Run `prose guide` to list every guide.
+
 ## 1. Pin the premise
 
 Write down the facts the joke must respect before writing any joke: who, what just happened,
