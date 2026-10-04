@@ -31,6 +31,7 @@ export interface OpenPlan {
  * predict (E_PREDICTION_REQUIRED). A tampered seal with --no-predict is ignored, as `set pick` ignores it.
  */
 export function planOpen(project: string, set: PromptSet, predict: boolean): OpenPlan {
+  if (set.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${set.id} was sent back (none of its variants was wanted), so it is closed`, { hint: `Make a new set: prose set new --redo ${set.id}` });
   const check = checkSet(project, set);
   if (!check.ok) throw new ProseError('E_USAGE', `Set ${set.id} has fewer than two surviving variants, so there is nothing to put on the page`, { hint: check.next });
   let prediction = readPrediction(project, set.id, set);
@@ -126,7 +127,7 @@ export function pendingSets(project: string, limit: number): { plans: OpenPlan[]
   const skipped: Array<{ set: string; reason: string }> = problems.map(p => ({ set: p.id, reason: p.error }));
   const plans: OpenPlan[] = [];
   for (const set of [...sets].reverse()) {
-    if (set.picked !== undefined) continue;
+    if (set.picked !== undefined || set.sentBack !== undefined) continue;
     try {
       const prediction = readPrediction(project, set.id, set);
       if (!prediction) continue;

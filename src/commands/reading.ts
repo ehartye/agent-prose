@@ -26,12 +26,13 @@ import {
   type Session, type SessionState, type StoredEvent,
 } from '../reading/session.ts';
 import { layoutOf } from '../reading/units.ts';
+import { reasonWords } from '../owner/feedback.ts';
 
 /** The entry the detached server runs: the same script this process was started from, next to the code. */
 const PROSE_CLI = join(import.meta.dirname, '..', '..', 'scripts', 'prose.mjs');
 const START_MS = 15_000;
 const WAIT_STEP_MS = 200;
-const ACTIONABLE = new Set(['refine', 'ship', 'abandon']);
+const ACTIONABLE = new Set(['refine', 'ship', 'none', 'abandon']);
 
 /** Said on every serve and every open: what the link exposes. */
 export const LOCAL_NOTICE = 'This server listens on this machine only (127.0.0.1): nothing else on the network can reach the link. Whoever opens the link can also delete lines from those drafts (strike them, then apply; the page asks you to confirm the exact text, and an undo puts them back), and can record picks for the sets it names (a pick cannot be changed afterwards).';
@@ -189,6 +190,16 @@ function describe(l: Loaded, event: StoredEvent) {
     return { event: 'ship', champion: event.champion, championLabel: label(event.champion), next: `read the reveal with prose reading status --id ${id}; it shows whether your sealed prediction matched. Then tell the owner what they chose` };
   }
   if (event.type === 'abandon') return { event: 'abandon', next: 'the owner abandoned this session' };
+  if (event.type === 'none') {
+    const maps = roundMaps(l.session, l.events);
+    const setId = maps.roundSet.get(l.state.round) ?? l.session.setId;
+    return {
+      event: 'none', outcome: 'none', set: setId, closest: event.closest === null ? null : (l.state.candidates.find(c => c.index === event.closest) ? variantOf(l.state.candidates.find(c => c.index === event.closest)!) : event.closest),
+      closestLabel: event.closest === null ? null : label(event.closest), reasons: event.reasons, reasonWords: reasonWords(event.reasons), note: event.note ?? null,
+      reveal: readReveal(l.project, id),
+      next: `the owner rejected every draft; the reveal of your sealed guess is unscored. Read the reasons and note, tell the owner what you will change, then make a new set: prose set new --redo ${setId}; then prose reading open --set <new-set>`,
+    };
+  }
   if (event.type !== 'refine') throw new ProseError('E_INTERNAL', `Cannot describe a ${event.type} event`);
   const notes = l.state.notes.filter(n => n.round === l.state.round).map(n => {
     const { text, format } = locate(l, n.index);
@@ -393,10 +404,11 @@ export function registerReadingCommands(program: Command, io: Io): void {
       }
       if (l.state.stage !== 'waiting') {
         throw new ProseError('E_CONFLICT', `Session ${opts.id} is in the ${l.state.stage} stage, not waiting for a round`, {
-          hint: l.state.stage === 'shipped' || l.state.stage === 'abandoned' ? 'Open a new session with prose reading open' : `A round answers a refine request: prose reading wait --id ${opts.id}`,
+          hint: l.state.stage === 'shipped' || l.state.stage === 'sentBack' || l.state.stage === 'abandoned' ? 'Open a new session with prose reading open' : `A round answers a refine request: prose reading wait --id ${opts.id}`,
         });
       }
       const set = readSet(project, opts.set);
+      if (set.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${set.id} was sent back, so it is closed and cannot be a round`, { hint: `Make a new set: prose set new --redo ${set.id}` });
       const used = new Set([l.session.setId, ...roundMaps(l.session, l.events).roundSet.values()]);
       if (used.has(set.id)) throw new ProseError('E_USAGE', `Set ${set.id} is already part of this session`, { hint: 'Make a new set from the champion: prose set new <champion draft> --directions ...' });
       if (set.form !== l.session.form) throw new ProseError('E_USAGE', `Set ${set.id} is a ${set.form} set; this session is ${l.session.form}`, { hint: 'Make the new set from the champion\'s draft' });
@@ -432,7 +444,8 @@ export function registerReadingCommands(program: Command, io: Io): void {
         id: session.id, setId: session.setId, ...(session.queue !== undefined ? { queue: session.queue } : {}), stage: state.stage, round: state.round, predicted: session.predicted ?? true,
         champion: state.champion, candidates: briefCandidates(l), duels: state.duels, notes: state.notes.length,
         pendingRefine: state.pendingRefine, shipped: state.shipped,
-        reveal: state.shipped !== null ? readReveal(l.project, session.id) : null,
+        reveal: state.shipped !== null || state.sentBack !== null ? readReveal(l.project, session.id) : null,
+        ...(state.sentBack !== null ? { sentBack: { ...state.sentBack, reasonWords: reasonWords(state.sentBack.reasons) } } : {}),
       });
     });
 
@@ -465,7 +478,7 @@ export function registerReadingCommands(program: Command, io: Io): void {
       const project = projectOf(opts);
       if (queueExists(project, opts.id)) { io.emit(closeQueue(project, opts.id)); return; }
       const l = load(project, opts.id);
-      if (l.state.stage === 'shipped' || l.state.stage === 'abandoned') { io.emit({ id: opts.id, closed: false, stage: l.state.stage }); return; }
+      if (l.state.stage === 'shipped' || l.state.stage === 'sentBack' || l.state.stage === 'abandoned') { io.emit({ id: opts.id, closed: false, stage: l.state.stage }); return; }
       appendEvent(l.project, opts.id, { type: 'abandon' });
       io.emit({ id: opts.id, closed: true, stage: 'abandoned' });
     });

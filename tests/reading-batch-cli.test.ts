@@ -369,7 +369,7 @@ describe('reading status, list and close for a queue', () => {
     sendDirect(b, q.id, 1, 2);
     const r = prose('reading', 'list', '--dir', b.project);
     expect(r.out.sessions.map((s: any) => s.id)).toEqual([single.out.id]);
-    expect(r.out.queues).toEqual([{ id: q.id, stage: 'open', total: 2, sent: 1, createdAt: q.createdAt }]);
+    expect(r.out.queues).toEqual([{ id: q.id, stage: 'open', total: 2, sent: 1, sentBack: 0, createdAt: q.createdAt }]);
     expect(prose('reading', 'status', '--id', q.items[1].sessionId, '--dir', b.project).out).toMatchObject({ queue: q.id, stage: 'lineup' });
     expect(prose('reading', 'status', '--id', single.out.id, '--dir', b.project).out).not.toHaveProperty('queue');
   });

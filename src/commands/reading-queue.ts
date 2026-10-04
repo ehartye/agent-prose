@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { ProseError } from '../errors.ts';
 import { newId, queueDir, queuesDir, sessionDir, setDir } from '../owner/paths.ts';
 import { variantPath } from '../owner/sets.ts';
-import { MAX_QUEUE_ITEMS, appendQueueEvent, childrenMap, foldQueue, loadChildren, rankedPicks, readQueue, readQueueEvents, writeQueue, type LoadedChild, type Queue, type QueueState } from '../reading/queue.ts';
+import { reasonWords } from '../owner/feedback.ts';
+import { MAX_QUEUE_ITEMS, appendQueueEvent, childrenMap, foldQueue, loadChildren, rankedOutcomes, readQueue, readQueueEvents, writeQueue, type LoadedChild, type Queue, type QueueState } from '../reading/queue.ts';
 import { railLabels, type OpenPlan } from '../reading/open.ts';
 import { displayPlan, labelOf } from '../reading/server.ts';
 import { appendEvent, openSession, readReveal } from '../reading/session.ts';
@@ -48,7 +49,8 @@ export function snapshotOf(project: string, id: string): Snapshot {
 /** What the agent is told of the counts: a staged choice is not a pick (the owner may still change it), so it counts as waiting. */
 export function agentCounts(state: QueueState) {
   const c = state.counts;
-  return { waiting: c.waiting + c.picked, skipped: c.skipped, sent: c.sent, blocked: c.blocked, ended: c.ended };
+  // staged choices and staged send-backs are not outcomes (the owner may still change them), so they count as waiting
+  return { waiting: c.waiting + c.picked + c.back, skipped: c.skipped, sent: c.sent, sentBack: c.sentBack, blocked: c.blocked, ended: c.ended };
 }
 
 const labelIn = (l: LoadedChild, index: number): string | null => {
@@ -83,6 +85,26 @@ export function pickOf(project: string, l: LoadedChild, state: QueueState) {
   };
 }
 
+/** The reveal of a sent-back item: the session's own (sent back on the page) or the set's (from the command line), in one shape. The guess is shown, never scored. */
+function noneRevealOf(project: string, l: LoadedChild, via: 'page' | 'cli'): unknown {
+  if (via === 'page') return readReveal(project, l.item.sessionId);
+  let raw: { agent?: unknown; model?: unknown; note?: string } | null = null;
+  try { raw = JSON.parse(readFileSync(join(setDir(project, l.item.setId), 'reveal.json'), 'utf8')); } catch { raw = null; }
+  return { schema: 'prose/session-reveal@1', outcome: 'none', setId: l.item.setId, picked: null, variant: null, matched: null, prediction: raw?.agent ?? null, ...(raw?.model ? { model: raw.model } : {}), ...(raw?.agent ? {} : { note: raw?.note ?? 'No prediction was sealed for this set, so there is nothing to reveal' }), via: 'cli' };
+}
+
+/** One sent-back item as the agent reads it: what the owner said, and the revealed (unscored) guess. */
+export function sentBackOf(project: string, l: LoadedChild, state: QueueState) {
+  const s = state.items[l.item.n - 1];
+  const b = s.sentBack!;
+  return {
+    item: l.item.n, set: l.item.setId, session: l.item.sessionId, who: l.item.who, where: l.item.where, form: l.item.form,
+    outcome: 'none', closest: b.closest, closestLabel: b.closest === null ? null : labelIn(l, b.closest), reasons: b.reasons, reasonWords: reasonWords(b.reasons), note: b.note ?? null,
+    via: s.via, at: s.sentAt, reveal: noneRevealOf(project, l, s.via ?? 'page'),
+    next: `read the feedback, say what you will change, then: prose set new --redo ${l.item.setId}`,
+  };
+}
+
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 export interface WaitOptions { since: number; timeoutMs: number; settleMs: number; stepMs?: number }
@@ -101,22 +123,24 @@ export async function waitForQueue(project: string, id: string, o: WaitOptions):
   let stamp = queueStamp(project, snap.queue);
   for (;;) {
     const { state, loaded } = snap;
-    const ranked = rankedPicks(state);
-    if (o.since > ranked.length) throw new ProseError('E_USAGE', `--since ${o.since} is past the ${ranked.length} pick${ranked.length === 1 ? '' : 's'} recorded so far`, { hint: `Pass the cursor the last wait printed (or 0): ${nextHint(ranked.length)}` });
+    const ranked = rankedOutcomes(state);
+    if (o.since > ranked.length) throw new ProseError('E_USAGE', `--since ${o.since} is past the ${ranked.length} ${state.counts.sentBack ? 'outcome' : 'pick'}${ranked.length === 1 ? '' : 's'} recorded so far`, { hint: `Pass the cursor the last wait printed (or 0): ${nextHint(ranked.length)}` });
     const fresh = ranked.slice(o.since);
-    const picks = () => fresh.map(p => pickOf(project, loaded[p.n - 1], state));
+    const picks = () => fresh.filter(p => p.kind === 'pick').map(p => pickOf(project, loaded[p.n - 1], state));
+    const sentBack = () => fresh.filter(p => p.kind === 'none').map(p => sentBackOf(project, loaded[p.n - 1], state));
+    const backNote = state.counts.sentBack > 0 ? '; items sent back need a new set: prose set new --redo <set>' : '';
     if (state.stage !== 'open') {
-      const reason = state.stage === 'done' ? 'all-picked' : state.stage;
+      const reason = state.stage === 'done' ? (state.counts.sentBack > 0 ? 'all-resolved' : 'all-picked') : state.stage;
       return {
-        event: 'done', reason, picks: picks(), unpicked: state.items.filter(i => i.status !== 'sent').map(i => ({ item: i.n, set: snap.queue.items[i.n - 1].setId })),
+        event: 'done', reason, picks: picks(), sentBack: sentBack(), unpicked: state.items.filter(i => i.status !== 'sent' && i.status !== 'sentBack').map(i => ({ item: i.n, set: snap.queue.items[i.n - 1].setId })),
         cursor: ranked.length, counts: agentCounts(state),
-        next: reason === 'all-picked' ? 'every set has a pick: tell the owner what they chose' : reason === 'finished' ? 'the owner pressed Finish; sets left unpicked are still sealed: prose reading open --pending offers them again' : 'the queue was closed',
+        next: reason === 'all-picked' ? 'every set has a pick: tell the owner what they chose' : reason === 'all-resolved' ? `every set is picked or sent back: tell the owner what they chose${backNote}` : reason === 'finished' ? 'the owner pressed Finish; sets left unpicked are still sealed: prose reading open --pending offers them again' : 'the queue was closed',
       };
     }
     if (fresh.length) {
       const lastAt = Date.parse(ranked[ranked.length - 1].at);
       if (Date.now() - lastAt >= o.settleMs || Date.now() >= end) {
-        return { event: 'picks', picks: picks(), cursor: ranked.length, counts: agentCounts(state), done: false, next: nextHint(ranked.length) };
+        return { event: 'picks', picks: picks(), sentBack: sentBack(), cursor: ranked.length, counts: agentCounts(state), done: false, next: nextHint(ranked.length) + backNote };
       }
     } else if (Date.now() >= end) {
       return { timeout: true, cursor: ranked.length, counts: agentCounts(state), next: `no picks yet; run ${nextHint(ranked.length)} again` };
@@ -131,17 +155,19 @@ export async function waitForQueue(project: string, id: string, o: WaitOptions):
 /** `reading status` for a queue: stage, counts and, for sent items only, the pick and its reveal. */
 export function queueStatus(project: string, id: string) {
   const { queue, state, loaded } = snapshotOf(project, id);
-  const ranked = rankedPicks(state);
+  const ranked = rankedOutcomes(state);
   return {
     id, kind: 'queue', stage: state.stage, total: queue.items.length, counts: agentCounts(state), cursor: ranked.length,
     items: state.items.map(s => {
       const l = loaded[s.n - 1];
       const sent = s.status === 'sent';
       const p = sent ? pickOf(project, l, state) : null;
+      const back = s.status === 'sentBack' ? sentBackOf(project, l, state) : null;
       return {
         n: s.n, set: l.item.setId, session: l.item.sessionId, who: l.item.who, where: l.item.where,
-        // a staged choice is not a pick: it is reported as waiting until Send
-        status: s.status === 'picked' ? 'waiting' : s.status, picked: sent, variant: p ? p.variant : null, label: p ? p.label : null, reveal: p ? p.reveal : null,
+        // a staged choice or a staged send-back is not an outcome: it is reported as waiting until Send
+        status: s.status === 'picked' || s.status === 'back' ? 'waiting' : s.status, picked: sent, variant: p ? p.variant : null, label: p ? p.label : null, reveal: p ? p.reveal : back ? back.reveal : null,
+        ...(back ? { sentBack: { closest: back.closest, closestLabel: back.closestLabel, reasons: back.reasons, reasonWords: back.reasonWords, note: back.note } } : {}),
       };
     }),
     order: state.order,
@@ -150,13 +176,13 @@ export function queueStatus(project: string, id: string) {
 
 /** Every queue of the project, newest first. */
 export function listQueues(project: string) {
-  const out: Array<{ id: string; stage: string; total: number; sent: number; createdAt: string }> = [];
+  const out: Array<{ id: string; stage: string; total: number; sent: number; sentBack: number; createdAt: string }> = [];
   const problems: Array<{ id: string; error: string }> = [];
   if (existsSync(queuesDir(project))) {
     for (const id of readdirSync(queuesDir(project))) {
       try {
         const { queue, state } = snapshotOf(project, id);
-        out.push({ id, stage: state.stage, total: queue.items.length, sent: state.counts.sent, createdAt: queue.createdAt });
+        out.push({ id, stage: state.stage, total: queue.items.length, sent: state.counts.sent, sentBack: state.counts.sentBack, createdAt: queue.createdAt });
       } catch (e) { problems.push({ id, error: e instanceof ProseError ? e.message : String(e) }); }
     }
   }
@@ -168,7 +194,7 @@ export function listQueues(project: string) {
 export function abandonUnshipped(project: string, loaded: LoadedChild[]): number {
   let n = 0;
   for (const l of loaded) {
-    if (!l.state || l.state.stage === 'shipped' || l.state.stage === 'abandoned') continue;
+    if (!l.state || l.state.stage === 'shipped' || l.state.stage === 'sentBack' || l.state.stage === 'abandoned') continue;
     try { appendEvent(project, l.item.sessionId, { type: 'abandon' }); n++; } catch { /* a child that cannot take it is already finished with */ }
   }
   return n;
@@ -181,7 +207,7 @@ export function closeQueue(project: string, id: string) {
   appendQueueEvent(project, id, { type: 'close' });
   const snap = snapshotOf(project, id);
   const abandoned = abandonUnshipped(project, snap.loaded);
-  return { id, kind: 'queue', closed: true, stage: 'closed', sent: snap.state.counts.sent, abandoned };
+  return { id, kind: 'queue', closed: true, stage: 'closed', sent: snap.state.counts.sent, sentBack: snap.state.counts.sentBack, abandoned };
 }
 
 /** The stat stamp of everything a queue's state depends on, so a waiter parses again only after a change. */

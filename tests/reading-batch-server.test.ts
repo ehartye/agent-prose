@@ -106,9 +106,9 @@ describe('the rail and the item', () => {
     expect(res.body.session).toMatchObject({ id: sessionOf(r, 2), setId: 'a-02', form: 'speech-small' });
     expect(res.body.compare).toMatchObject({ hasCurrent: false });
     expect(res.body.candidates.map((c: any) => c.index).sort()).toEqual([1, 2, 3]);
-    expect(res.body.queue).toEqual({ n: 2, stage: 'open', status: 'waiting', choice: { variant: null, passes: [] }, sentVariant: null });
+    expect(res.body.queue).toEqual({ n: 2, stage: 'open', status: 'waiting', choice: { variant: null, passes: [] }, back: null, sentBack: null, sentVariant: null });
     expect(res.text).not.toMatch(/SEALED|shortlistHit|"why"|"prediction"/); // the prediction is never in a payload
-    expect(res.body.reveal).toEqual({ shipped: false });
+    expect(res.body.reveal).toEqual({ shipped: false, sentBack: false });
   });
 
   it('serves the page at /q/<id> with no token, like /s/<id>, and only for a plain id', async () => {
