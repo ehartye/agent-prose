@@ -1,5 +1,6 @@
 import type { BlockKind, Doc } from '../ir.ts';
 import { AI_TELLS } from '../measure/lexicon.ts';
+import { loadRates } from './rates.ts';
 import { PROSE_KINDS } from '../kinds.ts';
 import { per1000, plain, round2, sentenceRanges, sentences, words } from '../text.ts';
 
@@ -43,6 +44,8 @@ export interface Ctx {
   markdown: boolean;
   /** Fountain and dialog drafts: only hard artifacts and vocabulary run (dialogue and stage directions read differently). */
   limited: boolean;
+  /** A rates file to read the triplet threshold from, in place of craft/audit-rates.json (tests inject one). */
+  ratesPath?: string;
 }
 
 interface Span {
@@ -265,12 +268,23 @@ function restatingCloser(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
 }
 
 /**
- * Group 3: density. `TRIPLET_DENSITY_PER_1000` is the rate of three-item lists ("A, B, and C") per 1,000 words above which
- * a passage of at least 100 words gets one finding, on its first such list. TODO(Task 3): replace the initial value with
- * the 95th percentile of the human samples' rate. It is the same quantity as the measured `tripletListsPer1000`
- * (same pattern, same word count), so the two always agree.
+ * Group 3: density. The threshold is the rate of three-item lists ("A, B, and C") per 1,000 words above which a passage
+ * of at least 100 words gets one finding, on its first such list. It is the 95th percentile of the measured
+ * `tripletListsPer1000` among the human texts of 100 words or more, taken as the larger of the two datasets in
+ * craft/audit-rates.json (generated 2026-10-04: arXiv abstracts 6.9, Wikipedia introductions 10.849, so 10.9 once
+ * rounded up to one decimal). The value is read from the file, so regenerating the file moves the threshold. The measured
+ * `tripletListsPer1000` is the same quantity (same pattern, same word count), so the two always agree.
  */
-export const TRIPLET_DENSITY_PER_1000 = 9;
+export const TRIPLET_FALLBACK_PER_1000 = 9;
+
+/** The threshold from a rates file (the committed one by default); the fallback constant when it cannot be read. */
+export function tripletThreshold(ratesPath?: string): number {
+  const rates = loadRates(ratesPath);
+  const p95s = Object.values(rates?.datasets ?? {}).map(d => d.human.tripletP95).filter(v => v > 0);
+  return p95s.length ? Math.ceil(Math.max(...p95s) * 10 - 1e-9) / 10 : TRIPLET_FALLBACK_PER_1000;
+}
+
+export const TRIPLET_DENSITY_PER_1000 = tripletThreshold();
 const DENSITY_MIN_WORDS = 100;
 
 const tripletStats = (() => {
@@ -297,14 +311,15 @@ const tripletStats = (() => {
   };
 })();
 
-function tripletDensity(_u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
+function tripletDensity(_u: Unit, ctx: Ctx, units: Unit[], i: number): Span[] {
   const { first, count, words: total } = tripletStats(units);
   if (!first || first.unit !== i || total < DENSITY_MIN_WORDS) return [];
   const rate = per1000(count, total);
-  if (rate <= TRIPLET_DENSITY_PER_1000) return [];
+  const threshold = ctx.ratesPath === undefined ? TRIPLET_DENSITY_PER_1000 : tripletThreshold(ctx.ratesPath);
+  if (rate <= threshold) return [];
   return [{
     start: first.start, end: first.end,
-    why: `${count} three-item lists in ${total} words, ${rate.toFixed(1)} per 1,000 words, above the ${TRIPLET_DENSITY_PER_1000} per 1,000 this audit uses; the first is marked.`,
+    why: `${count} three-item lists in ${total} words, ${rate.toFixed(1)} per 1,000 words, above the ${threshold} per 1,000 this audit uses; the first is marked.`,
   }];
 }
 

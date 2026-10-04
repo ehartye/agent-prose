@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseDocument } from '../src/document.ts';
 import { buildReport, EVIDENCE_WORDS, LIMITS, renderText } from '../src/audit/report.ts';
-import { AUDIT_SOURCES, FAMILIES, MEASURED_NOTES, TRIPLET_DENSITY_PER_1000, type Finding } from '../src/audit/detectors.ts';
+import { AUDIT_SOURCES, detect, FAMILIES, MEASURED_NOTES, TRIPLET_DENSITY_PER_1000, TRIPLET_FALLBACK_PER_1000, tripletThreshold, unitsOf, type Finding } from '../src/audit/detectors.ts';
+import { RATES_PATH } from '../src/audit/rates.ts';
 import { REFERENCES } from '../src/craft/rules.ts';
 
 const report = (text: string, name = 'draft.md', form?: string) => buildReport(parseDocument(name, text, form ? { form } : {}), text);
@@ -285,8 +286,49 @@ describe('group 2 interactions', () => {
 });
 
 describe('triplet-density', () => {
-  it('keeps the threshold in one exported constant, initially 9 per 1,000 words', () => {
-    expect(TRIPLET_DENSITY_PER_1000).toBe(9);
+  it('reads the threshold from the rates file: the larger human 95th percentile, rounded up to one decimal', () => {
+    const rates = JSON.parse(readFileSync(RATES_PATH, 'utf8'));
+    const p95s = Object.values<any>(rates.datasets).map(d => d.human.tripletP95);
+    expect(TRIPLET_DENSITY_PER_1000).toBe(Math.ceil(Math.max(...p95s) * 10 - 1e-9) / 10);
+    expect(TRIPLET_DENSITY_PER_1000).not.toBe(TRIPLET_FALLBACK_PER_1000);
+  });
+  it('falls back to a fixed constant when the file is missing or unreadable', () => {
+    expect(TRIPLET_FALLBACK_PER_1000).toBe(9);
+    const dir = mkdtempSync(join(tmpdir(), 'prose-rates-'));
+    try {
+      expect(tripletThreshold(join(dir, 'absent.json'))).toBe(TRIPLET_FALLBACK_PER_1000);
+      writeFileSync(join(dir, 'bad.json'), 'not json');
+      expect(tripletThreshold(join(dir, 'bad.json'))).toBe(TRIPLET_FALLBACK_PER_1000);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('uses the value in an injected rates file', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'prose-rates-'));
+    try {
+      const make = (name: string, a: number, b: number) => {
+        const rates = structuredClone(JSON.parse(readFileSync(RATES_PATH, 'utf8')));
+        rates.datasets.arxiv.human.tripletP95 = a;
+        rates.datasets.wikiintro.human.tripletP95 = b;
+        const p = join(dir, name);
+        writeFileSync(p, JSON.stringify(rates));
+        return p;
+      };
+      const low = make('low.json', 1.01, 2.04), high = make('high.json', 40, 50);
+      expect(tripletThreshold(low)).toBe(2.1);
+      const flagged = (text: string, ratesPath?: string) => detect(unitsOf(parseDocument('d.md', text, {})), { markdown: true, limited: false, ...(ratesPath ? { ratesPath } : {}) }).filter(f => f.family === 'triplet-density');
+      expect(flagged(passage(1))).toEqual([]);
+      expect(flagged(passage(1), low)).toHaveLength(1);
+      expect(flagged(passage(1), low)[0].why).toContain('above the 2.1 per 1,000');
+      expect(flagged(passage(2), high)).toEqual([]);
+      expect(flagged(passage(2))).toHaveLength(1);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it('with the committed file, a passage just below and just above the threshold behave', () => {
+    const above = passage(2, 21); // 180 words, two lists: 11.11 per 1,000
+    const below = passage(2, 22); // 188 words, two lists: 10.64 per 1,000
+    expect(report(above).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+    expect(report(below).measured.tripletListsPer1000).toBeLessThanOrEqual(TRIPLET_DENSITY_PER_1000);
+    expect(famOf(above, 'triplet-density')).toHaveLength(1);
+    expect(famOf(below, 'triplet-density')).toEqual([]);
   });
   it('reports nothing just below the threshold and one finding just above it, in a passage of about 120 words', () => {
     const below = passage(1); // 118 words, one list: 8.47 per 1,000
