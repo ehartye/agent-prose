@@ -21,7 +21,9 @@ export const VoiceSchema = z.strictObject({
   speakers: z.array(z.string().min(1)).min(1),
   register: z.string().optional(),
   description: z.string().min(1),
-  samples: z.array(z.string().min(1)).min(1),
+  /** Personality and background, brief material only (no lint rule reads it): `set new --character <id>` snapshots it. */
+  bio: z.string().trim().min(1).max(600).optional(),
+  samples: z.array(z.string().min(1)).default([]),
   banned: z.array(z.string().min(1)).default([]),
   catchphrases: z.array(z.string().min(1)).default([]),
   targets: z.strictObject({
@@ -33,7 +35,7 @@ export type Voice = z.infer<typeof VoiceSchema>;
 
 export const voicesDir = (projectDir: string) => join(projectDir, PROJECT_DIR, 'voices');
 
-const speakerKey = (s: string) => splitSpeaker(s).name.toUpperCase();
+export const speakerKey = (s: string) => splitSpeaker(s).name.toUpperCase();
 
 /**
  * Every voice bible in the project, by file name. A bad file is E_SCHEMA naming the file and the field; so is a
@@ -89,7 +91,7 @@ function readVoice(dir: string, f: string, text: string | Error): Voice {
     const issue = r.error.issues[0];
     throw new ProseError('E_SCHEMA', `${f}: ${issue.message}`, {
       pointer: issue.path.length ? '/' + issue.path.join('/') : '', details: { file: join(dir, f) },
-      hint: 'A prose/voice@1 bible needs schema, id, name, speakers, description and samples; targets are [low, high] ranges',
+      hint: 'A prose/voice@1 bible needs schema, id, name, speakers and description; bio (at most 600 characters), samples, banned, catchphrases and targets are optional, and a target is a [low, high] range',
     });
   }
   return r.data;

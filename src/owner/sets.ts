@@ -87,16 +87,16 @@ export type PromptSet = z.infer<typeof SetSchema>;
 export type Brief = z.infer<typeof BriefSchema>;
 
 /** What a caller may say about a brief; `confirmed` stamps `confirmedAt` with the current time. */
-export interface BriefInput { character?: string; context?: string; confirmed?: boolean }
+export interface BriefInput { character?: string; characterRef?: string; context?: string; confirmed?: boolean }
 
 /** The brief as `set show`, `set new` and `set brief` print it: every field present, `confirmed` a boolean. */
 export const briefView = (b: Brief) => ({ character: b.character ?? null, characterRef: b.characterRef ?? null, context: b.context ?? null, confirmed: b.confirmedAt !== undefined });
 
 /** A validated brief from the caller's words; a bad one is E_USAGE (it came from the command line, not from disk). */
-function newBrief(input: BriefInput, now: Date): Brief {
-  const { character, context, confirmed } = input;
+export function newBrief(input: BriefInput, now: Date): Brief {
+  const { character, characterRef, context, confirmed } = input;
   const parsed = BriefSchema.safeParse({
-    ...(character !== undefined ? { character } : {}), ...(context !== undefined ? { context } : {}),
+    ...(character !== undefined ? { character } : {}), ...(characterRef !== undefined ? { characterRef } : {}), ...(context !== undefined ? { context } : {}),
     ...(confirmed ? { confirmedAt: now.toISOString() } : {}),
   });
   if (!parsed.success) {
@@ -109,7 +109,7 @@ function newBrief(input: BriefInput, now: Date): Brief {
   return parsed.data;
 }
 
-export interface BriefEdit { character?: string; context?: string; clearCharacter?: boolean; clearContext?: boolean; confirmed?: boolean }
+export interface BriefEdit { character?: string; characterRef?: string; context?: string; clearCharacter?: boolean; clearContext?: boolean; confirmed?: boolean }
 
 /**
  * The brief after an edit: new text clears the confirmation (the owner confirmed other words) unless `confirmed` is passed
@@ -126,7 +126,7 @@ export function editedBrief(current: Brief | undefined, edit: BriefEdit, now: Da
   const characterChanged = edit.character !== undefined || edit.clearCharacter;
   const character = edit.clearCharacter ? undefined : (edit.character ?? current?.character);
   const context = edit.clearContext ? undefined : (edit.context ?? current?.context);
-  const characterRef = characterChanged ? undefined : current?.characterRef;
+  const characterRef = characterChanged ? edit.characterRef : current?.characterRef;
   if (character === undefined && context === undefined && characterRef === undefined) return undefined;
   const confirmedAt = edit.confirmed ? now.toISOString() : (textEdited ? undefined : current?.confirmedAt);
   const parsed = BriefSchema.safeParse({

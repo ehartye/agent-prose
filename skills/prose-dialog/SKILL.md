@@ -29,7 +29,7 @@ context for get a `comment`.
 3. **Write the brief if the owner will choose between rewrites** (prose-review). Character: how this
    speaker talks (register, habits, what they want from the player), in a sentence or two. Context: the
    trigger, the box size and how often it is heard (a bark heard every few seconds, a one-time quest line).
-   Confirm both with the owner before `prose set new ... --brief-confirmed`.
+   If the speaker has a voice bible with a `bio`, `--character <voice-id>` uses it (prose-voice). Confirm both with the owner before `prose set new ... --brief-confirmed`.
 4. **Decide what each revisit says.** Refusing, returning mid-quest and coming back after a
    refusal are revisits: each gets two or more `variants` so the NPC is not implausibly patient.
 
