@@ -133,10 +133,10 @@ button.link:hover { background: none; }
 
 /* ---- the compare grid: the current line and the drafts as aligned columns ---- */
 .sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; box-shadow: 0 1px 0 var(--rule), 0 14px 28px -22px rgba(0, 0, 0, 0.45); margin: 0.6rem 0 1rem; }
-.gr { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); }
-.n2 .gr { grid-template-columns: 2.6rem repeat(2, minmax(0, 1fr)); }
-.n3 .gr { grid-template-columns: 2.6rem repeat(3, minmax(0, 1fr)); }
-.n4 .gr { grid-template-columns: 2.6rem repeat(4, minmax(0, 1fr)); }
+.gr { display: grid; grid-template-columns: 3.3rem minmax(0, 1fr); }
+.n2 .gr { grid-template-columns: 3.3rem repeat(2, minmax(0, 1fr)); }
+.n3 .gr { grid-template-columns: 3.3rem repeat(3, minmax(0, 1fr)); }
+.n4 .gr { grid-template-columns: 3.3rem repeat(4, minmax(0, 1fr)); }
 .gr > * { padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--rule); min-width: 0; }
 .gr > .ln { color: var(--graphite); font: 0.72rem var(--script); text-align: right; padding-inline: 0.4rem; border-right: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
 .colhead, .cell, .foot { border-left: 1px solid var(--rule); }

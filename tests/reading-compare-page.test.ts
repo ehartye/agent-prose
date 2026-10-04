@@ -71,6 +71,14 @@ describe('folding', () => {
     const struck = buildCompare(base, [{ key: '1', cells: base, struck: [1] }], true, [1])!.rows;
     expect(r.rowIsSame(struck[1], ['1'], true)).toBe(false);
   });
+  it('drops an insertion row that no visible variant has a line on', () => {
+    const added = [...base.slice(0, 2), { text: 'Brand new.' }, ...base.slice(2)];
+    const rs = rows({ '1': added, '2': base });
+    const ins = rs.find((x: any) => x.base === null);
+    expect(r.rowShown(ins, ['1'])).toBe(true);
+    expect(r.rowShown(ins, ['2'])).toBe(false);
+    expect(r.rowShown(rs[0], ['2'])).toBe(true);
+  });
   it('labels a fold with its count and where it starts and ends', () => {
     const segs = r.foldSegments(rows({ '1': v1 }), ['1'], true);
     expect(r.foldLabel(segs[0].rows)).toEqual({ text: '2 lines unchanged', where: 'A, line 1 - A, line 2' });

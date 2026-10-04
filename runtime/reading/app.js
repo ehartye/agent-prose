@@ -261,6 +261,9 @@
     return seen.every(x => x === seen[0]);
   }
 
+  /** An insertion row (a line only some variants add) matters only when a visible variant has a line on it. */
+  const rowShown = (row, keys) => row.base !== null || keys.some(k => row.cells && row.cells[k]);
+
   /** The rows as segments: a plain row, or one fold for each run of rows that are the same in every visible column. */
   function foldSegments(rows, keys, hasCurrent) {
     const out = [];
@@ -349,7 +352,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, compareLimit, shownKeys, togglePicked, rowIsSame, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, compareLimit, shownKeys, togglePicked, rowIsSame, rowShown, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord };
     return;
   }
 
@@ -582,7 +585,7 @@
   const unitsOf = index => { const c = data && data.candidates.find(x => x.index === index); return (c && c.units) || []; };
 
   function highlight(index, i) {
-    for (const els of unitEls.values()) for (const el of els) el.classList.remove('speaking');
+    for (const els of unitEls.values()) for (const el of els) if (el) el.classList.remove('speaking');
     const el = i >= 0 && unitEls.get(index) && unitEls.get(index)[i];
     if (!el) return;
     el.classList.add('speaking');
@@ -935,7 +938,7 @@
       return out;
     };
 
-    const segs = foldSegments(cmp.rows, keys, hasCur);
+    const segs = foldSegments(cmp.rows.filter(row => rowShown(row, keys)), keys, hasCur);
     const body = [];
     segs.forEach(seg => {
       if (!seg.fold) { body.push(...dataRows(seg.row)); return; }
@@ -1024,7 +1027,7 @@
       await send({ type: 'lineup', kept, duds: [...duds, ...broken], order: shown.map(c => c.index) });
     }, 'primary', { disabled: !ready, 'data-gate': '1' });
     const dock = h('div', { class: 'actionbar' }, go, h('span', { class: 'quiet', role: 'status', text: ready ? marked + ' kept' : 'Keep at least one draft to continue' }));
-    // Side by side when the server aligned the drafts (every one readable); otherwise the stack of cards, as before.
+    // Side by side when the server aligned the drafts (every one readable); otherwise the stack of cards as before.
     if (data.compare && shown.length > 0 && shown.every(c => !c.changed && c.hashOk && c.units)) return [briefBlock(), compareView(shown, pinned), dock];
     const cards = shown.map(c => {
       const mark = which => () => { ui.marks[c.index] = ui.marks[c.index] === which ? null : which; render(); };
