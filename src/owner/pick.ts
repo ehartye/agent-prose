@@ -4,11 +4,12 @@ import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
 import { loadVoices, voiceFor, type Voice } from '../voice.ts';
 import { checkSet } from './check.ts';
+import { currentDraftHash, draftHash } from './original.ts';
 import { FEATURE_SET_ID, centered, featureVector } from './features.ts';
 import { withSetLock, writeFileAtomic, type LockContext, type LockOptions } from './fsutil.ts';
 import { globalTasteDir, projectTasteDir, setDir } from './paths.ts';
 import { readPrediction, sealValid, variantHash, type Prediction } from './prediction.ts';
-import { readSet, variantPath, writeSet, type PromptSet } from './sets.ts';
+import { basePath, readSet, variantPath, writeSet, type PromptSet } from './sets.ts';
 import { modelReveal, type ModelScore } from '../taste/reveal.ts';
 import { VERDICT_SCHEMA, appendLedgerOnce, appendVerdictsOnce, type Verdict } from './verdicts.ts';
 
@@ -37,6 +38,8 @@ export interface PickResult {
   /** Present when every row was already logged. */
   note?: string;
   reveal: Reveal | null;
+  /** Things the owner should know before the variant is copied over the draft. Absent when there are none. */
+  warnings?: string[];
   /** Set when a sealed prediction was discarded at pick time: it is recorded as a missed prediction, not dropped. */
   voided?: VoidReason;
   next: string;
@@ -181,12 +184,25 @@ function recordPickLocked(project: string, set: PromptSet, pick: number, opts: P
   writeSet(project, { ...set, picked: pick, pickedAt: now.toISOString() });
   try { rmSync(pendingFile(project, set.id), { force: true, maxRetries: 10, retryDelay: 10 }); } catch { /* the pick is recorded; a leftover is ignored once set.json says picked */ }
   const file = set.variants.find(v => v.index === pick)!.file;
+  const warnings = draftMovedOn(project, set);
   return {
     set: set.id, picked: pick, file, verdicts: rows.length, appended, skipped: rows.length - appended,
     ...(rows.length && !appended ? { note: 'Every verdict for this pick was already logged (a retry after an interrupted pick); nothing was appended' } : {}),
     reveal,
+    ...(warnings.length ? { warnings } : {}),
     ...(discarded ? { voided: discarded.reason } : {}),
     next: `Apply the choice if the owner wants it: copy ${join(setDir(project, set.id), file)} over ${resolve(project, set.source)}` +
-      (discarded ? `. The sealed prediction was discarded (${discarded.reason}) and is recorded as a voided miss` : ''),
+      (discarded ? `. The sealed prediction was discarded (${discarded.reason}) and is recorded as a voided miss` : '') +
+      (warnings.length ? `. Warning: ${warnings.join(' ')}` : ''),
   };
+}
+
+/** The draft changed since the set was made (an applied strike, an edit): copying a variant over it would undo that. */
+function draftMovedOn(project: string, set: PromptSet): string[] {
+  try {
+    const now = currentDraftHash(project, set.source);
+    if (now === null) return [];
+    if (now === draftHash(readFileSync(basePath(project, set), 'utf8'))) return [];
+    return ['The draft has changed since this set was made, so copying the variant over it would undo those changes, including any applied strikes.'];
+  } catch { return []; }
 }
