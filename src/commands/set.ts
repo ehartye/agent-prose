@@ -62,7 +62,8 @@ export function registerSetCommands(program: Command, io: Io): void {
         variants: s.variants.map(v => ({ index: v.index, file: v.file, direction: v.direction })),
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: false } : null,
-        next: `${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
+        excluded: s.excluded ?? null,
+        next: `${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}${s.excluded ? `${s.excluded.length} struck line${s.excluded.length === 1 ? ' is' : 's are'} excluded: leave ${s.excluded.length === 1 ? 'it' : 'them'} exactly as ${s.excluded.length === 1 ? 'it is' : 'they are'} in every variant (set check rejects an edit). ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
       });
     });
 
@@ -114,6 +115,7 @@ export function registerSetCommands(program: Command, io: Io): void {
         set: s.id, project, form: s.form, directions: s.directions, picked: s.picked ?? null,
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: isStale(project, s.original) } : null,
+        excluded: s.excluded ?? null,
         prediction: existsSync(`${setDir(project, id)}/prediction.json`),
         keep: check.keep, next: presentNext(check.keep, check.next),
         variants: s.variants.map(v => {

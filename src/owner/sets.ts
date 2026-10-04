@@ -6,7 +6,8 @@ import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
 import { FORMATS } from '../kinds.ts';
 import { assertDirections } from './directions.ts';
-import { OriginalSchema, SourcePath, snapshotOriginal } from './original.ts';
+import { MAX_ORIGINAL_TEXT, OriginalSchema, SourcePath, draftHash, snapshotOriginal } from './original.ts';
+import { currentStrikes } from '../strike/current.ts';
 import { writeFileAtomic } from './fsutil.ts';
 import { ID_RE, newId, setDir, setsDir, validId } from './paths.ts';
 
@@ -52,6 +53,13 @@ export const BriefSchema = z.strictObject({
   confirmedAt: z.string().optional(),
 }).refine(b => b.character !== undefined || b.context !== undefined || b.characterRef !== undefined, 'a brief needs a character or a context');
 
+/** A line struck when the set was made: kept out of the rewrite (a variant that edits it is rejected by set check). */
+export const ExcludedSchema = z.strictObject({
+  ref: z.string().regex(/^\d+(-\d+)?$/),
+  text: z.string().min(1).max(MAX_ORIGINAL_TEXT),
+});
+export const MAX_EXCLUDED = 200;
+
 export const SetSchema = z.strictObject({
   schema: z.literal('prose/set@1'),
   id: z.string().regex(/^[a-z0-9-]+$/),
@@ -70,6 +78,8 @@ export const SetSchema = z.strictObject({
   brief: BriefSchema.optional(),
   /** The line(s) this set revises, snapshotted when the set was made. Context only: never a candidate, never scored. */
   original: OriginalSchema.optional(),
+  /** Lines with a pending strike when the set was made. Variants are still full copies; these are not to be edited. */
+  excluded: z.array(ExcludedSchema).min(1).max(MAX_EXCLUDED).optional(),
 });
 
 export type Variant = z.infer<typeof VariantSchema>;
@@ -190,7 +200,16 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
   if (existsSync(dir)) throw new ProseError('E_CONFLICT', `Set ${id} already exists`);
   const ext = EXT[doc.format];
   const text = readFileSync(draft, 'utf8');
-  const original = opts.lines === undefined ? undefined : snapshotOriginal(relSource(project, draft), text, doc.format, doc.form, opts.lines);
+  const source = relSource(project, draft);
+  const original = opts.lines === undefined ? undefined : snapshotOriginal(source, text, doc.format, doc.form, opts.lines);
+  // Struck lines are not rewritten: refused as the line to revise, and recorded so a variant cannot edit them.
+  const live = currentStrikes(project, source, text, draftHash(text), doc.format, doc.form).live;
+  for (const l of original?.lines ?? []) {
+    const [start, end] = l.ref.split('-').map(Number);
+    const hit = live.find(p => p.start <= (end ?? start) && p.end >= start);
+    if (hit) throw new ProseError('E_CONFLICT', `Line ${l.ref} is struck (${hit.id}, ${hit.reason}), so it cannot be the line this set revises`, { hint: `prose strike clear ${source} ${hit.id} withdraws the strike, or choose another line` });
+  }
+  const excluded = live.slice(0, MAX_EXCLUDED).map(p => ({ ref: p.ref, text: p.text }));
   // Build in a temp directory and rename when complete, so a failure never leaves a half-built set.
   const tmp = join(setsDir(project), `.tmp-${id}`);
   rmSync(tmp, { recursive: true, force: true });
@@ -203,7 +222,7 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
     });
     const set = SetSchema.parse({
       schema: 'prose/set@1', id, uid: randomBytes(6).toString('hex'), createdAt: now.toISOString(), form: doc.form, format: doc.format,
-      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}),
+      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}), ...(excluded.length ? { excluded } : {}),
     });
     writeFileAtomic(join(tmp, 'set.json'), JSON.stringify(set, null, 2) + '\n');
     renameSync(tmp, dir);

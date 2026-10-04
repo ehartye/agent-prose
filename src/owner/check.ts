@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { originalRefs } from './original.ts';
 import { unitsOf } from '../reading/units.ts';
 import { unitSpans } from '../strike/spans.ts';
+import { strikeLines } from '../strike/lines.ts';
 
 export interface VariantCheck {
   index: number;
@@ -64,6 +65,20 @@ function changedOutside(outside: string[], variantText: string, set: PromptSet):
   return lost.length ? { count: lost.length, first: lost[0] } : null;
 }
 
+/** The excluded (struck) lines a variant no longer holds as they were: edited, or removed. Counted, so one copy cannot stand for two. */
+function editedStruck(set: PromptSet, variantText: string): Array<{ ref: string; text: string }> {
+  if (!set.excluded) return [];
+  const have = new Map<string, number>();
+  for (const l of strikeLines(variantText, set.format, set.form)) { const k = norm(l.text); have.set(k, (have.get(k) ?? 0) + 1); }
+  const lost: Array<{ ref: string; text: string }> = [];
+  for (const e of set.excluded) {
+    const k = norm(e.text);
+    const n = have.get(k) ?? 0;
+    if (n > 0) have.set(k, n - 1); else lost.push(e);
+  }
+  return lost;
+}
+
 interface Loaded { doc: Doc; text: string; vec: FeatureVector }
 
 export function checkSet(project: string, set: PromptSet): CheckResult {
@@ -100,6 +115,12 @@ export function checkSet(project: string, set: PromptSet): CheckResult {
     out.vsBase = { similarity: sim, distance: round2(distance(baseVec, vec)) };
     if (norm(text) === norm(baseText)) out.reasons.push('unchanged');
     else if (sim >= BARELY_CHANGED_AT) out.reasons.push('barely-changed');
+    if (set.excluded) {
+      try {
+        const lost = editedStruck(set, readFileSync(variantPath(project, set, v), 'utf8'));
+        if (lost.length) out.reasons.push(`struck-line-edited: ${lost.length === 1 ? 'line' : 'lines'} ${lost.map(l => l.ref).join(', ')} ${lost.length === 1 ? 'was' : 'were'} struck and must stay as written, but ${lost.length === 1 ? 'it was' : 'they were'} edited or removed (first: "${lost[0].text.slice(0, 60)}")`);
+      } catch { /* the parse above already decided this variant */ }
+    }
     const fresh = lint(doc).errors.filter(f => !baseErrors.has(f.rule));
     for (const f of fresh) out.reasons.push(`lint-error: ${f.rule}${f.at.line !== null ? ` at line ${f.at.line}` : ''} - ${f.message}`);
     if (v.direction) {
