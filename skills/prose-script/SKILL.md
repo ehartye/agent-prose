@@ -8,6 +8,14 @@ when_to_use: Use when asked for a sitcom, TV pilot, teleplay, cold open, teaser,
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 
+## Craft guide
+
+Craft guide: `prose guide screen-stage --text --section <name>` prints one section of the reference guide for
+multi-camera and single-camera sitcoms, TV drama and stage plays. Read the section you need, not all of it:
+`anatomy` before formatting a script or choosing a form, `length` before promising a runtime, `good` for worked
+examples, `failures` and `revise` when a draft is being fixed, `rules` for what lint checks. Run `prose guide`
+to list every guide.
+
 ## Pick the form first
 
 | Request | File | Form |
