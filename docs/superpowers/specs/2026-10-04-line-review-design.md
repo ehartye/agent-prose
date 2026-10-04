@@ -1,6 +1,6 @@
 # Line review (brief, existing line, strikes) — design
 
-Status: decided 2026-10-04 (see "Decisions"), ready to plan. Written against the 0.5.0 release. Builds on the owner loop (0.2.0 sets, sealed predictions, `prose/verdict@2`), the reading page (0.3.0) and the taste model (0.4.0). Five milestones, each independently shippable (see "Milestones"). Milestones 1 to 3 are implemented (M3 as built: see "Milestone 3 as built" below), and so is 5 (see "Milestone 5 as built"); 4 is not.
+Status: decided 2026-10-04 (see "Decisions"), ready to plan. Written against the 0.5.0 release. Builds on the owner loop (0.2.0 sets, sealed predictions, `prose/verdict@2`), the reading page (0.3.0) and the taste model (0.4.0). Five milestones, each independently shippable (see "Milestones"). Milestones 1 to 5 are implemented (see "Milestone 3 as built", "Milestone 4 as built" and "Milestone 5 as built" below).
 
 ## Goal
 
@@ -200,7 +200,7 @@ Each POST has a strict zod body (ref `^\d+(-\d+)?$`, reason from the enum, note 
 
 Accessibility: buttons are real `button`s, the picker is a labelled group, the pending bar is `role="status"`, the review panel moves focus to its heading and returns it on close.
 
-**Security.** The token, the Host check on a local bind and the Origin check on every POST already apply to the new routes unchanged; CSP, `no-store` and `no-referrer` are unchanged, no new page file. What changes is the **capability of the link**: today a link reads drafts and logs judgements; after this it can also remove lines from a draft file. Mitigations: apply needs the digest of the exact plan (a replayed or blind request fails once anything changed), removals are limited to units of the one draft behind the session, the file is rewritten whole lines at a time, and undo exists. There is no view-only token (decided): the token, the notice and `--local` are the defence. The startup notice and the apply confirmation panel both say the link can delete lines, and so does the `prose-review` skill (the `NOTICE` and `LOCAL_NOTICE` strings in `src/commands/reading.ts`, and their tests, change in milestone 3); `--local` stays the recommended default for anything the owner cares about. The draft path never comes from the client: the page sends refs, ids and hashes; the server derives the file from set.json and re-validates it. Notes and struck text reach the log only through the CLI's zod validation.
+**Security.** The token, the Host check on a local bind and the Origin check on every POST already apply to the new routes unchanged; CSP, `no-store` and `no-referrer` are unchanged, no new page file. What changes is the **capability of the link**: today a link reads drafts and logs judgements; after this it can also remove lines from a draft file. Mitigations: apply needs the digest of the exact plan (a replayed or blind request fails once anything changed), removals are limited to units of the one draft behind the session, the file is rewritten whole lines at a time, and undo exists. There is no view-only token (decided): the token, the notice and `--local` are the defence. The startup notice and the apply confirmation panel both say the link can delete lines, and so does the `prose-review` skill (the `NOTICE` and `LOCAL_NOTICE` strings in `src/commands/reading.ts`, and their tests: milestone 3 said the link can mark lines, milestone 4 says it can delete them); `--local` stays the recommended default for anything the owner cares about. The draft path never comes from the client: the page sends refs, ids and hashes; the server derives the file from set.json and re-validates it. Notes and struck text reach the log only through the CLI's zod validation.
 
 ### 5. Struck lines and sets (milestone 3)
 
@@ -224,12 +224,26 @@ What differs from the text above, found while building it (the rest of the spec 
 - **The strike log's rows for `apply` and `undo` are defined and folded now** (`src/strike/store.ts`), so M4 adds writers, not formats; nothing in M3 writes them.
 - **Variants carry `struck`** (unit indexes that are excluded lines, shown struck on the page): a payload field the spec only implied.
 
+## Milestone 4 as built
+
+What differs from the text above, found while building it (the rest of the spec stands):
+
+- **`SERVER_API` goes 2 to 3.** Milestone 3 already moved it to 2; the new apply and undo routes need a running M3 server replaced, so M4 bumps it again (the package version is not bumped).
+- **The intent file carries the log row.** `apply.pending.json` is `{ schema, kind, id, before, after, at, row }`, where `row` is the apply or undo row the write will produce, so a crash between the rename and the log append is finished by appending exactly that row. Recovery (`recoverPending` in `src/strike/apply.ts`) runs under the lock in `apply`, `undo`, `add` and `clear`: draft equals `after` completes the log row (and `apply`/`undo` stop there and report `recovered`, they never apply on top of a recovery), equals `before` abandons the file and continues, anything else (or an unreadable file) is a refusal that touches nothing.
+- **`--form <id>` on `strike add` and `strike apply`/`undo`.** The page's lines are laid out with the session set's form; the server passes `--form <set.form>` on every strike write so the CLI and the page cannot disagree about what a line is (a Markdown draft read as prose or as verse has different lines). Without it the draft's declared form is used, as before. `strike undo --apply <id>` refuses unless that is the latest un-undone apply (the page sends the id it shows).
+- **The digest-mismatch plan is in the CLI error's `details.plan`**, not forwarded by the server: the page answers a 409 by fetching `GET .../strike/preview` again and says why, which is the same text and one extra read-only call.
+- **The dry run also carries `after: { hash, lint }`**, so the owner sees new lint findings before confirming. `lint` is `{ ok, errors, warnings, newRules }` (rule ids with findings after that had none before), or `null` when the result cannot be linted. It is a report only.
+- **Removed rows in output** are `{ ref, start, end, kind, text, strike?, strikeRef?, reason?, note? }` (`ref` is the removed lines; `text` the exact raw text with line endings folded to LF, no trailing newline). The page's preview route uses the same function.
+- **Hardening beyond the text:** the draft must be valid UTF-8 (else nothing is written); the bytes are compared with what the plan was built from after the intent file lands and before the rename; a symlink at that moment is refused; the file mode is kept; the result is read back and compared. A read-back mismatch is E_INTERNAL and keeps the intent file. Undo verifies the rows (ascending, non-overlapping, line counts match their raw text) and that the restored text hashes to the apply's `before`. The hash is the normalised one, so a line-ending-only edit between apply and undo is not a refusal; the restore still uses each row's own raw endings.
+- **The page.** "Review and apply" in the pending bar fetches the preview and replaces the screen with the review panel (focus moves to its heading; "Not yet" returns focus to the button). If the draft or the strikes change while it is open, the panel reloads the new plan and says so. After an apply the Draft view shows and a "Removed N lines / Undo removal" bar stays while `draft.applied` is present. The notice strings now say the link can delete lines (strike, then apply, with the exact text confirmed, and an undo).
+- **`set pick`** returns `warnings` and appends "Warning: ..." to `next` when the source draft's hash differs from the set's base file's hash.
+
 ## Compatibility
 
 - Existing `set.json` files read unchanged (`brief`, `original`, `excluded` are optional). Existing event logs are untouched; strikes have their own log. Existing `.gitignore` files are not rewritten.
 - A set written with a new field cannot be read by an older runtime: `SetSchema` is `strictObject`, so the older runtime reports E_SCHEMA at that field. This is the one-way door, accepted because the version stays `prose/set@1` and downgrades are not supported. The plugin updates as a unit and the managed runtime is replaced with it.
 - `characterRef` is in the schema from milestone 1 so milestone 5 changes no set format. Milestone 5 does change the voice bible (additive `bio`, optional `samples`): old bibles read unchanged, and an older runtime reports E_SCHEMA on a bible that has `bio`.
-- `SERVER_API` goes to 2 in milestone 3 (routes were added); `reading open` replaces a running older server and keeps its token and projects, as `ensureServer` already does.
+- `SERVER_API` goes to 2 in milestone 3 (routes were added) and to 3 in milestone 4 (apply and undo routes); `reading open` replaces a running older server and keeps its token and projects, as `ensureServer` already does.
 - JSON outputs only gain fields.
 
 ## Skills
