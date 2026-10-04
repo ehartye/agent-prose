@@ -134,6 +134,17 @@
   }
 
   /**
+   * The brief folded to one line: the character's first sentence, else the context's, else nothing. The page clips it to
+   * the width with CSS; this only picks the words.
+   */
+  function briefGist(b) {
+    const text = String((b && (b.character || b.context)) || '').trim().replace(/\s+/g, ' ');
+    if (!text) return '';
+    const m = /^[\s\S]*?[.!?](?=\s|$)/.exec(text);
+    return m ? m[0] : text;
+  }
+
+  /**
    * The existing line as the page shows it: one row per line, `Speaker: text` as units read, plus a muted note when the
    * draft has changed since the set was made. Null when the set records no original. Display only.
    */
@@ -219,7 +230,7 @@
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED };
     return;
   }
 
@@ -238,7 +249,7 @@
   let fatal = false;
   const ui = {
     marks: {}, marksRound: -1, selected: null, noteDraft: '', rate: 1, directions: [], like: '', confirmShip: false,
-    showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: true, originalOpen: true,
+    showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: false, originalOpen: true,
     view: 'variants', pick: null, plan: null,
   };
 
@@ -569,7 +580,7 @@
       const bar = h('div', { class: 'bar', 'aria-hidden': 'true' }, fill);
       if (m.targetSeconds !== null) {
         const mark = h('div', { class: 'mark' });
-        mark.style.setProperty('--mark', String(Math.min(100, (m.targetSeconds / top) * 100)));
+        mark.style.setProperty('--at', String(Math.min(100, (m.targetSeconds / top) * 100)));
         bar.appendChild(mark);
       }
       kids.push(bar);
@@ -671,7 +682,9 @@
   /** One variant: label, timing, play controls, the tappable text, notes, and whatever buttons the screen adds. */
   function card(c, o) {
     o = o || {};
-    const kids = [h('div', { class: 'card-head' }, h('span', { class: 'label', text: c.label, 'aria-label': 'Draft ' + c.label }), o.tag ? h('span', { class: 'tag', text: o.tag }) : null)];
+    const kids = [h('div', { class: 'card-head' }, h('span', { class: 'label', text: c.label, 'aria-label': 'Draft ' + c.label }),
+      o.tag ? h('span', { class: 'tag', text: o.tag }) : null,
+      o.state ? h('span', { class: 'state-word', text: o.state === 'keep' ? 'Kept' : 'Passed' }) : null)];
     if (c.changed || !c.hashOk || !c.units) {
       kids.push(h('p', { class: 'changed-msg', text: 'This draft changed after it was sealed; it can\'t be chosen.' }));
       if (o.actionsWhenChanged) kids.push(o.actionsWhenChanged);
@@ -685,17 +698,19 @@
     kids.push(textBlock(c), noteBox(c), notesList(c));
     if (o.actions) kids.push(o.actions);
     if (!o.noChange) kids.push(...changeBlock(c));
-    return h('article', { class: 'card', 'data-index': String(c.index) }, kids);
+    return h('article', { class: 'card' + (o.state === 'keep' ? ' kept' : o.state === 'pass' ? ' passed' : ''), 'data-index': String(c.index) }, kids);
   }
 
-  /** "The brief": who speaks and where the line lands, open above the variants unless the owner folded it. Display only. */
+  /** "The brief": who speaks and where the line lands, folded to one line above the variants; open, it shows Character and Context in two columns. Display only. */
   function briefBlock() {
     const parts = briefParts(data.session.brief);
     if (!parts) return null;
     const el = h('details', { class: 'brief', open: ui.briefOpen },
-      h('summary', { text: 'The brief' }),
-      parts.rows.map(r => h('p', {}, h('strong', { text: r.label + ': ' }), r.text)),
-      parts.note ? h('p', { class: 'quiet brief-note', text: parts.note }) : null);
+      h('summary', null,
+        h('b', { text: 'The brief' }),
+        h('span', { class: 'gist', text: briefGist(data.session.brief) }),
+        parts.note ? h('span', { class: 'chip brief-note', text: parts.note }) : null),
+      h('div', { class: 'body' }, parts.rows.map(r => h('div', null, h('h3', { text: r.label }), h('p', { text: r.text })))));
     el.addEventListener('toggle', () => { ui.briefOpen = el.open; });
     return el;
   }
@@ -726,7 +741,7 @@
       const actions = c.index === pinned ? null : h('div', { class: 'row grow' },
         btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', mark('keep'), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep') }),
         btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', mark('pass'), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass') }));
-      return card(c, { tag: c.index === pinned ? 'Your pick from last round' : null, actions });
+      return card(c, { tag: c.index === pinned ? 'Your pick from last round' : null, actions, state: c.index === pinned ? null : ui.marks[c.index] });
     });
     const ready = marked > 0 || (s.round > 0 && open === 0);
     const go = btn('Continue', async () => {
@@ -1004,7 +1019,14 @@
 
   // ---- start ----
 
+  /** The font licences, linked from the page itself (index.html stays free of /fonts references; the files are served by the same server). */
+  function fontsFooter() {
+    const link = (href, text) => h('a', { href, text });
+    document.body.appendChild(h('footer', { class: 'site-foot' }, 'Fonts: SIL OFL 1.1 - ', link('/fonts/OFL-CourierPrime.txt', 'Courier Prime'), ' - ', link('/fonts/OFL-Atkinson.txt', 'Atkinson Hyperlegible')));
+  }
+
   function boot() {
+    fontsFooter();
     if (!sessionId) { showMessage('Reading', 'Open the link your writer gave you to start reading.'); return; }
     if (!auth.token) { showMessage('This link is missing its key', 'Ask your writer for a fresh link.'); return; }
     // The token moves into session storage and out of the visible address; if storage is unavailable it stays in the URL.
