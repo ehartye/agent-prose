@@ -306,8 +306,8 @@ function restatingCloser(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
   if (u.kind !== 'paragraph' || !RESTATING.test(u.text)) return [];
   const { last, count } = paragraphTail(units);
   if (count < 2 || last !== i) return [];
-  const first = sentenceRanges(u.text)[0];
-  return [{ start: 0, end: first ? first[1] : u.text.length }];
+  // Only the opening words are the span, like stock-opener, so it never contains another family's finding.
+  return [{ start: 0, end: RESTATING.exec(u.text)![0].trimEnd().length }];
 }
 
 /**
@@ -753,6 +753,13 @@ export function detect(units: Unit[], ctx: Ctx): Finding[] {
         for (let r = rank + 1; r < maxEnd.length; r++) if ((maxEnd[r] ?? -1) >= list[k].span.end) { dropped.add(list[k]); break; }
       }
       i = j;
+    }
+  }
+  // A density finding spans a whole three-item list; when another family reports words inside it, that family owns them.
+  for (const list of byUnit.values()) {
+    for (const d of list) {
+      if (d.family.id !== 'triplet-density') continue;
+      if (list.some(o => o.family !== d.family && o.span.start >= d.span.start && o.span.end <= d.span.end)) dropped.add(d);
     }
   }
   const kept = found.filter(f => !dropped.has(f));

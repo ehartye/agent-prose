@@ -501,8 +501,8 @@ const SPANS: Array<[family: string, text: string, spans: string[]]> = [
   ['marketing-verbs', 'Navigating the complexities of tax law is hard.', ['Navigating the complexities']],
   ['marketing-verbs', 'A cutting-edge lab opened.', ['cutting-edge']],
   ['marketing-verbs', 'We offer best-in-class support.', ['best-in-class']],
-  ['restating-closer', 'First point.\n\nIn summary, the plan works.', ['In summary, the plan works.']],
-  ['restating-closer', 'First point.\n\nAt the end of the day, it comes down to trust. We met on Tuesday.', ['At the end of the day, it comes down to trust.']],
+  ['restating-closer', 'First point.\n\nIn summary, the plan works.', ['In summary,']],
+  ['restating-closer', 'First point.\n\nAt the end of the day, it comes down to trust. We met on Tuesday.', ['At the end of the day,']],
   ['stock-opener', 'Every team makes hundreds of decisions each quarter.', ['Every team']],
   ['stock-opener', 'Imagine a kitchen where nothing is labelled.', ['Imagine']],
   ['stock-opener', 'In an era of cheap storage, nobody deletes anything.', ['In an era of']],
@@ -763,5 +763,21 @@ describe('sources', () => {
       for (const s of entry.sources) expect(ids, `${entry.id} -> ${s}`).toContain(s);
     }
     for (const f of FAMILIES) expect(AUDIT_SOURCES.map(e => e.id)).toContain(f.id);
+  });
+});
+
+describe('wide-span families do not repeat another family’s words', () => {
+  const TEXT = `${'We met on Tuesday and walked home together. '.repeat(14)}${'Teams value streamlining, planning, and testing. '.repeat(3)}`.trim();
+  it('has a density finding to lose (the list rate is above the threshold)', () => {
+    expect(report(TEXT).measured.tripletListsPer1000).toBeGreaterThan(TRIPLET_DENSITY_PER_1000);
+  });
+  it('reports "streamlining" once when it sits inside a three-item list', () => {
+    const found = all(report(TEXT));
+    expect(found.filter(f => f.family === 'marketing-verbs')).toHaveLength(3);
+    expect(found.filter(f => f.family === 'triplet-density' && f.text.includes('streamlining'))).toEqual([]);
+    expect(found.some(f => f.family === 'marketing-verbs')).toBe(true);
+  });
+  it('restating-closer marks only the opening words', () => {
+    expect(famOf('First point.\n\nIn summary, we leverage the data and streamline it.', 'restating-closer').map(f => f.text)).toEqual(['In summary,']);
   });
 });
