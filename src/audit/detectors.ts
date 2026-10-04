@@ -170,10 +170,17 @@ const STOCK_OPENER = new RegExp([
   String.raw`^Have\s+you\s+ever\s+wondered`,
 ].join('|'), 'iu');
 
+/** A plain-text title line: one line, at most 14 words, no sentence-final punctuation. */
+const titleLike = (u: Unit) => u.kind === 'paragraph' && !/\n/.test(u.text.trim()) && u.text.trim().split(/\s+/).length <= 14 && !/[.!?…]["'”’)\]]*$/.test(u.text.trim());
+
 function stockOpener(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
   // The opener is the first body block after any headings (frontmatter is not a block). A list item, step or
   // block quote before the paragraph means the passage did not open with prose, and a quote leaves a gap in the block indexes.
-  if (u.kind !== 'paragraph' || units.slice(0, i).some(x => x.kind !== 'heading')) return [];
+  // A pasted draft's title may be a plain first line; that line is skipped when another paragraph follows it.
+  if (u.kind !== 'paragraph') return [];
+  let k = units.findIndex(x => x.kind !== 'heading');
+  if (k >= 0 && titleLike(units[k]) && units[k + 1]?.kind === 'paragraph') k += 1;
+  if (k !== i) return [];
   if (units.slice(0, i + 1).some((x, n) => x.index !== units[0].index + n) || units[0].index !== 0) return [];
   const first = sentenceRanges(u.text)[0];
   if (!first) return [];

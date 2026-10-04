@@ -397,6 +397,25 @@ describe('new hallmark families on whole drafts', () => {
 
 ${P}`)).toEqual([]));
     it('keeps the lab-report near-miss', () => expect(spans('# Methods\n\nSoil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.')).toEqual([]));
+    describe('plain-text title line', () => {
+      const TITLE = 'Why Your Team Should Write Down Its Decisions';
+      it('skips a plain title line and flags the next paragraph', () => expect(spans(`${TITLE}
+
+${P}`)).toEqual(['Every team']));
+      it('does not treat a 15-word first line as a title', () => expect(spans(`Why your team should write down its decisions before the next quarter begins and ends
+
+${P}`)).toEqual([]));
+      it('does not treat a first line ending in a period as a title', () => expect(spans(`${TITLE}.
+
+${P}`)).toEqual([]));
+      it('never skips the only paragraph', () => expect(spans('Every team makes hundreds of decisions each quarter')).toEqual(['Every team']));
+      it('does not hit when the title line is followed by a list', () => expect(spans(`${TITLE}
+
+- one
+- two
+
+${P}`)).toEqual([]));
+    });
   });
   it('finds several new families in the announcement post', () => {
     const fams = families(POST);

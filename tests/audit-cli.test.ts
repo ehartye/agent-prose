@@ -95,3 +95,17 @@ describe('prose audit', () => {
     expect(prose('capabilities').json.commands).toContain('audit');
   });
 });
+
+describe('prose audit, plain-text title line', () => {
+  it('finds the stock opener below a title with no # marker', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'prose-audit-title-'));
+    try {
+      const file = join(dir, 'draft.md');
+      writeFileSync(file, 'Why Your Team Should Write Down Its Decisions\n\nEvery team makes hundreds of decisions each quarter. Which vendor to choose, which feature to ship, and who owns the follow-up are rarely written anywhere.\n');
+      const { status, json: r } = prose('audit', file);
+      expect(status).toBe(0);
+      const hits = [...r.tiers.hard, ...r.tiers.soft].filter((f: any) => f.family === 'stock-opener');
+      expect(hits.map((f: any) => f.text)).toEqual(['Every team']);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+});
