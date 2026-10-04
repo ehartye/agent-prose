@@ -85,11 +85,17 @@ describe('strikes', () => {
     for (const needle of ['It is a **record**', 'prose strike list <draft>', 'wrong-direction', 'faulty-premise', 'not-worth-rewrite', 'Never edit a draft by hand while strikes are pending', 'stale: true', 'Never rewrite a struck line', 'struck-line-edited', 'Do not remove a struck line yourself', 'prose strike clear <draft> s3', '--local']) {
       expect(text, needle).toContain(needle);
     }
-    expect(text).not.toMatch(/prose strike (apply|undo)/);
   });
-  it('prose-review points at strikes and tells the owner the link can mark lines', () => {
+  it('prose-strike never applies without the owner confirming the exact text, and says how undo and recovery behave', () => {
+    const text = flat('prose-strike');
+    for (const needle of ['Never apply without the owner', 'prose strike apply <draft> --confirm <digest>', 'is a **dry run**', 'prose strike undo <draft>', 'refuses once the draft has changed', 'after.lint', 'recovered', 'can delete lines from the draft']) {
+      expect(text, needle).toContain(needle);
+    }
+    expect(text).not.toMatch(/no command that removes/);
+  });
+  it('prose-review points at strikes and tells the owner the link can delete lines', () => {
     const text = flat('prose-review');
-    for (const needle of ['prose-strike', 'excluded', 'struck-line-edited', 'can also mark lines of the draft as struck']) expect(text, needle).toContain(needle);
+    for (const needle of ['prose-strike', 'excluded', 'struck-line-edited', 'can also delete lines from the draft', 'asks the owner to confirm']) expect(text, needle).toContain(needle);
   });
 });
 

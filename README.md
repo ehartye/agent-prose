@@ -35,7 +35,7 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose-voice` | Voice bibles for characters, brands and speakers (bio, samples, ranges), made from a description or fitted from lines, and checked on every draft |
 | `prose-poetry` | Poems and verse forms (free verse, sonnet, haiku, limerick, ballad, villanelle, sestina) and words to a given meter, checked for syllables, rhyme and form |
 | `prose-songwriting` | Song lyrics (verse-chorus, AABA, lullaby, hymn text, words to a melody): labelled sections, matched line lengths, refrains, syllables per beat |
-| `prose-strike` | Lines the owner wants gone: strikes recorded with a reason, read back, kept out of rewrites; never edits the draft |
+| `prose-strike` | Lines the owner wants gone: strikes recorded with a reason, read back, kept out of rewrites; removed only after the owner confirms the exact text (apply, undo) |
 | `prose-audit` | Audit a draft for generic or formulaic prose (stock openers, hollow significance, formula sentence shapes, chat residue, model-era vocabulary) and revise it by span toward specifics; never judges who wrote it |
 
 ## Commands
@@ -66,6 +66,8 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose set duel <id> --a <n> --b <n> --outcome a\|b\|tie\|bothBad` | record a head-to-head from the reading page as one taste verdict (the page calls it; it never ships the set) |
 | `prose strike [add] <draft> --line <ref> --reason <wrong-direction\|faulty-premise\|not-worth-rewrite> [--note <text>] [--draft-hash <sha>] [--event-id <id>]` | record that a line should not exist (the owner's strike): a source line number or range (any line inside a span names the span; Markdown prose strikes at paragraph level), bound to the draft's hash now. The draft is not edited. A change to the draft, even elsewhere, makes every pending strike stale |
 | `prose strike clear <draft> <strike-id>` / `--all` | withdraw pending strikes (the page's Undo) |
+| `prose strike apply <draft> [--confirm <digest>] [--event-id <id>]` | remove the struck lines. Without `--confirm` it is a dry run: it prints the exact text that would go, a digest and an `after.lint` report. With the digest it rewrites the draft atomically (line endings and BOM kept), only if the draft and strikes are exactly what the dry run showed, and the re-parsed draft holds exactly the old lines minus the struck ones; otherwise nothing is written. Stale strikes refuse. An interrupted apply is finished from its intent file (`apply.pending.json`) by the next strike command |
+| `prose strike undo <draft> [--apply <id>] [--event-id <id>]` | put back the latest removal, byte for byte, verified by hash; refused once the draft has changed since the apply |
 | `prose strike list [<draft>] [--all] [--reason <tag>] [--state pending\|applied\|all]` | strikes with their reasons and `stale` flags, counts by reason, across drafts with `--all` |
 | `prose serve [--local] [--port <n>] [--foreground] [--stop] [--status]` | start or reuse the LAN reading server and print its link (the link carries the access token) |
 | `prose reading open --set <id> [--no-predict] [--prompt <text>] [--dir <project>]` | put a checked, predicted set on the reading page: freezes what is shown, registers the project, prints the link |
@@ -109,14 +111,14 @@ terminal. `prose serve` runs a small web server and the agent hands the owner a 
   a new round shown against the champion. "What changed?" shows a draft's direction only when asked.
 - **Read aloud and timing.** Play reads a draft with the device's own voice (the browser's speech synthesis; no
   audio leaves the machine) and highlights the current sentence or line, with an estimate against the declared target.
-- **Draft.** A Draft view lists the draft line by line (a paragraph is one line in prose). Strike a line with a reason (wrong direction, faulty premise, not worth rewriting) and an optional note; it stays in place, crossed out with its reason and an Undo. A bar at the bottom of every screen says how many lines are struck. Striking only records the decision: nothing is removed from the draft, and any later change to the draft makes the strikes stale (Undo them and strike again). Struck lines are kept out of the next rewrite set.
+- **Draft.** A Draft view lists the draft line by line (a paragraph is one line in prose). Strike a line with a reason (wrong direction, faulty premise, not worth rewriting) and an optional note; it stays in place, crossed out with its reason and an Undo. A bar at the bottom of every screen says how many lines are struck. Striking only records the decision, and any later change to the draft makes the strikes stale (Undo them and strike again). Struck lines are kept out of the next rewrite set. **Review and apply** opens a panel listing the exact text of every line that will be removed (with any speaker cue or blank line that goes with it); only its Remove button deletes anything, and Undo removal puts the lines back while the draft is unchanged.
 - **Ship.** The owner chooses the winner; the page then reveals the agent's sealed prediction and whether it matched.
 
-Every judgement lands in the same taste log as `prose set pick`. Nothing the page does edits a draft;
-every write goes through the `prose` CLI.
+Every judgement lands in the same taste log as `prose set pick`. The page never edits a draft itself;
+every write, including a removal, goes through the `prose` CLI.
 
 **Exposure.** By default the server listens on the whole network, and anyone on it who has the link can read the drafts
-in the projects registered with the server, and mark their lines as struck (a record in `.agent-prose/strikes/`; no draft text is removed). Traffic is plain HTTP; the link carries a random token. Tell the owner
+in the projects registered with the server, and delete lines from them (strike, then apply: the page shows the exact text and asks for confirmation, and an undo restores the lines; the record is in `.agent-prose/strikes/`). Traffic is plain HTTP; the link carries a random token. Tell the owner
 before opening a session, and use `prose serve --local` to keep the server on this machine (the page then works only
 on this computer). Windows Firewall may block the first connection from a phone; the command prints the port to allow.
 
