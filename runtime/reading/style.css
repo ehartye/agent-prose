@@ -162,8 +162,11 @@ button.link:hover { background: none; }
 .cell.passed { color: var(--graphite); }
 .cell .sp, .cell .who { display: block; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--graphite); margin-bottom: 0.15rem; }
 .cell ins { text-decoration: none; background: linear-gradient(transparent 62%, var(--mark) 62%); color: var(--ink); }
-.cell del { text-decoration: line-through; text-decoration-color: var(--red); text-decoration-thickness: 2px; }
-.cell del.some { text-decoration-style: dashed; }
+/* Words every shown draft cut stay readable: ink colour, a faint red wash and a dotted underline (a cue that is not colour alone). */
+.cell del { text-decoration: underline dotted; text-decoration-color: var(--red); text-decoration-thickness: 2px; text-underline-offset: 0.2em; background: color-mix(in srgb, var(--red) 13%, transparent); color: var(--ink); border-radius: 2px; }
+/* Words cut by only some of the shown drafts stay plain (the hover title and the screen-reader text name who cut them); marking them would colour most of a line. */
+.cell del.some { text-decoration: none; background: none; }
+.sheet.plaincuts .cell del { text-decoration: none; background: none; }
 .cell .unit { display: inline; }
 .gone-text { color: var(--graphite); font-style: italic; }
 .noterow .notecell { grid-column: 2 / -1; border-left: 1px solid var(--rule); }

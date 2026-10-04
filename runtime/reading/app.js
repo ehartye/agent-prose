@@ -507,6 +507,8 @@
     keys: readKeys(), cache: new Map(), prefetched: new Set(),
   };
   /** The shortcut switch is remembered in this browser only; storage may be unavailable. */
+  function readCuts() { try { return window.localStorage.getItem('prose-cuts') !== 'off'; } catch { return true; } }
+  function saveCuts(on) { try { window.localStorage.setItem('prose-cuts', on ? 'on' : 'off'); } catch { /* not remembered */ } }
   function readKeys() { try { return window.localStorage.getItem('prose-keys') !== 'off'; } catch { return true; } }
   function saveKeys(on) { try { window.localStorage.setItem('prose-keys', on ? 'on' : 'off'); } catch { /* not remembered */ } }
   /** Where the open item's requests go: its own session, or its place in the queue (never a session id the page chose). */
@@ -1149,6 +1151,7 @@
           shown.map(c => btn(c.label, () => { ui.cmp.recent = togglePicked(allKeys, ui.cmp.recent, String(c.index), limit); render(); }, 'pill', { 'aria-pressed': String(keys.includes(String(c.index))), 'data-key': 'pick-' + c.index }))),
         h('span', { class: 'quiet', role: 'status', text: keys.map(k => colOf(k).label).join(' ') + ' shown' })));
     }
+    if (hasCur) bar.push(btn('Mark cuts', () => { saveCuts(!readCuts()); render(); }, 'small', { 'aria-pressed': String(readCuts()), 'data-key': 'mark-cuts' }));
     const folds = segs.filter(x => x.fold);
     if (folds.length) {
       const all = folds.every(f => ui.cmp.open.has(f.id));
@@ -1156,7 +1159,7 @@
     }
     const stale = data.session.original && data.session.original.stale ? h('p', { class: 'quiet original-note', text: 'The draft has changed since this set was made' }) : null;
     return [stale, bar.length ? h('div', { class: 'cmpbar' }, bar) : null,
-      h('section', { class: 'sheet grid n' + (cols.length + (hasCur && !phone ? 1 : 0)) + (phone ? ' phone' : ''), role: 'table', 'aria-label': hasCur ? 'The current line and the drafts, side by side' : 'The drafts, side by side' }, head, body, foot),
+      h('section', { class: 'sheet grid n' + (cols.length + (hasCur && !phone ? 1 : 0)) + (phone ? ' phone' : '') + (readCuts() ? '' : ' plaincuts'), role: 'table', 'aria-label': hasCur ? 'The current line and the drafts, side by side' : 'The drafts, side by side' }, head, body, foot),
       rateControl()];
   }
 
