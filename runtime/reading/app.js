@@ -221,7 +221,8 @@
   /** What is on screen: stage, round, event count, the brief, the existing line (an edit of either, or a stale draft, re-renders) and the draft's rev (its strikes and hash). */
   const signature = p => p.state.stage + '|' + p.state.round + '|' + p.state.events + '|' + (p.session && p.session.brief ? JSON.stringify([p.session.brief.character, p.session.brief.context, !!p.session.brief.confirmed]) : '')
     + (p.session && p.session.original ? '|' + JSON.stringify([p.session.original.stale, p.session.original.lines.map(l => [l.speaker, l.text])]) : '')
-    + (p.draft ? '|' + p.draft.rev : '');
+    + (p.draft ? '|' + p.draft.rev : '')
+    + (p.queue ? '|' + JSON.stringify([p.queue.status, p.queue.stage, p.queue.choice, p.queue.message || '', p.queue.sentVariant]) : '');
 
   // ---- the compare grid: pure helpers (the server sends the aligned rows and the word ops; the page only folds and renders) ----
 
@@ -343,16 +344,141 @@
   }
 
   /** A column's state words, never only a mark: Your pick from last round / Kept / Passed. */
-  const stateWord = state => (state === 'keep' ? 'Kept' : state === 'pass' ? 'Passed' : '');
+  const stateWord = (state, batchItem) => (state === 'keep' ? (batchItem ? 'Your pick' : 'Kept') : state === 'pass' ? 'Passed' : '');
 
   /** True only when the browser has a speech synthesizer object and an utterance constructor (the property alone can be undefined). */
   const speechSupported = win => !!(win && win.speechSynthesis && typeof win.SpeechSynthesisUtterance === 'function');
+
+  // ---- batch review: pure helpers (the queue's rail, the tally, the staged choice, the keys) ----
+
+  const queueIdFromPath = path => { const m = /^\/q\/([a-z0-9-]+)\/?$/.exec(path || ''); return m ? m[1] : null; };
+  /** Items the rail shows at once; the pager steps by this many. */
+  const RAIL_PAGE = 10;
+  /** An item the owner has not chosen for yet (a skipped one comes back, a blocked one needs another try). */
+  const isUndecided = status => status === 'waiting' || status === 'skipped' || status === 'blocked';
+
+  /** "N of M chosen", then, only once something is chosen, what has and has not been sent. Nothing is sent until the owner presses Send picks. */
+  function tallyText(counts, total) {
+    const chosen = counts.picked + counts.sent;
+    const head = chosen + ' of ' + total + ' chosen';
+    if (chosen === 0) return head;
+    if (counts.sent === 0) return head + ' - nothing sent until you press Send picks';
+    if (counts.picked > 0) return head + ' - ' + counts.sent + ' sent, ' + counts.picked + ' not sent yet';
+    return head + ' - ' + counts.sent + ' sent';
+  }
+
+  /** The rail's own count line: chosen, and how many are skipped (they come back at the end) or blocked. */
+  function railSummary(counts, total) {
+    const bits = [(counts.picked + counts.sent) + ' of ' + total + ' chosen'];
+    if (counts.skipped) bits.push(counts.skipped + ' skipped, back at the end');
+    if (counts.blocked) bits.push(counts.blocked + ' blocked');
+    return bits.join('. ');
+  }
+
+  /** The words beside an item's mark, so the state is never a colour or a shape alone. */
+  function statusWord(item) {
+    const letter = item.picked ? ' ' + item.picked : '';
+    switch (item.status) {
+      case 'picked': return 'Picked' + letter + ', not sent';
+      case 'sent': return item.via === 'cli' ? 'Picked' + letter + ' outside this page' : 'Sent' + letter;
+      case 'skipped': return 'Skipped';
+      case 'blocked': return 'Blocked: ' + (item.message || 'could not be sent');
+      case 'ended': return 'Closed';
+      default: return 'Waiting';
+    }
+  }
+
+  /** The whole state of a rail item for a screen reader, with its place in the queue. */
+  const railLabel = (item, pos, total) => item.who + ', ' + item.where + ', ' + statusWord(item).toLowerCase() + ', item ' + pos + ' of ' + total;
+
+  /** The next item after `cur` in rail order, wrapping, that is still undecided; null when there is no other one. `items` is indexed by item number - 1. */
+  function nextUnchosen(order, items, cur) {
+    const at = order.indexOf(cur);
+    for (let k = 1; k <= order.length; k++) {
+      const n = order[(at + k) % order.length];
+      if (n !== cur && items[n - 1] && isUndecided(items[n - 1].status)) return n;
+    }
+    return null;
+  }
+
+  /** The neighbour of `cur` in rail order (by = 1 next, -1 previous); null at either end (j and k do not wrap). */
+  function stepItem(order, cur, by) {
+    const to = order.indexOf(cur) + by;
+    return order.indexOf(cur) < 0 || to < 0 || to >= order.length ? null : order[to];
+  }
+
+  const railPageOf = (order, cur) => Math.max(0, Math.floor(order.indexOf(cur) / RAIL_PAGE));
+  /** The items on one page of the rail (the page is clamped), with the page count. */
+  function railWindow(order, page) {
+    const pages = Math.max(1, Math.ceil(order.length / RAIL_PAGE));
+    const p = Math.min(Math.max(0, page), pages - 1);
+    return { page: p, pages, from: p * RAIL_PAGE, ns: order.slice(p * RAIL_PAGE, (p + 1) * RAIL_PAGE) };
+  }
+
+  /** Keep is a radio in a batch: keeping the kept draft clears it, keeping another replaces it; a kept draft is never also passed. */
+  function keepChoice(choice, index) {
+    return { variant: choice.variant === index ? null : index, passes: choice.passes.filter(p => p !== index) };
+  }
+  /** Pass toggles; passing the kept draft takes the keep away. */
+  function passChoice(choice, index) {
+    const has = choice.passes.includes(index);
+    return { variant: choice.variant === index ? null : choice.variant, passes: has ? choice.passes.filter(p => p !== index) : [...choice.passes, index] };
+  }
+  /** The column marks a staged choice shows: { index: 'keep' | 'pass' }. */
+  function marksFromChoice(choice) {
+    const out = {};
+    for (const p of choice.passes) out[p] = 'pass';
+    if (choice.variant !== null) out[choice.variant] = 'keep';
+    return out;
+  }
+  const noChoice = choice => choice.variant === null && choice.passes.length === 0;
+
+  /** The first words of a draft for the Send review: units joined, cut at 60 characters. */
+  function previewText(units) {
+    const t = (units || []).map(u => String(u).trim()).filter(Boolean).join(' ');
+    return t.length > 60 ? t.slice(0, 60).trimEnd() + '...' : t;
+  }
+
+  /** What a variant changed, for the Send review: its first changed or added line from the compare rows, else its own units (a whole-draft copy would otherwise start with the draft's opening). */
+  function changedUnits(payload, index) {
+    const key = String(index);
+    if (payload.compare && Array.isArray(payload.compare.rows)) {
+      for (const row of payload.compare.rows) {
+        const cell = row.cells ? row.cells[key] : undefined;
+        if (cell && (cell.ops || row.base === null)) return [(cell.speaker ? cell.speaker + ': ' : '') + cell.text];
+      }
+    }
+    const c = (payload.candidates || []).find(x => x.index === index);
+    return (c && c.units) || [];
+  }
+
+  /** One line of the Send review: where, which draft and how it starts. */
+  const reviewLine = (item, label, units) => item.who + ' (' + item.where + '): ' + label + ' - ' + previewText(units);
+
+  /**
+   * What a key does on the desk, or null. Plain keys only: never in a field (`inField`), never with Ctrl, Alt or Meta held
+   * (except Ctrl or Cmd+Enter), and none of them at all once the owner turns shortcuts off (Escape and Ctrl/Cmd+Enter still
+   * work, they are not single characters). `st`: { keysOn, batch, panel: null | 'send' | 'finish' | 'help' }.
+   */
+  function keyAction(ev, st) {
+    if (ev.key === 'Escape') return st.panel ? { action: 'close' } : null;
+    if (ev.inField || ev.altKey) return null;
+    if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') return st.batch ? { action: st.panel === 'send' ? 'confirm' : 'review' } : null;
+    if (!st.keysOn || ev.ctrlKey || ev.metaKey) return null;
+    const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    if (k === '?') return { action: 'help' };
+    if (!st.batch) return null;
+    const plain = { j: 'next', k: 'previous', n: 'unchosen', s: 'skip', u: 'clear', e: 'fold', b: 'brief' };
+    if (Object.prototype.hasOwnProperty.call(plain, k) && !ev.shiftKey) return { action: plain[k] };
+    if (/^[a-f]$/.test(k)) return { action: ev.shiftKey ? 'pass' : 'keep', letter: k.toUpperCase() };
+    return null;
+  }
 
   const SPEECH_IGNORED = new Set(['interrupted', 'canceled']);
   const backoff = (fails, base) => (fails ? Math.min(30000, 2000 * 2 ** Math.min(fails, 4)) : base);
 
   if (window.__READING_TEST__) {
-    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, compareLimit, shownKeys, togglePicked, rowIsSame, rowShown, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord };
+    window.__reading = { wordCount, formatClock, timingModel, timingText, pickPosition, translateOutcome, duelBar, newEventId, lineupHint, resolveToken, sessionIdFromPath, paragraphsOf, briefParts, briefGist, originalParts, signature, STRIKE_REASONS, reasonLabel, strikeOn, staleStrikes, pendingSummary, applyReady, appliedSummary, removalParts, planTitle, planButton, strikeBody, backoff, revealParts, speechSupported, SPEECH_IGNORED, queueIdFromPath, RAIL_PAGE, isUndecided, tallyText, railSummary, statusWord, railLabel, nextUnchosen, stepItem, railPageOf, railWindow, keepChoice, passChoice, marksFromChoice, noChoice, previewText, reviewLine, changedUnits, keyAction, compareLimit, shownKeys, togglePicked, rowIsSame, rowShown, foldSegments, foldLabel, unitMap, newWords, curRuns, cellRuns, stateWord };
     return;
   }
 
@@ -361,6 +487,8 @@
   const store = (() => { try { const s = window.sessionStorage; s.getItem(TOKEN_KEY); return s; } catch { return null; } })();
   const auth = resolveToken(window.location.search, store);
   const sessionId = sessionIdFromPath(window.location.pathname);
+  const batchId = queueIdFromPath(window.location.pathname);
+  const batch = batchId !== null;
   const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let data = null;       // the last payload
@@ -374,7 +502,17 @@
     showChange: {}, measured: {}, reveal: null, revealFor: '', speech: null, positions: {}, briefOpen: false, originalOpen: true,
     view: 'variants', pick: null, plan: null,
     cmp: { recent: null, phone: null, open: new Set() }, drawn: {},
+    // a batch: the rail, the open item, the Send and Finish panels, the shortcut switch, items already fetched
+    cur: null, entered: null, rail: null, railSig: '', railPage: 0, panel: null, sending: false, sendTotal: 0, sendBase: 0, itemError: null,
+    keys: readKeys(), cache: new Map(), prefetched: new Set(),
   };
+  /** The shortcut switch is remembered in this browser only; storage may be unavailable. */
+  function readKeys() { try { return window.localStorage.getItem('prose-keys') !== 'off'; } catch { return true; } }
+  function saveKeys(on) { try { window.localStorage.setItem('prose-keys', on ? 'on' : 'off'); } catch { /* not remembered */ } }
+  /** Where the open item's requests go: its own session, or its place in the queue (never a session id the page chose). */
+  const base = () => (batch ? '/api/queue/' + batchId + '/item/' + ui.cur : '/api/session/' + sessionId);
+  /** What is on screen: the item's own signature, the rail's, and which item. */
+  const fullSig = p => signature(p) + (batch ? '|' + ui.railSig + '|' + ui.cur : '');
 
   const $ = id => document.getElementById(id);
   const app = $('app');
@@ -444,18 +582,19 @@
   }
 
   function apply(p, quiet) {
-    const changed = signature(p) !== renderedSig;
+    const changed = fullSig(p) !== renderedSig;
     data = p;
-    if (quiet) { renderedSig = signature(p); return; }
+    if (quiet) { renderedSig = fullSig(p); return; }
     if (changed) render();
     // The plan on screen belongs to one draft and one set of strikes; when either moves, show the new plan instead of a stale one.
     if (ui.plan && !ui.plan.busy && !ui.plan.loading && p.draft && ui.plan.rev !== p.draft.rev) openPlan('The draft or the strikes changed, so this is the new list. Nothing has been removed.');
   }
 
   async function load() {
+    if (batch) return loadBatch();
     if (!sessionId) return;
     try {
-      const res = await request('GET', '/api/session/' + sessionId);
+      const res = await request('GET', base());
       fails = 0;
       showBanner(false);
       if (res.ok) apply(res.body);
@@ -473,8 +612,9 @@
   function schedule() {
     clearTimeout(timer);
     if (fatal) return;
-    const base = data && data.state.stage === 'waiting' ? 2000 : 8000;
-    timer = setTimeout(async () => { await load(); schedule(); }, backoff(fails, base));
+    // a batch polls the rail (and the open item) every 8 s, every 2 s while picks are being sent
+    const every = (data && data.state.stage === 'waiting') || ui.sending ? 2000 : 8000;
+    timer = setTimeout(async () => { await load(); schedule(); }, backoff(fails, every));
   }
 
   /** Send an owner event. Returns true when the server took it. */
@@ -483,7 +623,7 @@
     if (gate && busy) return false;
     if (gate) { busy = true; setBusy(true); }
     try {
-      const res = await post('/api/session/' + sessionId + '/event', JSON.stringify({ ...event, eventId: newEventId(window.crypto) }));
+      const res = await post(base() + '/event', JSON.stringify({ ...event, eventId: newEventId(window.crypto) }));
       if (res.ok && res.body && res.body.state) { hideNotice(); showBanner(false); apply(res.body.state, opts && opts.quiet); return true; }
       if (!(opts && opts.silent)) showProblem(res);
       if (res.status === 409) await load();
@@ -502,7 +642,7 @@
     if (busy) return false;
     busy = true; setBusy(true);
     try {
-      const res = await post('/api/session/' + sessionId + '/strike' + suffix, JSON.stringify(body));
+      const res = await post(base() + '/strike' + suffix, JSON.stringify(body));
       if (res.ok && res.body && res.body.state) { hideNotice(); showBanner(false); apply(res.body.state); return true; }
       showProblem(res);
       if (res.status === 409 || res.status === 404) await load();
@@ -527,7 +667,7 @@
     ui.plan = { loading: true, rev, why: why || null, busy: false, plan: null };
     render();
     try {
-      const res = await request('GET', '/api/session/' + sessionId + '/strike/preview');
+      const res = await request('GET', base() + '/strike/preview');
       if (!ui.plan) return;
       if (res.ok && res.body) { ui.plan = { loading: false, rev, why: why || null, busy: false, plan: res.body }; hideNotice(); }
       else { ui.plan = null; showProblem(res); await load(); }
@@ -541,7 +681,7 @@
     if (!cur || !cur.plan || busy) return;
     busy = true; setBusy(true); cur.busy = true;
     try {
-      const res = await post('/api/session/' + sessionId + '/strike/apply', JSON.stringify({ digest: cur.plan.digest, eventId: newEventId(window.crypto) }));
+      const res = await post(base() + '/strike/apply', JSON.stringify({ digest: cur.plan.digest, eventId: newEventId(window.crypto) }));
       if (res.ok && res.body && res.body.state) { hideNotice(); showBanner(false); ui.plan = null; ui.view = 'draft'; apply(res.body.state); render(); return; }
       cur.busy = false;
       busy = false; setBusy(false);
@@ -670,6 +810,16 @@
   // ---- screens ----
 
   function setTitle(title, sub) {
+    const item = batch && ui.rail ? ui.rail.items[ui.cur - 1] : null;
+    if (item) {
+      // The title row of a batch item reads "who - where", with its place in the queue and what the screen asks of the owner beside it.
+      const pos = ui.rail.order.indexOf(ui.cur) + 1;
+      const heading = item.who + ' - ' + item.where;
+      $('title').textContent = heading;
+      $('subtitle').textContent = 'Item ' + pos + ' of ' + ui.rail.items.length + '. ' + (sub || title);
+      document.title = heading;
+      return;
+    }
     $('title').textContent = title;
     $('subtitle').textContent = sub || '';
     document.title = title;
@@ -730,9 +880,9 @@
         const selected = ui.selected && ui.selected.index === c.index && ui.selected.unit === i;
         const span = h('span', {
           class: 'unit' + (noted.has(i) ? ' noted' : '') + (selected ? ' selected' : '') + (struck.has(i) ? ' struck' : ''),
-          text: units[i], role: 'button', tabindex: '0',
+          text: units[i], ...(batch ? {} : { role: 'button', tabindex: '0' }),
           'aria-label': noted.has(i) ? 'Sentence with a note: ' + units[i] : (struck.has(i) ? 'Struck line, kept as it was: ' + units[i] : undefined),
-          on: {
+          on: batch ? {} : {
             click: () => selectUnit(c.index, i),
             keydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectUnit(c.index, i); } },
           },
@@ -918,9 +1068,9 @@
       const selected = ui.selected && ui.selected.index === c.index && ui.selected.unit === unit;
       const isNoted = noted.get(c.index).has(unit);
       const span = h('span', {
-        class: 'unit' + (isNoted ? ' noted' : '') + (selected ? ' selected' : '') + (src.struck ? ' struck' : ''), role: 'button', tabindex: '0',
+        class: 'unit' + (isNoted ? ' noted' : '') + (selected ? ' selected' : '') + (src.struck ? ' struck' : ''), ...(batch ? {} : { role: 'button', tabindex: '0' }),
         'aria-label': isNoted ? 'Line with a note: ' + src.text : (src.struck ? 'Struck line, kept as it was: ' + src.text : undefined),
-        on: { click: () => selectUnit(c.index, unit), keydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectUnit(c.index, unit); } } },
+        on: batch ? {} : { click: () => selectUnit(c.index, unit), keydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); selectUnit(c.index, unit); } } },
       }, plain ? src.text : varNodes(src, row.base === null));
       unitEls.get(c.index)[unit] = span;
       return h('div', { class: cls, role: 'cell', 'data-unit': String(unit) }, who('Draft ' + c.label), src.speaker ? h('span', { class: 'sp', text: src.speaker }) : null, span);
@@ -956,7 +1106,7 @@
       const st = stateOf(c);
       const fresh = !!st && (ui.drawn[c.index] || '') !== st;
       ui.drawn[c.index] = st || '';
-      const word = c.index === pinned ? 'Your pick from last round' : stateWord(st);
+      const word = c.index === pinned ? 'Your pick from last round' : stateWord(st, batch);
       const play$ = btn('Play', () => (speech.index === c.index ? stopSpeech() : play(c.index, 0)), 'small', { hidden: !speechOn(), 'data-key': 'play-' + c.index, 'aria-label': 'Play draft ' + c.label });
       const pause$ = btn('Pause', togglePause, 'small', { hidden: true, 'data-key': 'pause-' + c.index, 'aria-label': 'Pause draft ' + c.label });
       controlEls.set(c.index, { play: play$, pause: pause$ });
@@ -974,8 +1124,8 @@
       const kept = st === 'keep', passed = st === 'pass';
       const n = newWords(cmp.rows, String(c.index));
       const actions = c.index === pinned ? null : h('div', { class: 'acts' },
-        btn(kept ? 'Kept' : 'Keep', () => { ui.marks[c.index] = kept ? null : 'keep'; render(); }, kept ? 'on' : '', { 'aria-pressed': String(kept), 'data-key': 'keep-' + c.index, 'aria-label': (kept ? 'Kept' : 'Keep') + ' draft ' + c.label }),
-        btn(passed ? 'Passed' : 'Pass', () => { ui.marks[c.index] = passed ? null : 'pass'; render(); }, passed ? 'off' : '', { 'aria-pressed': String(passed), 'data-key': 'pass-' + c.index, 'aria-label': (passed ? 'Passed' : 'Pass') + ' draft ' + c.label }));
+        btn(kept ? 'Kept' : 'Keep', () => markKeep(c), kept ? 'on' : '', { 'aria-pressed': String(kept), 'data-key': 'keep-' + c.index, 'aria-label': (kept ? 'Kept' : 'Keep') + ' draft ' + c.label }),
+        btn(passed ? 'Passed' : 'Pass', () => markPass(c), passed ? 'off' : '', { 'aria-pressed': String(passed), 'data-key': 'pass-' + c.index, 'aria-label': (passed ? 'Passed' : 'Pass') + ' draft ' + c.label }));
       return h('div', { class: 'foot' + (passed ? ' passed' : ''), role: 'cell' },
         timingBlock(c), h('p', { class: 'newcount', text: n + ' of ' + wordCount(c.units || []) + ' words new' }),
         changeBlock(c), notesList(c), actions);
@@ -1010,10 +1160,36 @@
       rateControl()];
   }
 
+  /** Keep one draft in a single-set lineup (several may be kept), or choose it in a batch (one at a time, staged in the queue until Send picks). */
+  function markKeep(c) {
+    if (batch) return setChoice(keepChoice(data.queue.choice, c.index));
+    ui.marks[c.index] = ui.marks[c.index] === 'keep' ? null : 'keep';
+    render();
+  }
+  function markPass(c) {
+    if (batch) return setChoice(passChoice(data.queue.choice, c.index));
+    ui.marks[c.index] = ui.marks[c.index] === 'pass' ? null : 'pass';
+    render();
+  }
+
   function lineupScreen() {
     const s = data.state;
     const pinned = s.round > 0 && s.champion !== null && s.lineup.includes(s.champion) ? s.champion : null;
     const shown = data.candidates.filter(c => s.lineup.includes(c.index));
+    if (batch) {
+      // The staged choice is the marks: the server holds it, so a reload or another device shows the same.
+      ui.marks = marksFromChoice(data.queue.choice);
+      setTitle('Choose a draft', lineupHintBatch());
+      const body = data.compare && shown.length > 0 && shown.every(c => !c.changed && c.hashOk && c.units)
+        ? [compareView(shown, null)]
+        : [originalBlock(), rateControl(), shown.map(c => card(c, {
+          state: ui.marks[c.index],
+          actions: h('div', { class: 'row grow' },
+            btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', () => markKeep(c), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep'), 'data-key': 'keep-' + c.index }),
+            btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', () => markPass(c), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass'), 'data-key': 'pass-' + c.index })),
+        }))];
+      return [...batchTop(), briefBlock(), ...body];
+    }
     if (ui.marksRound !== s.round) { ui.marks = {}; ui.marksRound = s.round; ui.drawn = {}; ui.cmp = { recent: null, phone: null, open: new Set() }; }
     const choosable = c => !(c.changed || !c.hashOk || !c.units) && c.index !== pinned;
     const marked = shown.filter(c => choosable(c) && ui.marks[c.index] === 'keep').length;
@@ -1030,10 +1206,9 @@
     // Side by side when the server aligned the drafts (every one readable); otherwise the stack of cards as before.
     if (data.compare && shown.length > 0 && shown.every(c => !c.changed && c.hashOk && c.units)) return [briefBlock(), compareView(shown, pinned), dock];
     const cards = shown.map(c => {
-      const mark = which => () => { ui.marks[c.index] = ui.marks[c.index] === which ? null : which; render(); };
       const actions = c.index === pinned ? null : h('div', { class: 'row grow' },
-        btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', mark('keep'), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep') }),
-        btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', mark('pass'), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass') }));
+        btn(ui.marks[c.index] === 'keep' ? 'Kept' : 'Keep', () => markKeep(c), ui.marks[c.index] === 'keep' ? 'on' : '', { 'aria-pressed': String(ui.marks[c.index] === 'keep'), 'data-key': 'keep-' + c.index }),
+        btn(ui.marks[c.index] === 'pass' ? 'Passed' : 'Pass', () => markPass(c), ui.marks[c.index] === 'pass' ? 'off' : '', { 'aria-pressed': String(ui.marks[c.index] === 'pass'), 'data-key': 'pass-' + c.index }));
       return card(c, { tag: c.index === pinned ? 'Your pick from last round' : null, actions, state: c.index === pinned ? null : ui.marks[c.index] });
     });
     return [briefBlock(), originalBlock(), rateControl(), cards, dock];
@@ -1257,11 +1432,11 @@
       revealParts(r, labelFor, r.setId === data.session.setId, 'You chose ' + labelFor(r.picked) + '.')
         .forEach(part => box.append(h('p', { class: part.cls, text: part.text })));
     };
-    if (ui.reveal && ui.revealFor === signature(data)) fill(ui.reveal);
+    if (ui.reveal && ui.revealFor === fullSig(data)) fill(ui.reveal);
     else {
       box.append(h('p', { class: 'quiet', text: 'Opening the sealed guess...' }));
-      const sig = signature(data);
-      request('GET', '/api/session/' + sessionId + '/reveal').then(res => {
+      const sig = fullSig(data);
+      request('GET', base() + '/reveal').then(res => {
         if (res.ok) { ui.reveal = res.body; ui.revealFor = sig; fill(res.body); }
         else { box.replaceChildren(h('p', { text: 'You chose ' + labelFor(data.state.shipped) + '.' }), h('p', { class: 'quiet', text: 'The sealed guess is not available.' })); }
       }).catch(() => { box.replaceChildren(h('p', { text: 'You chose ' + labelFor(data.state.shipped) + '.' }), h('p', { class: 'quiet', text: 'Could not reach the server for the sealed guess. Reload to try again.' })); });
@@ -1269,19 +1444,420 @@
     return [box];
   }
 
+  // ---- batch review: the rail, one item at a time, staged choices, Send picks, Finish ----
+
+  const railItem = n => (ui.rail ? ui.rail.items[n - 1] : null);
+  const lineupHintBatch = () => 'Keep the draft you want, or none. Nothing is sent until you press Send picks.';
+  const announce = text => { const el = $('live'); if (!el) return; el.textContent = ''; setTimeout(() => { el.textContent = text; }, 30); };
+  const openStage = () => !!(ui.rail && ui.rail.queue.stage === 'open');
+
+  /** The rail's number for the item as it reads on screen: its place in the queue and its state in words. */
+  function itemAnnouncement(n) {
+    const it = railItem(n);
+    return 'Item ' + (ui.rail.order.indexOf(n) + 1) + ' of ' + ui.rail.items.length + ': ' + it.who + ', ' + it.where + ', ' + statusWord(it).toLowerCase();
+  }
+
+  /** The state of a rail item as a class: the hollow circle waits, the filled circle holds the letter, the slash is a skip. */
+  const stateClass = it => (it.status === 'picked' ? 'picked' : it.status === 'sent' ? 'picked sent' : it.status === 'skipped' ? 'skipped' : it.status === 'blocked' ? 'blocked' : it.status === 'ended' ? 'ended' : '');
+
+  function renderRail() {
+    const el = $('rail');
+    const desk = $('desk');
+    if (!batch || !ui.rail) { el.hidden = true; return; }
+    const r = ui.rail;
+    const focused = document.activeElement && el.contains(document.activeElement) ? document.activeElement.getAttribute('data-key') : null;
+    desk.classList.add('batch');
+    el.hidden = false;
+    const w = railWindow(r.order, ui.railPage);
+    ui.railPage = w.page;
+    const rows = w.ns.map(n => {
+      const it = r.items[n - 1];
+      return h('li', null, h('button', {
+        type: 'button', class: 'qitem', 'aria-current': n === ui.cur ? 'true' : undefined, 'data-key': 'rail-' + n,
+        'aria-label': railLabel(it, r.order.indexOf(n) + 1, r.items.length), on: { click: () => go(n) },
+      },
+      h('span', { class: 'state ' + stateClass(it), 'data-l': it.picked || '', 'aria-hidden': 'true' }),
+      h('span', { class: 'qtext' }, h('span', { class: 'who', text: it.who }), h('span', { class: 'where', text: it.where }), h('span', { class: 'qstatus', text: statusWord(it) }))));
+    });
+    const pager = w.pages > 1 ? h('div', { class: 'pager', role: 'group', 'aria-label': 'Pages of the queue' },
+      btn('Earlier', () => { ui.railPage = w.page - 1; renderRail(); }, 'small', { disabled: w.page === 0, 'data-key': 'rail-earlier' }),
+      h('span', { class: 'quiet', text: (w.from + 1) + '-' + (w.from + w.ns.length) + ' of ' + r.order.length }),
+      btn('Later', () => { ui.railPage = w.page + 1; renderRail(); }, 'small', { disabled: w.page >= w.pages - 1, 'data-key': 'rail-later' })) : null;
+    el.replaceChildren(
+      h('h2', { class: 'rail-title', text: 'Review desk' }),
+      h('p', { class: 'count', text: railSummary(r.queue.counts, r.items.length) }),
+      h('ol', { class: 'queue' }, rows), ...(pager ? [pager] : []));
+    if (focused) { const again = Array.prototype.find.call(el.querySelectorAll('[data-key]'), x => x.getAttribute('data-key') === focused); if (again && !again.disabled) again.focus({ preventScroll: true }); }
+  }
+
+  /** The rail's payload: re-render only when something on it changed. */
+  function applyRail(r, quiet) {
+    const sig = JSON.stringify([r.queue.stage, r.queue.counts, r.order, r.items.map(i => [i.status, i.picked, i.message || '', i.via || ''])]);
+    const changed = sig !== ui.railSig;
+    ui.rail = r;
+    ui.railSig = sig;
+    if (changed && !quiet) { renderRail(); if (data) render(); }
+  }
+
+  /** The item to open first: the one named in the address (#3) when the queue has it, else the first still to be decided. */
+  function startItem(r) {
+    const n = Number(String(window.location.hash || '').replace(/^#/, ''));
+    return Number.isInteger(n) && r.items.some(i => i.n === n) ? n : r.current;
+  }
+
+  /** The marks drawn for an item as it is first shown are fully drawn, not animated: only a change the owner makes draws. */
+  function enterItem() {
+    ui.entered = ui.cur;
+    ui.drawn = {};
+    for (const c of data.candidates) ui.drawn[c.index] = marksFromChoice(data.queue.choice)[c.index] || '';
+    ui.cmp = { recent: null, phone: null, open: new Set() };
+    ui.view = 'variants'; ui.plan = null; ui.pick = null; ui.selected = null; ui.noteDraft = ''; ui.confirmShip = false;
+  }
+
+  function rememberItem(n, payload) {
+    ui.cache.set(n, payload);
+    if (ui.cache.size > 12) for (const k of ui.cache.keys()) { if (k !== ui.cur) { ui.cache.delete(k); break; } }
+  }
+
+  /** The open item's payload arrived. */
+  function applyItem(n, payload) {
+    if (n !== ui.cur) return;
+    ui.itemError = null;
+    rememberItem(n, payload);
+    if (ui.entered !== n) { data = payload; enterItem(); render(); return; }
+    apply(payload);
+  }
+
+  /** The next item is fetched once, a moment after the open one is on screen, so Next is instant. */
+  function prefetch() {
+    if (!batch || !ui.rail) return;
+    const next = stepItem(ui.rail.order, ui.cur, 1);
+    if (next === null || ui.cache.has(next) || ui.prefetched.has(next)) return;
+    ui.prefetched.add(next);
+    setTimeout(async () => {
+      try { const res = await request('GET', '/api/queue/' + batchId + '/item/' + next); if (res.ok) rememberItem(next, res.body); } catch { /* it is fetched when the owner gets there */ }
+    }, 600);
+  }
+
+  async function loadBatch() {
+    try {
+      const rail = await request('GET', '/api/queue/' + batchId);
+      if (!rail.ok) { loadFailed(rail); return; }
+      fails = 0;
+      showBanner(false);
+      if (ui.cur === null) ui.cur = startItem(rail.body);
+      applyRail(rail.body, true);
+      renderRail();
+      const n = ui.cur;
+      const res = await request('GET', '/api/queue/' + batchId + '/item/' + n);
+      if (n !== ui.cur) return;
+      if (res.ok) { applyItem(n, res.body); prefetch(); }
+      else if (res.status === 404) { data = null; ui.itemError = (res.body && res.body.error && (res.body.error.message)) || 'This item is not available'; renderItemError(); }
+      else if (res.status === 401) loadFailed(res);
+      else showProblem(res);
+    } catch {
+      fails++;
+      showBanner(true);
+    }
+  }
+
+  function loadFailed(res) {
+    if (res.status === 401 || res.status === 404) {
+      fatal = true;
+      showMessage(res.status === 401 ? 'This link is missing its key' : 'That review was not found',
+        (res.body && res.body.error && (res.body.error.hint || res.body.error.message)) || 'Ask your writer for a fresh link.');
+    } else showProblem(res);
+  }
+
+  function renderItemError() {
+    renderRail();
+    setTitle('Not available', ui.itemError);
+    app.className = '';
+    $('views').hidden = true;
+    app.replaceChildren(h('p', { class: 'quiet', text: ui.itemError + '. The rest of the queue is on the left.' }), batchDock());
+  }
+
+  /** Open an item: the rail follows it, the address names it, the title row takes the focus, and a screen reader hears where it is. */
+  function go(n) {
+    if (!ui.rail || !railItem(n)) return;
+    stopSpeech();
+    ui.cur = n;
+    ui.railPage = railPageOf(ui.rail.order, n);
+    try { window.history.replaceState(null, '', window.location.pathname + '#' + n); } catch { /* the address stays */ }
+    const cached = ui.cache.get(n);
+    ui.entered = null;
+    if (cached) { data = cached; enterItem(); render(); } else { data = null; renderRail(); app.replaceChildren(h('p', { class: 'quiet', text: 'Loading...' })); }
+    $('title').focus();
+    announce(itemAnnouncement(n));
+    request('GET', '/api/queue/' + batchId + '/item/' + n).then(res => { if (res.ok) { applyItem(n, res.body); prefetch(); } else if (n === ui.cur) { if (res.status === 404) { data = null; ui.itemError = (res.body && res.body.error && res.body.error.message) || 'This item is not available'; renderItemError(); } else showProblem(res); } }).catch(() => showBanner(true));
+  }
+  const goUnchosen = () => { const n = nextUnchosen(ui.rail.order, ui.rail.items, ui.cur); if (n !== null) go(n); };
+
+  /** A write to the queue (choose, skip, send, finish): gated like a judgement, answered with the rail and, for a choice, the item. */
+  async function batchPost(path, body) {
+    if (busy) return null;
+    busy = true; setBusy(true);
+    try {
+      const res = await post('/api/queue/' + batchId + path, JSON.stringify({ ...body, eventId: newEventId(window.crypto) }));
+      if (res.ok && res.body) { hideNotice(); showBanner(false); if (res.body.rail) applyRail(res.body.rail, true); return res.body; }
+      showProblem(res);
+      if (res.status === 409 || res.status === 404 || res.status === 400) await load();
+      return null;
+    } catch {
+      showBanner(true);
+      return null;
+    } finally {
+      busy = false; setBusy(false);
+    }
+  }
+
+  /** Stage the choice for the open item: the server keeps it in the queue log (nothing is sent). */
+  async function setChoice(next) {
+    const n = ui.cur;
+    const body = await batchPost('/choose', { item: n, variant: next.variant, passes: next.passes });
+    if (body && body.state && body.state.queue.n === ui.cur) { rememberItem(n, body.state); apply(body.state); }
+  }
+
+  /** Skip the open item (it goes to the end of the queue) and move on to the one that follows it. */
+  async function skipItem() {
+    const n = ui.cur;
+    const after = stepItem(ui.rail.order, n, 1);
+    const body = await batchPost('/skip', { item: n });
+    if (!body) return;
+    ui.cache.delete(n);
+    if (after !== null) go(after);
+    else if (body.state && body.state.queue.n === ui.cur) apply(body.state);
+  }
+
+  // ---- Send picks and Finish: a panel above the item, nothing happens until a button in it is pressed ----
+
+  /** The items the server would send: the chosen ones not yet sent, in rail order. Their text comes from fresh item payloads. */
+  async function openSend(thenFinish) {
+    if (!ui.rail || ui.sending) return;
+    const ns = ui.rail.order.filter(n => ['picked', 'blocked'].includes(ui.rail.items[n - 1].status));
+    ui.panel = { kind: 'send', loading: true, lines: [], thenFinish: !!thenFinish };
+    render();
+    const lines = [];
+    let at = 0;
+    const worker = async () => {
+      while (at < ns.length) {
+        const n = ns[at++];
+        try {
+          const res = await request('GET', '/api/queue/' + batchId + '/item/' + n);
+          if (!res.ok) continue;
+          rememberItem(n, res.body);
+          const v = res.body.queue.choice.variant;
+          const c = v === null ? null : res.body.candidates.find(x => x.index === v);
+          if (c) lines.push({ n, text: reviewLine(railItem(n), c.label, changedUnits(res.body, v)) });
+        } catch { /* the line is left out; the server sends what is staged */ }
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    if (!ui.panel || ui.panel.kind !== 'send') return;
+    lines.sort((a, b) => ui.rail.order.indexOf(a.n) - ui.rail.order.indexOf(b.n));
+    ui.panel = { kind: 'send', loading: false, lines, thenFinish: !!thenFinish, focus: true };
+    render();
+  }
+
+  function closePanel() {
+    const kind = ui.panel ? ui.panel.kind : null;
+    ui.panel = null;
+    render();
+    const again = app.querySelector('[data-key="' + (kind === 'send' ? 'send' : kind === 'finish' ? 'finish' : 'keys') + '"]');
+    if (again) again.focus();
+  }
+
+  async function confirmSend() {
+    const panel = ui.panel;
+    if (!panel || panel.kind !== 'send' || panel.loading || ui.sending || panel.lines.length === 0) return;
+    ui.panel = null;
+    ui.sending = true; ui.sendTotal = panel.lines.length; ui.sendBase = ui.rail.queue.counts.sent;
+    render();
+    schedule();
+    const body = await batchPost('/send', { sendId: newEventId(window.crypto).slice(0, 60) });
+    ui.sending = false;
+    if (body && Array.isArray(body.results)) {
+      const sent = body.results.filter(r => r.status === 'sent').length;
+      const blocked = body.results.filter(r => r.status === 'blocked');
+      if (blocked.length) showNotice(sent + ' sent. ' + blocked.length + (blocked.length === 1 ? ' pick' : ' picks') + ' could not be sent.', blocked[0].message + (blocked.length > 1 ? ' (The others are marked in the list.)' : ''));
+    }
+    ui.cache.clear(); ui.prefetched.clear();
+    await load();
+    // "Send and finish" finishes only when every pick went through; a blocked one is left for the owner to see
+    if (panel.thenFinish && body && Array.isArray(body.results) && body.results.every(r => r.status === 'sent') && openStage()) await doFinish();
+    if (data) render();
+  }
+
+  async function doFinish() {
+    const body = await batchPost('/finish', {});
+    ui.panel = null;
+    ui.cache.clear(); ui.prefetched.clear();
+    if (body) await load();
+    if (data) render();
+  }
+
+  function openFinish() {
+    if (!ui.rail || ui.sending) return;
+    ui.panel = { kind: 'finish', focus: true };
+    render();
+  }
+
+  function toggleHelp() {
+    ui.panel = ui.panel && ui.panel.kind === 'help' ? null : { kind: 'help', focus: true };
+    render();
+  }
+  function setKeys(on) { ui.keys = on; saveKeys(on); render(); }
+
+  /** The panel that is open, built from state; the heading takes the focus when it first appears. */
+  function panelBlock() {
+    const pn = ui.panel;
+    if (!pn || !ui.rail) return null;
+    const c = ui.rail.queue.counts;
+    if (pn.kind === 'send') {
+      if (pn.loading) return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' }, h('h2', { id: 'panel-h', tabindex: '-1', text: 'Send picks' }), h('p', { class: 'quiet', text: 'Getting your choices together...' }));
+      const n = pn.lines.length;
+      return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' },
+        h('h2', { id: 'panel-h', tabindex: '-1', text: n === 0 ? 'Nothing to send' : 'Send ' + n + (n === 1 ? ' pick?' : ' picks?') }),
+        n === 0 ? h('p', { text: 'Nothing is chosen yet. Keep a draft in an item first.' })
+          : [h('ul', { class: 'review' }, pn.lines.map(l => h('li', { text: l.text }))),
+            h('p', { class: 'warn', text: 'Picks cannot be changed once sent.' })],
+        h('div', { class: 'row' },
+          n > 0 ? btn(pn.thenFinish ? 'Send ' + n + (n === 1 ? ' pick and finish' : ' picks and finish') : 'Send ' + n + (n === 1 ? ' pick' : ' picks'), confirmSend, 'primary', { 'data-key': 'confirm-send' }) : null,
+          btn('Not yet', closePanel, '', { 'data-key': 'panel-back' })));
+    }
+    if (pn.kind === 'finish') {
+      const unsent = c.picked;
+      return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' },
+        h('h2', { id: 'panel-h', tabindex: '-1', text: unsent ? 'Send them first?' : 'Finish the review?' }),
+        unsent
+          ? h('p', { text: unsent + (unsent === 1 ? ' pick is' : ' picks are') + ' chosen but not sent. Finishing without sending drops them; the sets stay unpicked.' })
+          : h('p', { text: 'Sets without a pick stay as they are, and your writer can open them again. Picks already sent stay.' }),
+        h('div', { class: 'row' },
+          unsent ? btn('Send and finish', () => openSend(true), 'primary', { 'data-key': 'finish-send' }) : null,
+          btn(unsent ? 'Finish without them' : 'Finish', doFinish, unsent ? '' : 'primary', { 'data-key': 'finish-go', 'data-gate': '1' }),
+          btn('Back', closePanel, '', { 'data-key': 'panel-back' })));
+    }
+    const rows = [['j / k', 'next and previous item'], ['n', 'next unchosen item'], ['a to f', 'keep that draft'], ['Shift + a to f', 'pass on that draft'], ['u', 'clear the choice for this item'],
+      ['s', 'skip this item (it comes back at the end)'], ['e', 'expand or fold the unchanged lines'], ['b', 'open or close the brief'], ['Ctrl or Cmd + Enter', 'open Send picks, and confirm it'], ['Escape', 'close a panel'], ['?', 'show this list']];
+    return h('section', { class: 'panel', role: 'region', 'aria-labelledby': 'panel-h' },
+      h('h2', { id: 'panel-h', tabindex: '-1', text: 'Keyboard shortcuts' }),
+      h('dl', { class: 'keys' }, rows.map(r => [h('dt', { text: r[0] }), h('dd', { text: r[1] })])),
+      h('div', { class: 'row' },
+        btn(ui.keys ? 'Turn shortcuts off' : 'Turn shortcuts on', () => setKeys(!ui.keys), '', { 'aria-pressed': String(ui.keys), 'data-key': 'keys-switch' }),
+        btn('Close', closePanel, '', { 'data-key': 'panel-back' })));
+  }
+
+  /** The row above an item: previous and next, skip, clear, and the way out to the full single-set flow. */
+  function batchTop() {
+    const q = data.queue;
+    const prev = stepItem(ui.rail.order, ui.cur, -1);
+    const next = stepItem(ui.rail.order, ui.cur, 1);
+    const live = openStage() && q.status !== 'sent' && q.status !== 'ended';
+    return [
+      panelBlock(),
+      q.message && q.status === 'blocked' ? h('p', { class: 'warn blocked-msg', role: 'alert', text: 'Could not be sent: ' + q.message }) : null,
+      h('div', { class: 'itembar' },
+        btn('Previous', () => go(prev), 'small', { disabled: prev === null, 'data-key': 'prev' }),
+        btn('Next', () => go(next), 'small', { disabled: next === null, 'data-key': 'next' }),
+        live ? btn('Skip this one', skipItem, 'small', { 'data-key': 'skip', 'data-gate': '1' }) : null,
+        live ? btn('Clear choice', () => setChoice({ variant: null, passes: [] }), 'small', { disabled: noChoice(q.choice), 'data-key': 'clear', 'data-gate': '1' }) : null,
+        h('a', { class: 'own', href: '/s/' + data.session.id, text: 'Open as its own session' })),
+    ];
+  }
+
+  /** The dock of a batch: the tally, Next unchosen, Finish, Keys, and Send picks. Once the review is over it is only the summary. */
+  function batchDock() {
+    const r = ui.rail;
+    const total = r.items.length;
+    const c = r.queue.counts;
+    if (r.queue.stage !== 'open') {
+      const text = r.queue.stage === 'done' ? 'All ' + total + ' sets have a pick.' : 'The review is over: ' + c.sent + ' sent, ' + (total - c.sent) + ' not chosen.';
+      return h('div', { class: 'actionbar batchbar over' }, h('span', { class: 'tally', role: 'status', text }));
+    }
+    const nextN = nextUnchosen(r.order, r.items, ui.cur);
+    const undecided = c.waiting + c.skipped + c.blocked;
+    const status = ui.sending ? 'Sending ' + Math.min(ui.sendTotal, Math.max(0, c.sent - ui.sendBase)) + ' of ' + ui.sendTotal + '...' : tallyText(c, total);
+    return h('div', { class: 'actionbar batchbar' },
+      h('span', { class: 'tally', role: 'status', text: status }),
+      btn(undecided === 0 ? 'All chosen' : 'Next unchosen', goUnchosen, '', { disabled: nextN === null, 'data-key': 'next-unchosen' }),
+      btn('Finish', openFinish, '', { disabled: ui.sending, 'data-key': 'finish' }),
+      btn('Keys', toggleHelp, 'link', { 'aria-pressed': String(!!(ui.panel && ui.panel.kind === 'help')), 'data-key': 'keys' }),
+      btn('Send picks', () => openSend(false), 'primary', { disabled: c.picked === 0 || ui.sending, 'data-key': 'send' }));
+  }
+
+  /** What an item that is not a lineup shows: sent (the sealed guess, opened), closed, or judged in its own session. */
+  function batchScreen() {
+    const q = data.queue;
+    const stage = data.state.stage;
+    const top = batchTop();
+    if (q.status === 'sent') {
+      if (q.via === 'cli') {
+        const c = candidateOf(q.sentVariant);
+        setTitle('Picked outside this page', 'Picked outside this page');
+        return [...top, h('p', { text: 'This set was picked outside this page' + (c ? ': draft ' + c.label : '') + '.' }), h('p', { class: 'quiet', text: 'Your writer or the command line recorded it, so there is nothing more to do here.' }), batchDock()];
+      }
+      return [...top, ...revealScreen(), batchDock()];
+    }
+    if (q.status === 'ended' || stage === 'abandoned') {
+      setTitle('Closed', 'This item is closed');
+      return [...top, h('p', { text: 'This item was closed without a pick. Its set is still unpicked, and your writer can open it again.' }), batchDock()];
+    }
+    if (stage !== 'lineup') {
+      setTitle('In its own session', 'This set is being judged in its own session');
+      return [...top, h('p', { text: 'This set is being judged in its own session, so it cannot take a quick pick here.' }), batchDock()];
+    }
+    return [...lineupScreen(), batchDock()];
+  }
+
+  /** The shortcuts: one place that maps a key to what the screen does. */
+  function runKey(act) {
+    const q = data && data.queue;
+    const live = openStage() && q && q.status !== 'sent' && q.status !== 'ended' && data.state.stage === 'lineup';
+    const cand = act.letter ? data.candidates.find(c => c.label === act.letter && data.state.lineup.includes(c.index) && !c.changed && c.hashOk && c.units) : null;
+    switch (act.action) {
+      case 'close': closePanel(); break;
+      case 'help': toggleHelp(); break;
+      case 'next': { const n = stepItem(ui.rail.order, ui.cur, 1); if (n !== null) go(n); break; }
+      case 'previous': { const n = stepItem(ui.rail.order, ui.cur, -1); if (n !== null) go(n); break; }
+      case 'unchosen': goUnchosen(); break;
+      case 'review': if (openStage() && ui.rail.queue.counts.picked > 0) openSend(false); break;
+      case 'confirm': confirmSend(); break;
+      case 'skip': if (live) skipItem(); break;
+      case 'clear': if (live && !noChoice(q.choice)) setChoice({ variant: null, passes: [] }); break;
+      case 'keep': if (live && cand) markKeep(cand); break;
+      case 'pass': if (live && cand) markPass(cand); break;
+      case 'fold': { const b = app.querySelector('[data-key="expand-all"]'); if (b) b.click(); break; }
+      case 'brief': ui.briefOpen = !ui.briefOpen; render(); break;
+      default: break;
+    }
+  }
+
+  function onKey(ev) {
+    if (!batch || !data || !ui.rail) return;
+    const t = ev.target;
+    const inField = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable));
+    const act = keyAction({ key: ev.key, shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey, inField },
+      { keysOn: ui.keys, batch: true, panel: ui.panel ? ui.panel.kind : null });
+    if (!act) return;
+    ev.preventDefault();
+    runKey(act);
+  }
+
   function render() {
     if (!data) return;
     const focused = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-key') : null;
     stopSpeech();
     unitEls.clear(); controlEls.clear(); timingEls.clear();
-    renderedSig = signature(data);
+    renderedSig = fullSig(data);
     const stage = data.state.stage;
     if (stage !== 'refine') ui.confirmShip = false;
     viewBar();
-    app.className = stage === 'duel' && !(ui.view === 'draft' && data.draft) ? 'wide' : '';
+    if (batch) renderRail();
+    app.className = stage === 'duel' && !batch && !(ui.view === 'draft' && data.draft) ? 'wide' : '';
     let screen;
     if (ui.plan) screen = planScreen();
-    else if (ui.view === 'draft' && data.draft) screen = draftScreen();
+    else if (ui.view === 'draft' && data.draft) screen = batch ? [...batchTop(), ...draftScreen(), batchDock()] : draftScreen();
+    else if (batch) screen = batchScreen();
     else if (stage === 'lineup') screen = lineupScreen();
     else if (stage === 'duel') screen = duelScreen();
     else if (stage === 'refine') screen = refineScreen();
@@ -1306,6 +1882,9 @@
       if (again && !again.disabled && !again.hidden) again.focus({ preventScroll: true });
     }
     if (ui.plan && ui.plan.plan && !ui.plan.focused) { ui.plan.focused = true; const t = app.querySelector('.plan-title'); if (t) t.focus(); }
+    // a panel that has just opened takes the focus on its heading (Escape or its own button closes it and gives the focus back)
+    if (ui.panel && ui.panel.focus) { ui.panel.focus = false; const hd = app.querySelector('#panel-h'); if (hd) hd.focus(); }
+    if (batch) prefetch();
   }
 
   // ---- start ----
@@ -1318,10 +1897,11 @@
 
   function boot() {
     fontsFooter();
-    if (!sessionId) { showMessage('Reading', 'Open the link your writer gave you to start reading.'); return; }
+    if (!sessionId && !batch) { showMessage('Reading', 'Open the link your writer gave you to start reading.'); return; }
     if (!auth.token) { showMessage('This link is missing its key', 'Ask your writer for a fresh link.'); return; }
     // The token moves into session storage and out of the visible address; if storage is unavailable it stays in the URL.
-    if (auth.fromUrl && auth.persisted) { try { window.history.replaceState(null, '', window.location.pathname); } catch { /* keep the URL */ } }
+    if (auth.fromUrl && auth.persisted) { try { window.history.replaceState(null, '', window.location.pathname + (batch ? window.location.hash : '')); } catch { /* keep the URL */ } }
+    if (batch) document.addEventListener('keydown', onKey);
     checkSpeech();
     load().then(schedule);
   }

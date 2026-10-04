@@ -370,7 +370,8 @@ describe('strikes: apply helpers', () => {
 
 describe('strikes: the page source', () => {
   it('sends strikes, the apply and the undo through the one request path, to the strike routes', () => {
-    expect(js).toContain("'/api/session/' + sessionId + '/strike' + suffix");
+    expect(js).toContain("base() + '/strike' + suffix");
+    expect(js).toContain("'/api/session/' + sessionId"); // the single-set base; a batch item's base is its place in the queue
     expect(js).toContain("'/clear'");
     expect(js).toContain("'/strike/preview'");
     expect(js).toContain("'/strike/apply'");
