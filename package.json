@@ -1,6 +1,6 @@
 {
   "name": "agent-prose",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Writing-craft toolkit for coding agents: drafts in native formats (Fountain, Markdown, dialog YAML), measured and linted against cited craft rules per form and register",

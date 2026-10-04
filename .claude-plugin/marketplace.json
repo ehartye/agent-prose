@@ -3,6 +3,6 @@
   "description": "Local marketplace for the agent-prose plugin",
   "owner": { "name": "ehartye" },
   "plugins": [
-    { "name": "agent-prose", "description": "Writing-craft toolkit for coding agents", "version": "0.5.0", "source": "./", "license": "MIT" }
+    { "name": "agent-prose", "description": "Writing-craft toolkit for coding agents", "version": "0.6.0", "source": "./", "license": "MIT" }
   ]
 }
