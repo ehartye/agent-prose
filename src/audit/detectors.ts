@@ -209,11 +209,15 @@ const DIVE_IN = new RegExp([
 /**
  * Group 2: phrasing patterns. Reader-reported except restating-closer (an extension of the field guide's closing summary).
  */
-const startsSentence = (text: string, at: number) => sentenceRanges(text).some(([a]) => a === at);
 
 /** "Whether you're a ... or ...": the first clause must be a noun or activity ("a pro", "building"), so "Whether you're coming or not" is left alone. */
 const WHETHER = /\bWhether\s+you(?:['’]re|\s+are)\s+(?:a|an|the|new|just|looking|trying|building|planning|starting|running|managing|working)\b[^.!?,;]{1,80}?\s+or\s+[^.!?,;]{1,50}/gu;
-const whetherYoure = (u: Unit): Span[] => spansOf(WHETHER, u.text).filter(s => startsSentence(u.text, s.start));
+function whetherYoure(u: Unit): Span[] {
+  const spans = spansOf(WHETHER, u.text);
+  if (!spans.length) return [];
+  const starts = new Set(sentenceRanges(u.text).map(([a]) => a)); // once per unit, not once per match
+  return spans.filter(s => starts.has(s.start));
+}
 
 /**
  * "from X to Y" as a range of examples: each side one or two lowercase words ending in a plural or abstract noun, no

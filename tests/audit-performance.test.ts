@@ -44,4 +44,10 @@ describe('audit stays linear on large input', () => {
     expect(value.words).toBeGreaterThan(45_000);
     expect(ms).toBeLessThan(1000);
   });
+
+  it('reads 5,000 "Whether you’re" sentences in one paragraph', () => {
+    const text = `${'Whether you’re a cat or a dog. '.repeat(5000)}\n`;
+    const { ms } = timed(() => report(text));
+    expect(ms).toBeLessThan(1000);
+  });
 });
