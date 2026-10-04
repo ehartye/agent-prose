@@ -112,6 +112,11 @@ describe('set new --character resolution', () => {
     expect(out.brief.character).toBe('BOB. Terse and dry.');
     expect(out.notes.join(' ')).toContain('no bio');
   });
+  it('a description that already starts with the name is not prefixed twice', async () => {
+    const p = tmpProject();
+    await run('voice', 'new', '--dir', p.project, '--id', 'bob', '--name', 'Bob', '--speaker', 'BOB');
+    expect((await run('set', 'new', p.write('s.fountain', SCENE), '--id', 's1', '--character', 'bob')).brief.character).toBe('Bob. Describe register and signature words here.');
+  });
   it('a long name and description is cut to 600 characters', async () => {
     const p = tmpProject();
     p.write('.agent-prose/voices/bob.yaml', `schema: prose/voice@1\nid: bob\nname: Bob\nspeakers: [BOB]\ndescription: ${'word '.repeat(200)}\n`);
