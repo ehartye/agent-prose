@@ -104,23 +104,23 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
   },
   // group 1: openers and announcements (reader-reported)
   'stock-opener': {
-    hit: ['Every team makes hundreds of decisions each quarter.', 'In an era of cheap storage, nobody deletes anything.', 'Imagine a kitchen where nothing is labelled.', 'Have you ever wondered why bread rises?', 'In a world where shops close daily, owners worry.', 'In today’s market, tools change quickly.'],
-    miss: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.', 'Every Monday we meet at the pool.', 'We tested the model.\n\nImagine the result.', 'The first line is plain. Have you ever wondered why?'],
+    hit: ['Every team makes hundreds of decisions each quarter.', 'In an era of cheap storage, nobody deletes anything.', 'Imagine a kitchen where nothing is labelled.', 'Have you ever wondered why bread rises?', 'In a world where shops close daily, owners worry.', 'In today’s market, tools change quickly.', 'Every business needs a plan.'],
+    miss: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery sample was weighed twice.', 'Every Monday we meet at the pool.', 'We tested the model.\n\nImagine the result.', 'The first line is plain. Have you ever wondered why?', 'Every bolt must be torqued to 40 Nm before the next step.', 'Every ingredient should be at room temperature.', 'Every sample was weighed twice.', 'Imagine my surprise when the door opened.', 'In today’s meeting we agreed on the budget.'],
     human: ['Soil samples were dried at 60 C for 24 hours.\n\nEvery model was tested twice.'],
   },
   'announcement-filler': {
     hit: ['We’re excited to share some news about the studio.', 'I am thrilled to announce our new office.', 'We are so proud to introduce the new line.', 'I\'m delighted to unveil the plan.'],
-    miss: ['We’re excited about the trip.', 'I’m excited to see you on Saturday.', 'We are proud to serve the town since 1950.'],
+    miss: ['We’re excited about the trip.', 'I’m excited to see you on Saturday.', 'We are proud to serve the town since 1950.', 'We are pleased to share the recipe with you.'],
     human: ['I am pleased to report that the test passed on the second try.'],
   },
   'roadmap-sentence': {
-    hit: ['In this post, we’ll look at what a record contains.', 'In this guide I will walk through the setup.', 'Below is a breakdown of the options.', 'Here’s what we’ll cover.', 'Below we walk through the steps.'],
-    miss: ['In this paper, we propose a method for sorting.', 'In this section, we show that the bound holds.', 'Below is the wiring table.', 'Here’s what happened next.'],
+    hit: ['In this post, we’ll look at what a record contains.', 'In this guide I will walk through the setup.', 'Here’s what we’ll cover.'],
+    miss: ['In this paper, we propose a method for sorting.', 'In this section, we show that the bound holds.', 'Below is the wiring table.', 'Below is a breakdown of the costs by month.', 'Below are the results for each plot.', 'Below, we list the parts we used.', 'Below we walk down the stairs.', 'Here’s what happened next.'],
     human: ['In this chapter the author argues that the harbour failed.'],
   },
   'dive-in': {
-    hit: ['Let’s dive in.', 'Let’s unpack the problem.', 'This is a deep dive into the budget.', 'The talk dives into pricing.', 'Let’s delve into the data.'],
-    miss: ['She dove into the pool.', 'The divers dive into the quarry at noon.', 'He dived into the lake.'],
+    hit: ['Let’s dive in.', 'Let’s unpack the problem.', 'This is a deep dive into the budget.', 'The talk dives into pricing.', 'Let’s unpack what went wrong.', 'Let’s unpack.', 'Let’s delve into the data.'],
+    miss: ['She dove into the pool.', 'The divers dive into the quarry at noon.', 'He dived into the lake.', 'She dove into the cold sea.', 'The seals dive into the deep dark water.', 'Divers dive into the Mariana trench.', 'Let’s explore the park.', 'Let’s unpack the suitcase.', 'Let’s unpack the groceries.'],
     human: ['The kids jumped into the lake and swam to the raft.'],
   },
   // group 2: phrasing patterns
@@ -131,7 +131,7 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
   },
   'from-to-range': {
     hit: ['We serve clients from startups to enterprises.', 'From small startups to global enterprises, teams rely on it.', 'The course suits learners from beginners to experts.'],
-    miss: ['Prices rose from 5 to 10 percent.', 'The train runs from Paris to Lyon.', 'Look from the left to the right.', 'Samples were moved from vials to plates.'],
+    miss: ['Prices rose from 5 to 10 percent.', 'The train runs from Paris to Lyon.', 'The pipe runs from boilers to radiators.', 'Seeds were collected from plants to trays.', 'Parcels were delivered from depots to shops.', 'Look from the left to the right.', 'Samples were moved from vials to plates.'],
     human: ['Transfer the cookies from trays to racks and let them cool.'],
   },
   'worth-noting': {
@@ -140,8 +140,8 @@ const CASES: Record<string, { hit: string[]; miss: string[]; human: string[] }> 
     human: ['Note that the valve must stay closed while the tank fills.'],
   },
   'marketing-verbs': {
-    hit: ['We leverage our data to grow.', 'The tool streamlines onboarding.', 'A seamless checkout is the goal.', 'Unlock the full potential of your team.', 'It will elevate your brand.', 'We empower teams.', 'This is a game-changer.', 'They harness the power of wind.', 'Navigating the complexities of tax law is hard.', 'A cutting-edge lab opened.', 'We offer best-in-class support.'],
-    miss: ['The lever gave us leverage over the bolt.', 'Unlock the door and enter.', 'Elevate the patient’s legs on a pillow.', 'The board is empowered to sign.', 'A leveraged buyout closed.', 'Seamless steel pipe was used.', 'The cutting edge of the saw is sharp.'],
+    hit: ['We leverage our data to grow.', 'The tool streamlines onboarding.', 'A seamless checkout is the goal.', 'Unlock the full potential of your team.', 'It will elevate your brand.', 'We empower teams.', 'Tools that empower your developers.', 'This is a game-changer.', 'They harness the power of wind.', 'Navigating the complexities of tax law is hard.', 'A cutting-edge lab opened.', 'We offer best-in-class support.'],
+    miss: ['The lever gave us leverage over the bolt.', 'Unlock the door and enter.', 'Elevate the patient’s legs on a pillow.', 'The board is empowered to sign.', 'A leveraged buyout closed.', 'Seamless steel pipe was used.', 'The cutting edge of the saw is sharp.', 'Harness the horse before dawn.', 'They harnessed the river for a mill.', 'Harness the wind with a kite.', 'The tenant is empowered by this lease.', 'The board shall empower the clerk.', 'The seamless join was invisible.', 'The position was leveraged at 5 to 1.', 'The fund was leveraged by its lender.'],
     human: ['Unlock the door with the brass key and leave the lights off.'],
   },
   'restating-closer': {
@@ -511,7 +511,6 @@ const SPANS: Array<[family: string, text: string, spans: string[]]> = [
   ['announcement-filler', 'We’re excited to share some news about the studio.', ['We’re excited to share']],
   ['announcement-filler', 'I am thrilled to announce our new office.', ['I am thrilled to announce']],
   ['roadmap-sentence', 'In this post, we’ll look at what a record contains.', ['In this post, we’ll look at']],
-  ['roadmap-sentence', 'Below is a breakdown of the options.', ['Below is a breakdown']],
   ['roadmap-sentence', 'Here’s what we’ll cover.', ['Here’s what we’ll cover']],
   ['dive-in', 'Let’s dive in.', ['Let’s dive in']],
   ['dive-in', 'This is a deep dive into the budget.', ['deep dive']],

@@ -160,13 +160,23 @@ const CLOSING = /^(?:Overall|In conclusion),\s/u;
  * Stock opener: only the first sentence of the first prose paragraph (headings and frontmatter before it are skipped), and only the opening words are the span.
  * "Every <noun>" skips time words ("Every Monday", "Every year"), which open ordinary letters and diaries.
  */
-const TIME_WORDS = String.raw`(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|day|morning|afternoon|evening|night|week|weekend|month|year|summer|winter|spring|autumn|fall|time|once|other|now|one)`;
+/**
+ * Conservative rule: only the generic continuation counts, because the bare openers are ordinary in methods sections,
+ * recipes, manuals and stories. "Every" must be followed by a generic person or organisation noun ("Every team", "Every
+ * business"); "Every sample", "Every bolt" and "Every Monday" are left alone. "In today's" must lead into a stock scene
+ * word ("market", "world", "landscape", "digital age") after at most three buzz adjectives; "In today's meeting" is left
+ * alone. "Imagine" must be followed by a stock setup ("a ...", "an ...", "if", "you", "your", "being", "what", "how");
+ * "Imagine my surprise" is left alone.
+ */
+const GENERIC_SUBJECT = String.raw`(?:team|business(?:es)?|company|companies|organi[sz]ation|leader|manager|developer|engineer|customer|user|marketer|brand|startup|professional|entrepreneur|employee|student|creator|designer|owner|enterprise|successful\s+\p{L}+|great\s+\p{L}+|modern\s+\p{L}+)`;
+const SCENE_ADJ = String.raw`(?:fast-paced|digital|competitive|modern|ever-changing|rapidly\s+\p{L}+|busy|global|connected|data-driven|interconnected|hyper-connected|technology-driven|\p{L}+-\p{L}+)`;
+const SCENE_NOUN = String.raw`(?:world|landscape|era|age|market|marketplace|economy|environment|climate|society|workplace|business\s+world)`;
 const STOCK_OPENER = new RegExp([
-  String.raw`^Every\s+(?!${TIME_WORDS}\b)\p{L}+`,
-  String.raw`^In\s+today['’]s`,
+  String.raw`^Every\s+${GENERIC_SUBJECT}\b`,
+  String.raw`^In\s+today['’]s(?=(?:\s+${SCENE_ADJ}){0,3}\s+${SCENE_NOUN}\b)`,
   String.raw`^In\s+an\s+era\s+of`,
   String.raw`^In\s+a\s+world\s+where`,
-  String.raw`^Imagine\b`,
+  String.raw`^Imagine(?=\s+(?:a|an|if|you|your|yourself|being|what|how)\b)`,
   String.raw`^Have\s+you\s+ever\s+wondered`,
 ].join('|'), 'iu');
 
@@ -188,20 +198,26 @@ function stockOpener(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
   return m ? [{ start: first[0], end: first[0] + m[0].length }] : [];
 }
 
-const ANNOUNCEMENT = /\b(?:We['’]re|We\s+are|I['’]m|I\s+am)\s+(?:(?:so|very|truly|really)\s+)?(?:excited|thrilled|delighted|proud|pleased)\s+to\s+(?:share|announce|introduce|unveil)\b/giu;
+const ANNOUNCEMENT = /\b(?:We['’]re|We\s+are|I['’]m|I\s+am)\s+(?:(?:so|very|truly|really)\s+)?(?:excited|thrilled|delighted|proud)\s+to\s+(?:share|announce|introduce|unveil)\b/giu;
 
 const ROADMAP_VERBS = String.raw`(?:look\s+at|explore|cover|walk\s+through|dive\s+into|discuss|break\s+down)`;
 const ROADMAP = new RegExp([
   String.raw`\bIn\s+this\s+(?:post|article|guide|piece|section|chapter),?\s+(?:we(?:['’]ll|\s+will)|I(?:['’]ll|\s+will))\s+${ROADMAP_VERBS}`,
-  String.raw`(?:^|(?<=[.!?]\s))Below\s+(?:is|are)\s+(?:a|an|the)\s+(?:overview|summary|breakdown|look|guide|list|walkthrough|rundown)\b`,
-  String.raw`(?:^|(?<=[.!?]\s))Below,?\s+we\s+(?:will\s+|['’]ll\s+)?(?:look|explore|cover|walk|discuss|break|outline|summari[sz]e|describe)\b`,
   String.raw`(?:^|(?<=[.!?]\s))Here(?:['’]s|\s+is)\s+what\s+(?:we(?:['’]ll|\s+will)|you(?:['’]ll|\s+will)|I(?:['’]ll|\s+will))\s+(?:cover|learn|find|explore|see|look\s+at)\b`,
 ].join('|'), 'giu');
 
-/** "delve into" is not here: `delve` is already a vocabulary finding, and "let's delve" is one dive-in finding that swallows it (RANK). */
-const PHYSICAL_DIVE = String.raw`(?!\s+(?:the\s+)?(?:water|pool|lake|sea|ocean|river|quarry|waves?)\b)`;
+/**
+ * "delve into" is not here: `delve` is already a vocabulary finding, and "let's delve" is one dive-in finding that swallows it (RANK).
+ * "Let's explore" is dropped (ordinary invitation). "Let's unpack" counts only as a bare or abstract roadmap ("Let's unpack.",
+ * "Let's unpack what went wrong", "Let's unpack the problem"), not "Let's unpack the suitcase". A physical dive into water
+ * is not a finding, with or without adjectives between ("dive into the cold sea").
+ */
+const WATER = String.raw`(?:water|waters|pool|lake|sea|ocean|river|quarry|waves?|trench|pond|surf|depths|harbou?r|bay|canal|reef|lagoon)`;
+const PHYSICAL_DIVE = String.raw`(?!\s+(?:(?:the|a|an|that|this|those|these|its|his|her|their|our|my)\s+)?(?:[\p{L}-]+\s+){0,2}${WATER}\b)`;
+const UNPACK_ABSTRACT = String.raw`(?=\s*(?:[.!?,:;—]|$)|\s+(?:what|how|why|this|that|it|these)\b|\s+(?:the|this|these|those|our|your)\s+(?:\p{L}+\s+)?(?:problem|issue|question|idea|topic|concept|numbers|findings|results|trend|trends|challenge|challenges|details|strategy|difference|differences)\b)`;
 const DIVE_IN = new RegExp([
-  String.raw`\blet['’]s\s+(?:dive\s+in|dive\s+into|unpack|explore|delve)\b`,
+  String.raw`\blet['’]s\s+(?:dive\s+in|dive\s+into|delve)\b`,
+  String.raw`\blet['’]s\s+unpack\b${UNPACK_ABSTRACT}`,
   String.raw`\bdeep[- ]dives?\b`,
   String.raw`\b(?:dive|dives|diving)\s+(?:deep(?:ly)?\s+)?into\b${PHYSICAL_DIVE}`,
 ].join('|'), 'giu');
@@ -226,7 +242,7 @@ function whetherYoure(u: Unit): Span[] {
 const FROM_TO = /\b[Ff]rom\s+(\p{Ll}[\p{Ll}-]*(?:\s+\p{Ll}[\p{Ll}-]*)?)\s+to\s+(\p{Ll}[\p{Ll}-]*(?:\s+\p{Ll}[\p{Ll}-]*)?)(?![\p{L}-])/gu;
 const DETERMINER = /^(?:the|a|an|this|that|these|those|my|our|your|its|their|his|her|one|each|every|some|any)$/;
 const NOUNISH = /(?:[^sui]s|ies|ity|ness|ment|tion|sion)$/;
-const MOTION = /\b(?:mov\w*|transferr?\w*|copi\w*|copy|pour\w*|ship\w*|carr\w+|convert\w*|translat\w*|switch\w*|go|goes|went|gone|chang\w*|pass\w*|flow\w*|migrat\w*|import\w*|export\w*|sent|send|draw\w*|drain\w*|shift\w*)\s+(?:\S+\s+){0,2}$/iu;
+const MOTION = /\b(?:mov\w*|transferr?\w*|copi\w*|copy|pour\w*|ship\w*|carr\w+|convert\w*|translat\w*|switch\w*|go|goes|went|gone|chang\w*|pass\w*|flow\w*|migrat\w*|import\w*|export\w*|sent|send|draw\w*|drain\w*|shift\w*|collect\w*|deliver\w*|run|runs|ran|running|pipe\w*)\s+(?:\S+\s+){0,2}$/iu;
 function fromTo(u: Unit): Span[] {
   const out: Span[] = [];
   for (const m of u.text.matchAll(FROM_TO)) {
@@ -247,19 +263,19 @@ const WORTH_NOTING = /\bit(?:['’]s|\s+is)(?:\s+also)?\s+(?:worth\s+(?:noting|m
 
 /**
  * Marketing verbs, exact words. "Elevate" counts only with a figurative object (your brand, the game), "unlock" only before
- * power, potential or full, "empowered to" is a legal grant, and "leverage" the verb needs an auxiliary or pronoun before it.
+ * power, potential or full, "empower" only before a promotional object (teams, users, you), "harness" only before power,
+ * potential and the like (not the horse or the river), "seamless" only as "seamlessly" or before a service noun, and
+ * "leverage" the verb needs an auxiliary or pronoun before it, or an object after it ("leveraged at 5 to 1" is finance).
  */
 const MARKETING = new RegExp([
-  String.raw`\bleverag(?:es|ing)\b`,
-  String.raw`\bleveraged\b(?!\s+(?:buyouts?|loans?|etfs?|funds?|positions?|finance)\b)`,
+  String.raw`\bleverag(?:es|ing|ed)\s+(?:the|a|an|our|your|their|its|his|her|my|these|those|this|that|existing|new|everything|data|insights?|AI|technology|expertise|resources|synerg\p{L}+)\b`,
   String.raw`(?<=\b(?:to|will|can|could|would|should|must|we|you|they|I|and|or|that|which|who|helps?|lets?)\s)leverage\b`,
   String.raw`\bstreamlin(?:e|es|ed|ing)\b`,
-  String.raw`\bseamless(?:ly)?\b(?!\s+(?:steel|tubes?|pipes?|garments?|stockings?|tights?)\b)`,
+  String.raw`\bseamlessly\b|\bseamless(?=\s+(?:integrations?|experiences?|workflows?|checkout|onboarding|transitions?|processes|process|connectivity|collaboration|access|setup|payments?|migration|interface|user|solutions?|platform|navigation|communication|operations?)\b)`,
   String.raw`\bunlock(?:s|ed|ing)?\s+the\s+(?:power|potential|full)\b`,
   String.raw`\belevat(?:e|es|ed|ing)\s+(?:your|their|our|its|the|his|her)\s+(?:\p{L}+\s+)?(?:brands?|business(?:es)?|game|experience|work|workflow|presence|strategy|content|style|cooking|skills|performance|marketing|teams?|results|dish(?:es)?|craft|writing|approach|standards)\b`,
-  String.raw`\bempower(?:s|ing)?\b`,
-  String.raw`\bempowered\b(?!\s+to\b)`,
-  String.raw`\bharness(?:es|ed|ing)?\s+the\b`,
+  String.raw`\bempower(?:s|ing)?(?=\s+(?:teams?|users?|businesses|customers|developers|you|your|employees|people|organi[sz]ations|everyone|individuals|creators|marketers|leaders|managers|students|learners|them|our|their)\b)`,
+  String.raw`\bharness(?:es|ed|ing)?\s+the(?=\s+(?:power|potential|full|capabilit(?:y|ies)|strengths?|magic|insights?|data)\b)`,
   String.raw`\bnavigat(?:e|es|ed|ing)\s+the\s+complexit(?:y|ies)\b`,
   String.raw`\bgame[- ]changers?\b`,
   String.raw`\bcutting-edge\b|\bcutting\s+edge(?=\s+(?:technolog|research|solution|tool|platform|design|software|approach))`,
