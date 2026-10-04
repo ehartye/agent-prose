@@ -582,7 +582,10 @@ describe('summary, limits and forbidden wording', () => {
   const DETECTOR_LIMIT = 'Plain wording and non-native writing trigger some detectors in published research; this audit does not flag them.';
   /** The only place the phrase 'AI-generated text' may appear (the singular is allowed for the one-hallmark headline). */
   const HALLMARKS = 'hallmarks some readers associate with AI-generated text';
+  /** The one sentence that may carry percentages: the measured share of human texts with a family, in a fixed form. */
+  const RATE_SENTENCE = /^\s*In our samples (?:(?:(?:about \d+%|under 1%) of human|none of \d+ human) (?:abstracts|introductions)(?: and )?){1,2} contain this \(n=\d+(?: and \d+)?\); other genres may differ\.$/;
   const bannedIn = (strings: string[]) => strings
+    .filter(s => !RATE_SENTENCE.test(s))
     .map(s => s.replace(DETECTOR_LIMIT, '').replace(new RegExp(HALLMARKS.replace('hallmarks', 'hallmarks?'), 'gi'), ''))
     .filter(s => BANNED.test(s) && !/^As an AI language model/.test(s));
 
@@ -628,6 +631,9 @@ describe('summary, limits and forbidden wording', () => {
       for (const s of ['This is human-written.', 'It was written by a person.', 'Written by a human.', 'The detector says so.', 'Detectors flag it.'])
         expect(bannedIn([s]), s).toHaveLength(1);
       expect(bannedIn([DETECTOR_LIMIT])).toEqual([]);
+      const rate = 'In our samples about 8% of human abstracts and none of 350 human introductions contain this (n=351 and 350); other genres may differ.';
+      expect(bannedIn([`    ${rate}`])).toEqual([]);
+      for (const s of [rate.replace('contain', 'likely contain'), `${rate} Probably AI.`, 'About 8% of this passage is flagged.']) expect(bannedIn([s]), s).toHaveLength(1);
       expect(bannedIn([`These are ${HALLMARKS}.`])).toEqual([]);
       for (const x of ['This reads as AI-generated text.', 'It is likely AI.', 'A probability of 80%.', 'AI-generated hallmarks.', 'Written by AI.']) expect(bannedIn([x]), x).toHaveLength(1);
     });
@@ -659,7 +665,7 @@ describe('evidence tiers', () => {
     expect(Object.keys(r.families)).toEqual(found);
     for (const id of found) {
       const def = FAMILIES.find(f => f.id === id)!;
-      expect(r.families[id]).toEqual({ evidence: def.evidence, sources: def.sources });
+      expect(r.families[id]).toEqual({ evidence: def.evidence, sources: def.sources, humanRate: expect.any(Object) });
     }
     expect(r.families.vocabulary.evidence).toBe('corpus');
     expect(read('human-plain.md').families).toEqual({});
