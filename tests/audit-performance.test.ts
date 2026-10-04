@@ -50,4 +50,10 @@ describe('audit stays linear on large input', () => {
     const { ms } = timed(() => report(text));
     expect(ms).toBeLessThan(1000);
   });
+
+  it('reads 20,000 closing-style paragraphs', () => {
+    const text = Array.from({ length: 20_000 }, () => 'Ultimately, x.').join('\n\n');
+    const { ms } = timed(() => report(text));
+    expect(ms).toBeLessThan(1000);
+  });
 });

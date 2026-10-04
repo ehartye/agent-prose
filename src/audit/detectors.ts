@@ -272,11 +272,24 @@ const marketingVerbs = (u: Unit): Span[] => {
 };
 
 const RESTATING = /^(?:In\s+summary|In\s+short|In\s+essence|To\s+sum\s+up|Ultimately|At\s+the\s+end\s+of\s+the\s+day),\s/u;
+/** Index of the last paragraph and the paragraph count, once per units array (not once per unit). */
+const paragraphTail = (() => {
+  const cache = new WeakMap<Unit[], { last: number; count: number }>();
+  return (units: Unit[]) => {
+    let hit = cache.get(units);
+    if (!hit) {
+      let last = -1, count = 0;
+      units.forEach((x, n) => { if (x.kind === 'paragraph') { last = n; count++; } });
+      cache.set(units, hit = { last, count });
+    }
+    return hit;
+  };
+})();
 /** The last paragraph, when another paragraph came before it. "In conclusion," and "Overall," belong to closing-opener. */
 function restatingCloser(u: Unit, _ctx: Ctx, units: Unit[], i: number): Span[] {
   if (u.kind !== 'paragraph' || !RESTATING.test(u.text)) return [];
-  const paragraphs = units.map((x, n) => (x.kind === 'paragraph' ? n : -1)).filter(n => n >= 0);
-  if (paragraphs.length < 2 || paragraphs[paragraphs.length - 1] !== i) return [];
+  const { last, count } = paragraphTail(units);
+  if (count < 2 || last !== i) return [];
   const first = sentenceRanges(u.text)[0];
   return [{ start: 0, end: first ? first[1] : u.text.length }];
 }
