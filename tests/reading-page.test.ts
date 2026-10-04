@@ -289,7 +289,7 @@ describe('strikes: the pure helpers', () => {
     expect(r.pendingSummary(undefined)).toBeNull();
     expect(r.pendingSummary(draft([mk('s1', '5')]))).toMatchObject({ count: 1, stale: 0, text: '1 line struck' });
     expect(r.pendingSummary(draft([mk('s1', '5'), mk('s2', '7')])).text).toBe('2 lines struck');
-    expect(r.pendingSummary(draft([mk('s1', '5')])).note).toBe('Struck lines stay in the draft until your writer applies them.');
+    expect(r.pendingSummary(draft([mk('s1', '5')])).note).toBe('Struck lines stay in the draft until you review and apply them.');
   });
 
   it('says the draft changed, and that the stale ones can only be undone', () => {
@@ -325,12 +325,56 @@ describe('strikes: the pure helpers', () => {
   });
 });
 
+describe('strikes: apply helpers', () => {
+  const draft = (over: any = {}) => ({ source: 't.md', hash: 'a'.repeat(64), rev: 'r1', editable: true, lines: [], strikes: [{ id: 's1', ref: '5', reason: 'wrong-direction', stale: false }], applied: null, ...over });
+
+  it('offers apply only when something is struck, nothing is stale and the session is open', () => {
+    expect(r.applyReady(draft())).toBe(true);
+    expect(r.applyReady(draft({ strikes: [] }))).toBe(false);
+    expect(r.applyReady(draft({ editable: false }))).toBe(false);
+    expect(r.applyReady(draft({ strikes: [{ id: 's1', ref: '5', reason: 'x', stale: false }, { id: 's2', ref: '7', reason: 'x', stale: true }] }))).toBe(false);
+    expect(r.applyReady(null)).toBe(false);
+  });
+
+  it('says what was removed while it can be undone, and not once the session is closed', () => {
+    expect(r.appliedSummary(draft({ applied: { id: 'a1', count: 3, at: 'x' } }))).toEqual({ id: 'a1', text: 'Removed 3 lines' });
+    expect(r.appliedSummary(draft({ applied: { id: 'a2', count: 1, at: 'x' } })).text).toBe('Removed 1 line');
+    expect(r.appliedSummary(draft())).toBeNull();
+    expect(r.appliedSummary(draft({ editable: false, applied: { id: 'a1', count: 3, at: 'x' } }))).toBeNull();
+    expect(r.appliedSummary(null)).toBeNull();
+  });
+
+  it('puts every removed row in words: lines, the exact text, the reason, and what else goes with it', () => {
+    expect(r.removalParts({ start: 17, end: 18, kind: 'unit', text: 'Not tonight.\nPlease.', reason: 'faulty-premise', note: 'never says please' }))
+      .toEqual({ where: 'Lines 17-18', text: 'Not tonight.\nPlease.', extra: null, reason: 'Faulty premise', note: 'never says please' });
+    expect(r.removalParts({ start: 16, end: 16, kind: 'cue', text: 'MAYA', reason: 'wrong-direction' })).toMatchObject({ where: 'Line 16', extra: 'Also removes the speaker cue MAYA' });
+    expect(r.removalParts({ start: 19, end: 19, kind: 'blank', text: '' })).toMatchObject({ text: '', extra: expect.stringMatching(/blank line/), reason: null });
+    expect(r.removalParts({ start: 10, end: 10, kind: 'key', text: '    choices:' }).extra).toBe('Also removes the list heading choices: that is left empty');
+  });
+
+  it('counts lines in the heading and the button', () => {
+    expect([r.planTitle({ count: 1 }), r.planButton({ count: 1 })]).toEqual(['Remove 1 line from the draft?', 'Remove 1 line']);
+    expect(r.planButton({ count: 3 })).toBe('Remove 3 lines');
+  });
+});
+
 describe('strikes: the page source', () => {
-  it('sends strikes through the one request path, to the strike routes, and never to an apply route in this version', () => {
+  it('sends strikes, the apply and the undo through the one request path, to the strike routes', () => {
     expect(js).toContain("'/api/session/' + sessionId + '/strike' + suffix");
     expect(js).toContain("'/clear'");
-    expect(js).not.toMatch(/strike\/apply|strike\/undo/);
-    expect(js).not.toMatch(/Remove \d|Review and apply|can delete lines/);
+    expect(js).toContain("'/strike/preview'");
+    expect(js).toContain("'/strike/apply'");
+    expect(js).toContain("'/undo'");
+    expect(js).toContain('This link can delete lines from the draft.');
+    expect(js).toContain("'Review and apply'");
+    expect(js).toContain("'Undo removal'");
+    expect(js).toContain("'Not yet'");
+    expect(js).toContain('digest: cur.plan.digest');
+  });
+
+  it('never sends a path or a text to the server: the apply carries only the digest and an event id', () => {
+    expect(js).not.toMatch(/JSON\.stringify\(\{[^}]*(file|path|text)[^}]*\}\)/);
+    expect(js).toContain("JSON.stringify({ digest: cur.plan.digest, eventId: newEventId(window.crypto) })");
   });
 
   it('uses real buttons, a labelled radio group for the reasons, and a status bar', () => {
