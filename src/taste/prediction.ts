@@ -78,6 +78,7 @@ export function repairModelPrediction(project: string, id: string, opts: { load?
   return withSetLock(project, id, ctx => {
     const set = readSet(project, id);
     if (set.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${id} was already picked; a model prediction can no longer be sealed`, { hint: 'The model has no result for this set' });
+    if (set.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${id} was sent back (none of its variants was wanted), so it is closed`, { hint: 'The model has no result for this set' });
     const agent = readPrediction(project, id, set);
     if (!agent) throw new ProseError('E_USAGE', `Set ${id} has no sealed prediction to repair the model's guess for`, { hint: `prose predict --set ${id} --pick <n> --why "..."` });
     if (existsSync(modelFile(project, id)) || existsSync(modelSealFile(project, id))) {

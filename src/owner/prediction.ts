@@ -55,6 +55,7 @@ export function writePrediction(project: string, set: PromptSet, input: Predicti
 function writePredictionLocked(project: string, set: PromptSet, input: PredictionInput, ctx: LockContext): Prediction {
   if (!input.why.trim()) throw new ProseError('E_USAGE', 'Say why: --why "..."', { hint: 'The reason is what lets the guess be checked against the owner\'s pick' });
   if (set.picked !== undefined) throw new ProseError('E_CONFLICT', `Set ${set.id} was already picked; predictions come first`, { hint: 'Start a new set with prose set new' });
+  if (set.sentBack !== undefined) throw new ProseError('E_CONFLICT', `Set ${set.id} was sent back (none of its variants was wanted), so it is closed`, { hint: `Make a new set with prose set new --redo ${set.id}` });
   if (existsSync(file(project, set.id))) {
     throw new ProseError('E_CONFLICT', `Set ${set.id} already has a sealed prediction`, { hint: `Run prose set pick ${set.id} --pick <n>` });
   }

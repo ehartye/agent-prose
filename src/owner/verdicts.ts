@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { z } from 'zod';
 import { FEATURE_SET_ID } from './features.ts';
 import { projectKey } from './paths.ts';
+import { FeedbackSchema } from './feedback.ts';
 
 /**
  * One side of a judgement. `set` and `setUid` are present ONLY when the side comes from a different set than the row's
@@ -46,6 +47,37 @@ export const VerdictSchema = z.strictObject({
   n: z.number().int().min(2),
 });
 export type Verdict = z.infer<typeof VerdictSchema>;
+
+/**
+ * "None of these": the owner rejected every variant of a set and said why. It is an outcome of a set, NOT a verdict about a
+ * pair: it carries no style vectors, no winner and no loser, so it is never a pick, a duel or taste data. It lives in the
+ * same log files under its own schema id, and `readVerdicts` returns it in `none`, never in `rows` (the taste model, the
+ * duel counts and the stats only ever read `rows`). A runtime that predates it counts the line as malformed.
+ */
+export const NONE_VERDICT_SCHEMA = 'prose/verdict-none@1';
+export const NoneVerdictSchema = FeedbackSchema.extend({
+  schema: z.literal(NONE_VERDICT_SCHEMA),
+  kind: z.literal('none'),
+  at: z.string(),
+  project: z.string(),
+  set: z.string(),
+  setUid: z.string().min(8),
+  form: z.string(),
+  register: z.string().nullable(),
+  voices: z.array(z.string()),
+  /** The variants the owner was shown. */
+  shown: z.array(z.number().int().min(1)),
+});
+export type NoneVerdict = z.infer<typeof NoneVerdictSchema>;
+const noneKey = (r: { project: string; set: string; setUid: string; closest: number | null; reasons: string[]; note?: string }) =>
+  JSON.stringify([projectKey(r.project), r.set, r.setUid, 'none', r.closest, r.reasons, r.note ?? null]);
+
+/** Append a none row unless the log already holds the same outcome for the same set (a retry after a crash). */
+export function appendNoneOnce(path: string, row: NoneVerdict): boolean {
+  if (keysFor(path, row.set, noneKey).has(noneKey(row))) return false;
+  appendJsonlRows(path, [row]);
+  return true;
+}
 
 /** What makes two verdict rows the same judgement (a retry after a crash). */
 type KeySide = { index: number; set?: string; setUid?: string };
@@ -138,6 +170,8 @@ export function appendJsonlRows(path: string, rows: unknown[]): void {
 
 export interface VerdictLog {
   rows: Verdict[];
+  /** "None of these" outcomes (see NONE_VERDICT_SCHEMA): never part of `rows`, so never counted as a pick, a duel or taste data. */
+  none: NoneVerdict[];
   /** Rows of another `prose/verdict@` version: kept out of `rows`, not an error. */
   unknownVersion: number;
   /** Only with `countOtherFeatures`: rows of this schema version whose only fault is a `features` id other than the current one, counted instead of malformed. */
@@ -162,7 +196,7 @@ export interface ReadOpts {
 const MAX_BAD_TEXTS = 1000;
 
 function newLog(opts: ReadOpts): VerdictLog {
-  return { rows: [], unknownVersion: 0, ...(opts.countOtherFeatures ? { skippedFeatures: 0 } : {}), malformed: 0, malformedLines: [] };
+  return { rows: [], none: [], unknownVersion: 0, ...(opts.countOtherFeatures ? { skippedFeatures: 0 } : {}), malformed: 0, malformedLines: [] };
 }
 
 function foldLine(log: VerdictLog, line: string, n: number, opts: ReadOpts): void {
@@ -178,6 +212,12 @@ function foldLine(log: VerdictLog, line: string, n: number, opts: ReadOpts): voi
   const named = (raw as { project?: unknown } | null)?.project;
   if (opts.excludeProject !== undefined && typeof named === 'string' && projectKey(named) === opts.excludeProject) return;
   const schema = (raw as { schema?: unknown } | null)?.schema;
+  if (typeof schema === 'string' && schema.startsWith('prose/verdict-none@')) {
+    if (schema !== NONE_VERDICT_SCHEMA) { log.unknownVersion++; return; }
+    const none = NoneVerdictSchema.safeParse(raw);
+    if (none.success) log.none.push(none.data); else bad();
+    return;
+  }
   if (typeof schema === 'string' && schema.startsWith('prose/verdict@') && schema !== VERDICT_SCHEMA) { log.unknownVersion++; return; }
   const other = (raw as { features?: unknown } | null)?.features;
   if (opts.countOtherFeatures && typeof other === 'string' && other !== FEATURE_SET_ID && VerdictSchema.safeParse({ ...(raw as object), features: FEATURE_SET_ID }).success) { log.skippedFeatures = (log.skippedFeatures ?? 0) + 1; return; }

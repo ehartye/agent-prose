@@ -6,6 +6,7 @@ import { loadDocument } from '../document.ts';
 import { ProseError } from '../errors.ts';
 import { FORMATS } from '../kinds.ts';
 import { assertDirections } from './directions.ts';
+import { FeedbackSchema, type Feedback } from './feedback.ts';
 import { MAX_ORIGINAL_TEXT, OriginalSchema, SourcePath, draftHash, snapshotOriginal } from './original.ts';
 import { currentStrikes } from '../strike/current.ts';
 import { writeFileAtomic } from './fsutil.ts';
@@ -75,12 +76,25 @@ export const SetSchema = z.strictObject({
   variants: z.array(VariantSchema).min(MIN_VARIANTS).max(MAX_VARIANTS),
   picked: z.number().int().optional(),
   pickedAt: z.string().optional(),
+  /**
+   * The owner rejected every variant ("none of these"): the set is closed, like a picked one, and never receives a pick.
+   * The agent makes a new set with `set new --redo <id>`. Never set together with `picked`.
+   */
+  sentBack: FeedbackSchema.extend({ at: z.string(), shown: z.array(z.number().int().min(1)) }).optional(),
+  /** This set redoes a sent-back one (`set new --redo`): its id, and what the owner said about it. Display and the agent's context only. */
+  redoOf: z.string().regex(/^[a-z0-9-]+$/).optional(),
+  feedback: FeedbackSchema.optional(),
   brief: BriefSchema.optional(),
   /** The line(s) this set revises, snapshotted when the set was made. Context only: never a candidate, never scored. */
   original: OriginalSchema.optional(),
   /** Lines with a pending strike when the set was made. Variants are still full copies; these are not to be edited. */
   excluded: z.array(ExcludedSchema).min(1).max(MAX_EXCLUDED).optional(),
 });
+
+/** A set that takes no more judgements: picked, or sent back with none of its variants wanted. */
+export const isClosed = (s: Pick<PromptSet, 'picked' | 'sentBack'>): boolean => s.picked !== undefined || s.sentBack !== undefined;
+export type SentBack = NonNullable<PromptSet['sentBack']>;
+export type { Feedback };
 
 export type Variant = z.infer<typeof VariantSchema>;
 export type PromptSet = z.infer<typeof SetSchema>;
@@ -178,6 +192,8 @@ export interface CreateOptions {
   brief?: BriefInput | Brief;
   /** Line refs ("12", "12-13", comma list) of the draft this set revises: snapshotted as `original`. */
   lines?: string;
+  /** `set new --redo`: the sent-back set this one redoes, the original it revised (copied whole, so a changed draft shows as stale) and what the owner said. */
+  redo?: { of: string; original?: PromptSet['original']; feedback: Feedback };
 }
 
 const isBrief = (b: BriefInput | Brief): b is Brief => 'confirmedAt' in b || 'characterRef' in b;
@@ -201,7 +217,7 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
   const ext = EXT[doc.format];
   const text = readFileSync(draft, 'utf8');
   const source = relSource(project, draft);
-  const original = opts.lines === undefined ? undefined : snapshotOriginal(source, text, doc.format, doc.form, opts.lines);
+  const original = opts.redo ? opts.redo.original : opts.lines === undefined ? undefined : snapshotOriginal(source, text, doc.format, doc.form, opts.lines);
   // Struck lines are not rewritten: refused as the line to revise, and recorded so a variant cannot edit them.
   const live = currentStrikes(project, source, text, draftHash(text), doc.format, doc.form).live;
   for (const l of original?.lines ?? []) {
@@ -222,7 +238,7 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
     });
     const set = SetSchema.parse({
       schema: 'prose/set@1', id, uid: randomBytes(6).toString('hex'), createdAt: now.toISOString(), form: doc.form, format: doc.format,
-      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}), ...(excluded.length ? { excluded } : {}),
+      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}), ...(opts.redo ? { redoOf: opts.redo.of, feedback: opts.redo.feedback } : {}), ...(excluded.length ? { excluded } : {}),
     });
     writeFileAtomic(join(tmp, 'set.json'), JSON.stringify(set, null, 2) + '\n');
     renameSync(tmp, dir);

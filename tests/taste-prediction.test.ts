@@ -426,6 +426,7 @@ describe('the command surface keeps the model sealed', () => {
       }
     };
     walk(join(ROOT, 'src'));
-    expect(offenders.sort()).toEqual(['src/owner/pick.ts', 'src/taste/reveal.ts']);
+    // the reveal paths: a pick (pick.ts) and a send-back (none.ts, which reveals the guess unscored); the reading itself is in taste/reveal.ts
+    expect(offenders.sort()).toEqual(['src/owner/none.ts', 'src/owner/pick.ts', 'src/taste/reveal.ts']);
   });
 });

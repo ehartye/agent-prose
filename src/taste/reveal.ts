@@ -91,3 +91,16 @@ export function modelReveal(project: string, id: string, agent: { shown: number[
   if (reason) return { pick, shortlist, hit: false, shortlistHit: false, abstained: false, sealValid: valid, voided: reason };
   return { pick, shortlist, hit: pick === picked, shortlistHit: pick === picked || shortlist.includes(picked), abstained: false, sealValid: true };
 }
+
+/** The model's side of a reveal when the owner sent the set back instead of picking: what it guessed, never scored (there is no pick to be right or wrong about). */
+export interface ModelUnscored { pick: number | null; shortlist: number[]; abstained: boolean; sealValid: boolean; voided?: ModelVoid; unscored: true }
+
+/**
+ * `modelReveal` for a set sent back. The guess is read and validated exactly as at a pick (an edited or missing file still shows as such), but
+ * no hit or miss is derived: the result carries `unscored: true` and no `hit` fields, and it is never written to the predictions ledger.
+ */
+export function modelRevealUnscored(project: string, id: string, agent: { shown: number[]; hashes: Record<string, string> }, forced?: ModelVoid): ModelUnscored | null {
+  const scored = modelReveal(project, id, agent, -1, forced);
+  if (!scored) return null;
+  return { pick: scored.pick, shortlist: scored.shortlist, abstained: scored.abstained, sealValid: scored.sealValid, ...(scored.voided ? { voided: scored.voided } : {}), unscored: true };
+}

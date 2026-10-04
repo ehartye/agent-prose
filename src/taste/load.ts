@@ -87,7 +87,8 @@ async function readText(path: string, maxRows: number | undefined): Promise<{ te
     catch (e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { text: '', bytes: 0 }; throw e; }
   }
   const { text, bytes } = await readTail(path, TAIL_BYTES);
-  const lines = text.split('\n').filter(l => l.trim());
+  // "none of these" rows are not taste data: they must not take a place in the window of the last `maxRows` lines
+  const lines = text.split('\n').filter(l => l.trim() && !l.includes('"schema":"prose/verdict-none@'));
   return { text: lines.slice(-maxRows).join('\n'), bytes };
 }
 
