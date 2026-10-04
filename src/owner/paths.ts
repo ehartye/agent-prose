@@ -34,6 +34,8 @@ export const setsDir = (project: string) => join(project, PROJECT_DIR, 'sets');
 export const setDir = (project: string, id: string) => join(setsDir(project), validId(id, 'Set id'));
 export const sessionsDir = (project: string) => join(project, PROJECT_DIR, 'sessions');
 export const sessionDir = (project: string, id: string) => join(sessionsDir(project), validId(id, 'Session id'));
+export const strikesDir = (project: string) => join(project, PROJECT_DIR, 'strikes');
+export const strikeDir = (project: string, key: string) => join(strikesDir(project), validId(key, 'Strike key'));
 export const projectTasteDir = (project: string) => join(project, PROJECT_DIR, 'taste');
 
 /** The per-user directory. It is also the managed runtime's home, so tests must override AGENT_PROSE_HOME. */

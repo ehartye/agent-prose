@@ -5,7 +5,7 @@ import { strikeLines } from '../src/strike/lines.ts';
 import { VERIFY_BUDGET, planRemoval, rawLines, simulateRemoval, verifiedLines, withoutRows } from '../src/strike/plan.ts';
 import { fixture } from './helpers.ts';
 
-const read = (name: string) => readFileSync(fixture(`strike/${name}`), 'utf8');
+const read = (name: string) => readFileSync(fixture(`strike/${name}`), 'utf8').replace(/\r\n/g, '\n');
 const lineAt = (text: string, format: Format, form: string | undefined, ref: string) => {
   const l = strikeLines(text, format, form).find(x => x.ref === ref);
   if (!l) throw new Error(`no line ${ref}`);
