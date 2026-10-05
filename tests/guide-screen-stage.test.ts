@@ -57,10 +57,10 @@ describe('the screen and stage guide', () => {
     const cold = examples.find(e => e.src.includes('>COLD OPEN<'))!;
     const withMarker = pages(lintSource('cold.fountain', cold.src));
     const without = pages(lintSource('cold-no-marker.fountain', cold.src.replace(/^>COLD OPEN<\n\n/m, '')));
-    expect(withMarker).toBeCloseTo(1.76, 2);
+    expect(withMarker).toBeCloseTo(0.8, 2);
     expect(without).toBeCloseTo(0.76, 2);
-    expect(flat).toContain('0.76 pages without the marker and 1.76 with it');
-    expect(flat).toMatch(/runs 0\.76 pages \(1\.76 with the marker\) and plans at 0\.34 minute/);
+    expect(flat).toContain('before the first scene consumes its printed lines');
+    expect(flat).toMatch(/runs 0\.8 pages \(0\.76 without the marker\) and plans at 0\.36 minute/);
     const minutes = (lintSource('cold-minutes.fountain', cold.src.replace(/^>COLD OPEN<\n\n/m, '')).info.find(f => f.rule === 'script.runtime.report')!.measured as { minutes: number }).minutes;
     expect(minutes).toBeCloseTo(0.34, 2);
   });

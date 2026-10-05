@@ -623,18 +623,21 @@ describe('the server stays responsive', () => {
   it('while a choose waits on the queue lock, other requests are answered at once', async () => {
     const r = await rig(2);
     const log = join(tmp('prose-hold-'), 'hold.log');
-    const child = spawn(process.execPath, ['tests/lock-holder.mjs', r.b.project, r.q.id, 'holder', '4000', '200', log, JSON.stringify({ kind: 'queue' })], { stdio: 'ignore', cwd: join(import.meta.dirname, '..') });
+    const releaseFile = `${log}.release`;
+    const child = spawn(process.execPath, ['tests/lock-holder.mjs', r.b.project, r.q.id, 'holder', '30000', '200', log, JSON.stringify({ kind: 'queue', releaseFile })], { stdio: 'ignore', cwd: join(import.meta.dirname, '..') });
     holders.push(child);
     const deadline = Date.now() + 10_000;
     while (!(existsSync(log) && readFileSync(log, 'utf8').includes('enter'))) { if (Date.now() > deadline) throw new Error('no lock'); await new Promise(res => setTimeout(res, 25)); }
     const pending = choose(r, 1, 1);
     let settled = false;
     void pending.then(() => { settled = true; });
-    const slowest: number[] = [];
-    await new Promise(res => setTimeout(res, 200));
-    while (!settled) { const t = Date.now(); expect((await api(r, '')).status).toBe(200); slowest.push(Date.now() - t); await new Promise(res => setTimeout(res, 100)); }
-    expect(slowest.length).toBeGreaterThan(5);
-    expect(Math.max(...slowest)).toBeLessThan(300);
+    try {
+      // The holder is released by us, so scheduler load cannot make it expire before this assertion.
+      expect((await api(r, '')).status).toBe(200);
+      expect((await http(r.info, '/api/health')).status).toBe(200);
+      expect(settled).toBe(false);
+      expect(readQueueEvents(r.b.project, r.q.id)).toHaveLength(0);
+    } finally { writeFileSync(releaseFile, 'release'); }
     expect((await pending).status).toBe(200); // it waited for the lock, then wrote
     expect(readQueueEvents(r.b.project, r.q.id)).toHaveLength(1);
   }, 30_000);

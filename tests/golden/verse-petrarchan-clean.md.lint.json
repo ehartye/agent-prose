@@ -5,7 +5,274 @@
   "register": null,
   "ok": true,
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 6 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 6
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 7 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 7
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 8 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 8
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 9 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 9
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 11 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 11
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 12 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 12
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 13 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 13
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 14 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 14
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 16 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 16
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 17 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 17
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 18 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 18
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 20 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 20
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 21 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 21
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    },
+    {
+      "rule": "verse.form.syllables",
+      "severity": "warn",
+      "message": "Line 22 has 8 syllables; the iamb meter expects 10, allowing a feminine ending",
+      "at": {
+        "line": 22
+      },
+      "measured": {
+        "syllables": 8,
+        "want": 10
+      },
+      "fix": "Read the meter aloud; add or cut syllables if the departure is unintended.",
+      "tradeoffs": [
+        {
+          "rule": "verse.line-break.purpose",
+          "note": "Counting syllables can push a break to where the count falls instead of where the image turns; poets.org says the pattern is routinely broken, so let the break win when it must."
+        }
+      ]
+    }
+  ],
   "info": [],
   "judgement": [
     {

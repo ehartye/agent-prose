@@ -37,7 +37,8 @@
 
 - Manuscript conventions: 12-point Courier, a character breakdown page (name, age, a line of
   description) before the script, act and scene citations, page numbers.
-- Festivals and readings treat one page as about one minute.
+- The tool uses a provisional one-minute-per-page placeholder based on approximate screenplay
+  layout; stage-play timing needs a measured rehearsal.
 
 ## Structure is guidance, not a rule
 

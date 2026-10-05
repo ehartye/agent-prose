@@ -2,7 +2,7 @@
 // Usage: node tests/lock-holder.mjs <project> <setId> <name> <holdMs> <heartbeatEveryMs|0> <logFile> [optionsJson]
 // optionsJson may carry `"kind": "session"`: then <setId> names a reading session and its session lock is held instead;
 // `"kind": "strikes"`: then <setId> is a strike folder key (the draft's strike lock).
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
 import { withDirLock, withSetLock } from '../src/owner/fsutil.ts';
 import { queueDir, sessionDir, strikeDir } from '../src/owner/paths.ts';
 
@@ -11,11 +11,11 @@ const sleep = (/** @type {number} */ ms) => Atomics.wait(new Int32Array(new Shar
 const note = (/** @type {string} */ what) => appendFileSync(log, `${what} ${name} ${Date.now()}\n`);
 
 try {
-  const { kind, ...lockOptions } = optionsJson ? JSON.parse(optionsJson) : {};
+  const { kind, releaseFile, ...lockOptions } = optionsJson ? JSON.parse(optionsJson) : {};
   const hold = (/** @type {{ heartbeat(): void }} */ ctx) => {
     note('enter');
     const end = Date.now() + Number(holdMs);
-    while (Date.now() < end) {
+    while (Date.now() < end && !(releaseFile && existsSync(releaseFile))) {
       if (Number(beatMs) > 0) ctx.heartbeat();
       sleep(Number(beatMs) > 0 ? Number(beatMs) : 10);
     }

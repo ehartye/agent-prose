@@ -21,8 +21,10 @@ at a rate — 130 words per minute for speeches (CRS); the 150 used for game dia
 used for YouTube are this plugin's planning defaults — and script runtime from pages. Both are
 estimates with real spread: individual speakers range widely, and Follows suggests treating a
 script page as about a minute, ±20%, because few scripts land close to it. So a miss is a prompt
-to check, not a failure: the finding is a warning, and its ±10% tolerance is this plugin's choice
-(`derived`). A page or word target is compared with measured pages or words, not with an
+to check, not a failure: the finding is a warning. Page-derived script minute targets use the
+provisional ±20% timing band; other targets use the plugin's ±10% tolerance (`derived`).
+Stage-play timing remains a screenplay-layout placeholder: confirm it with a measured rehearsal.
+A page or word target is compared with measured pages or words, not with an
 estimated runtime. When the real reader's pace is known, set it: `wpm` (and the dialog box size)
 can be set in `.agent-prose/project.json`, per form under `forms.<id>`, and `wpm` in a draft's
 own metadata; the most specific wins. `spoken.duration.report` and `script.runtime.report`
@@ -31,7 +33,7 @@ words per minute. The BBC recommends subtitles at 160–180 words per minute, a 
 subtitles rather than a speech rate; the 180 cap is this plugin's own choice, so that spoken
 segments can be captioned legibly.
 
-Rules whose thresholds this plugin chose, rather than a source: `length.target` (±10%),
+Rules whose thresholds this plugin chose, rather than a source: `length.target` (±10%, or ±20% for page-derived minutes),
 `spoken.sentence.max` (16 words), `style.echo` (3 repeats), `ai.vocabulary` (3 terms),
 `youtube.segment.pace` (180 as a cap), `dialog.barks.variety` (0.6 overlap), and the reporting
 rules built on planning defaults.
@@ -144,11 +146,16 @@ warns when the count differs (sonnet 14, villanelle 19, sestina 39, limerick 5, 
 stanzas of 4). `verse.form.rhyme-scheme` compares each rhyme group with its first line rather than
 comparing scheme strings, because one missed rhyme (Sonnet 18's temperate/date) shifts every later
 letter; only a certain non-rhyme warns, and slant, eye and guessed-word pairs are info.
-`verse.form.syllables` is the soft haiku 5/7/5 (info), or the pattern a draft declares in its frontmatter (warn). `verse.form.refrain` and
+`verse.form.syllables` checks the soft haiku 5/7/5 (info), a draft's explicit pattern (warn), or
+known meter length using the scansion fit rules (warn). Explicit patterns take precedence;
+meter fit permits a feminine ending and a headless anapest. `verse.form.refrain` and
 `verse.form.end-words` check the villanelle's repeated lines and the sestina's rotation and
 envoi, and stay silent when the line count is wrong because `verse.form.line-count` already spoke.
 `verse.meter.deviation` is advisory: scansion is contested, so only a polysyllable's dictionary
-stress against its slot counts, and lines with guessed words are skipped. `verse.pronunciation.guessed`
+stress against its slot counts, and lines with guessed words are skipped. Optional `meter: {foot: iamb, feet: 5}`
+drives textual scansion on any verse form, including lyrics; it says nothing about musical alignment.
+Family rhyme uses Pattison's related-coda convention, with a conservative manner-based mapping;
+it remains slant/advisory, and alternate pronunciations retain uncertainty. `verse.pronunciation.guessed`
 and `verse.pronunciation.ambiguous` list the words the dictionary lacks or reads two ways, since
 verdicts on those lines are weaker. `verse.rhyme.every-line` notes free verse where every line rhymes
 (a sameness signal from one study, never an authorship verdict). `verse.format.markup` catches a

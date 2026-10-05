@@ -19,7 +19,8 @@ VO: You've been told never to do this. But the inside of your microwave is alrea
 VO: ...
 ```
 
-- A heading or paragraph that starts with `m:ss–m:ss` opens a segment; lint measures each
+- A source line starting with `m:ss–m:ss` or `h:mm:ss–h:mm:ss` opens a segment; minutes in
+  `m:ss` can exceed 99, and invalid timestamp components get a warning. Lint measures each
   segment's spoken words per minute and warns above 180.
 - `VISUAL:`, `B-ROLL:`, `ON SCREEN:`, `SFX:`, `MUSIC:`, `TEXT:` lines are directions, not speech.
 - `VO:`, `NARRATOR:`, `HOST:` labels are stripped before counting.
@@ -38,7 +39,10 @@ VO: ...
 
 ## Pace and structure
 
-- Narration usually runs 130–180 words per minute; plan at 150–160 and check per segment.
+- The 160 wpm default and the suggested 130–180 planning range are maintainer estimates,
+  not sourced narration-rate norms. Measure the narrator and override `wpm` as needed.
+  The 180 wpm segment cap is a separate caption-related convention; BBC subtitle reading
+  speed does not establish a speech-rate limit.
 - In long videos, re-engage every few minutes with a new question or stakes, and never signal the
   ending before the payoff.
 - Every claim in the title must be delivered in the video; curiosity gaps are fine only if the

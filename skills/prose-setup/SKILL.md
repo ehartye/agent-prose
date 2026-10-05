@@ -27,6 +27,10 @@ Done when the JSON reports `"ok": true` and `cliVersion` equals `pluginVersion`.
 3. Run the check again and confirm `"ok": true`.
 4. Smoke test: `node "<plugin-root>/scripts/run-managed.js" capabilities` prints JSON with `"name":"prose"`.
 
+For PDF exports, run `node "<plugin-root>/scripts/setup.js" --pdf` to install the paired Chromium
+headless shell under the managed home. Check with `--check --pdf --json`. Other exports need no browser.
+On Linux, install Playwright's required system libraries separately if the browser cannot start.
+
 ## When it fails
 
 | Message | Fix |

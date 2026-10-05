@@ -77,11 +77,12 @@ describe('the YouTube scripts guide', () => {
     expect(flat).toContain('28 spoken words across 18 seconds');
   });
 
-  it('describes the parser as it behaves, including the hours range it skips', () => {
+  it('describes minute and hour ranges as the parser reads them', () => {
     const m = measureSource('hours.md', '---\nform: youtube\n---\n\n## 1:02:00–1:03:00\n\nVO: One two three.\n\n## 75:00–76:00\n\nVO: One two three.');
-    expect(m.segments.map(s => s.start)).toEqual(['75:00']);
+    expect(m.segments.map(s => s.start)).toEqual(['1:02:00', '75:00']);
     expect(flat).toContain('1:02:00–1:03:00');
-    expect(flat).toContain('is not read, and the segment is skipped without a warning');
+    expect(flat).toContain('Malformed ranges get a source-line warning');
+    expect(m.segments.map(s => [s.seconds, s.words])).toEqual([[60, 3], [60, 3]]);
     const dir = measureSource('dirs.md', '---\nform: youtube\n---\n\n## 0:00–0:10\n\nVISUAL: a b c d e f\n\nB-ROLL: g h\n\nON SCREEN: i\n\nSFX: j\n\nMUSIC: k\n\nTEXT: l\n\nGRAPHIC: m\n\nSHOT: n\n\nCUT TO: o\n\nVO: One two three.');
     expect(dir.segments[0]!.words).toBe(3);
   });

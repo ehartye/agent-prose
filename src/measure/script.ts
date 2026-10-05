@@ -61,7 +61,7 @@ function layout(blocks: Block[], kind: 'screenplay' | 'multicam'): Layout {
       case 'scene':
         closeScene();
         // multi-cam starts every scene on a new page
-        if (kind === 'multicam' && lines > 0) lines = Math.ceil(lines / LINES_PER_PAGE) * LINES_PER_PAGE;
+        if (kind === 'multicam' && scenes.length > 0) lines = Math.ceil(lines / LINES_PER_PAGE) * LINES_PER_PAGE;
         sceneStart = lines;
         scenes.push({ line: b.line, heading: b.text, lines: 0 });
         lines += kind === 'multicam' ? 3 : 2;

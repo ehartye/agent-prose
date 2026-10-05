@@ -6,9 +6,11 @@ import { renderReferences } from '../src/craft/references.ts';
 import { ALL_LEXICONS } from '../src/measure/lexicon.ts';
 import { AUDIT_SOURCES } from '../src/audit/detectors.ts';
 import { FORMS } from '../src/forms.ts';
+import { loadGuide } from '../src/craft/guides.ts';
 
 const root = join(import.meta.dirname, '..');
 const refIds = new Set(REFERENCES.map(r => r.id));
+const guides = GUIDE_REFERENCES.map(g => ({ ...g, sources: loadGuide(g.family).sources }));
 
 describe('craft data', () => {
   it('has unique rule and reference ids', () => {
@@ -19,7 +21,8 @@ describe('craft data', () => {
   it('cites only known references, and every reference is cited', () => {
     const cited = new Set([...RULES.flatMap(r => r.sources), ...ALL_LEXICONS.flatMap(l => l.sources), ...AUDIT_SOURCES.flatMap(a => a.sources)]);
     for (const id of cited) expect(refIds, `unknown reference ${id}`).toContain(id);
-    for (const id of refIds) expect(cited, `uncited reference ${id}`).toContain(id);
+    const allCited = new Set([...cited, ...guides.flatMap(g => g.sources)]);
+    for (const id of refIds) expect(allCited, `uncited reference ${id}`).toContain(id);
   });
 
   it('names only known forms', () => {
@@ -64,7 +67,7 @@ describe('craft data', () => {
     expect(missing, 'rule ids missing from craft/GUIDE.md').toEqual([]);
   });
   it('keeps REFERENCES.md in sync', () => {
-    const expected = renderReferences(REFERENCES, RULES, ALL_LEXICONS, AUDIT_SOURCES, GUIDE_REFERENCES);
+    const expected = renderReferences(REFERENCES, RULES, ALL_LEXICONS, AUDIT_SOURCES, guides);
     expect(readFileSync(join(root, 'REFERENCES.md'), 'utf8').replaceAll('\r\n', '\n')).toBe(expected);
   });
 });

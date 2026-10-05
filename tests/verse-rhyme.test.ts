@@ -15,7 +15,7 @@ describe('rhymeClass table', () => {
     ['love', 'move', 'eye', false],
     ['cat', 'cut', 'consonance', false],
     // AY M against AY N: same stressed vowel, different tail.
-    ['time', 'mine', 'assonance', false],
+    ['time', 'mine', 'family', false],
     ['light', 'light', 'identity', false],
     ['Light', 'light,', 'identity', false],
     ['fire', 'choir', 'perfect', false],
@@ -78,7 +78,7 @@ describe('scheme', () => {
     const r = scheme(ends('time', 'day', 'mine', 'say', 'cat', 'cut'));
     expect(r.scheme).toBe('abcbde');
     expect(r.nearScheme).toBe('ababcc');
-    expect(r.pairs.map(p => [p.a, p.b, p.class])).toEqual([[0, 2, 'assonance'], [1, 3, 'perfect'], [4, 5, 'consonance']]);
+    expect(r.pairs.map(p => [p.a, p.b, p.class])).toEqual([[0, 2, 'family'], [1, 3, 'perfect'], [4, 5, 'consonance']]);
   });
 
   it('lists every pair that is not none, with class and uncertainty', () => {

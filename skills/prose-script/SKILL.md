@@ -36,6 +36,10 @@ conventions; [references/youtube.md](references/youtube.md) for segments, hooks 
 
 ## Screen and stage
 
+Export a formatted reading copy with `prose render <draft> --to pdf --out <new-file.pdf>` (prose-setup
+`--pdf` installs the browser), or `--to html` offline. Print pagination is measured; stage runtime stays
+a provisional estimate. Existing output paths refuse, so choose a new filename.
+
 - Multi-cam is its own format: action in ALL CAPS, dialogue double-spaced in print, lettered
   scenes, act markers as centered lines (`>COLD OPEN<`). `#` sections do not print.
 - Fit the slot: a multi-cam cold open runs about 2–5 pages; single-cam acts and hour-drama acts

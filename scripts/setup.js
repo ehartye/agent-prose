@@ -1,16 +1,23 @@
 #!/usr/bin/env node
-// Install or check the managed agent-prose runtime outside the plugin cache. Usage: node scripts/setup.js [--check] [--json]
+// Install/check the managed runtime; --pdf explicitly installs its paired browser. Usage: node scripts/setup.js [--check] [--json] [--pdf]
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inspectInstallation, installRuntime } from './managed-runtime.js';
+import { inspectInstallation, installRuntime, installPdfBrowser, inspectPdfBrowser } from './managed-runtime.js';
 
 class UsageError extends Error {}
 const source = join(dirname(fileURLToPath(import.meta.url)), '..');
 try {
   const args = process.argv.slice(2);
-  if (args.some(arg => !['--check', '--json'].includes(arg))) throw new UsageError('Usage: node scripts/setup.js [--check] [--json]');
-  if (!args.includes('--check')) installRuntime(source);
+  if (args.some(arg => !['--check', '--json', '--pdf'].includes(arg))) throw new UsageError('Usage: node scripts/setup.js [--check] [--json] [--pdf]');
+  if (!args.includes('--check')) {
+    const runtime = installRuntime(source);
+    if (args.includes('--pdf')) installPdfBrowser(runtime.root);
+  }
   const report = inspectInstallation(source);
+  if (args.includes('--pdf') && report.dependencies) {
+    report.pdf = inspectPdfBrowser(report.runtimeRoot);
+    if (!report.pdf.installed) { report.ok = false; report.errors.push('Paired PDF browser missing; run node scripts/setup.js --pdf'); }
+  }
   report.node = process.versions.node;
   console.log(JSON.stringify(report, null, args.includes('--json') ? undefined : 2));
   if (!report.ok) process.exitCode = 1;

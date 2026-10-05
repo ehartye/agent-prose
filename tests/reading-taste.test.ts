@@ -10,12 +10,28 @@ import { appendJsonlRows, type Verdict } from '../src/owner/verdicts.ts';
 import { openSession } from '../src/reading/session.ts';
 import type { ReadingServer } from '../src/reading/server.ts';
 import { TasteDuels } from '../src/reading/taste.ts';
+import { loadTasteAsync } from '../src/taste/load.ts';
 import { readSet } from '../src/owner/sets.ts';
 import { tmpProject, useTempHome, useTmp } from './owner-helpers.ts';
 import { TOKEN, http, post, startServer } from './reading-helpers.ts';
 
 useTmp();
 useTempHome();
+vi.mock('../src/taste/load.ts', { spy: true });
+
+/** Hold the actual async load at its I/O boundary until the health request has completed. */
+async function holdTasteLoad() {
+  const real = await vi.importActual<typeof import('../src/taste/load.ts')>('../src/taste/load.ts');
+  let enter!: () => void, release!: () => void;
+  const entered = new Promise<void>(resolve => { enter = resolve; });
+  const released = new Promise<void>(resolve => { release = resolve; });
+  vi.mocked(loadTasteAsync).mockImplementationOnce(async opts => {
+    enter();
+    await released;
+    return real.loadTasteAsync(opts);
+  });
+  return { entered, release };
+}
 
 const servers: ReadingServer[] = [];
 afterEach(async () => {
@@ -188,22 +204,18 @@ describe('the server stays responsive while the model loads', () => {
     const p = seedLengths();
     seedBig(p.project, 100_000);
     const { info, server } = await startServer(servers, { projects: [p.project] });
-    const t0 = Date.now();
+    const hold = await holdTasteLoad();
     const loading = post(info, 'read-1', lineup); // the lineup answer is the first payload that asks for the model
     let done = false;
-    void loading.then(() => { done = true; });
-    const slowest: number[] = [];
-    do {
-      const t = Date.now();
+    void loading.then(() => { done = true; }, () => { done = true; });
+    try {
+      await hold.entered;
       expect((await http(info, '/api/health')).status).toBe(200);
-      slowest.push(Date.now() - t);
-    } while (!done && slowest.length < 200);
-    const took = Date.now() - t0;
-    expect(Math.max(...slowest)).toBeLessThan(300);
+      expect(done).toBe(false);
+    } finally { hold.release(); }
     expect((await loading).status).toBe(200);
     expect(server.loads.models).toBe(1);
     expect(await pairOf(info)).toEqual([2, 3]);
-    expect(took).toBeLessThan(3000);
     expect(server.loads.bytes).toBeLessThanOrEqual(4 * 1024 * 1024); // the project log's tail; the global log is empty here
   }, 30_000);
 
@@ -211,18 +223,17 @@ describe('the server stays responsive while the model loads', () => {
     const p = seedLengths();
     seedVerdicts(p.project, 4000);
     const { info } = await startServer(servers, { projects: [p.project] });
-    await post(info, 'read-1', lineup);
-    const loading = http(info, '/api/session/read-1');
+    const hold = await holdTasteLoad();
+    const loading = post(info, 'read-1', lineup);
     let done = false;
-    void loading.then(() => { done = true; });
-    const slowest: number[] = [];
-    do {
-      const t = Date.now();
+    void loading.then(() => { done = true; }, () => { done = true; });
+    try {
+      await hold.entered;
       expect((await http(info, '/api/health')).status).toBe(200);
-      slowest.push(Date.now() - t);
-    } while (!done && slowest.length < 200);
-    expect(Math.max(...slowest)).toBeLessThan(300); // loose bound for a slow CI
-    expect((await loading).body.pair).toEqual([2, 3]);
+      expect(done).toBe(false);
+    } finally { hold.release(); }
+    expect((await loading).status).toBe(200);
+    expect(await pairOf(info)).toEqual([2, 3]);
   }, 30_000);
 });
 

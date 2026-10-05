@@ -42,10 +42,11 @@ describe('cli', () => {
 });
 
 describe('capabilities error codes', () => {
-  it('lists only codes the CLI emits today and reserves the rest', async () => {
+  it('advertises rendering and source dialogue commands with their active errors', async () => {
     const caps = await run('capabilities');
-    expect(caps.errorCodes).not.toContain('E_TTS');
+    expect(caps.errorCodes).toEqual(expect.arrayContaining(['E_TTS', 'E_RENDER', 'E_BROWSER_MISSING']));
     expect(caps.errorCodes).toContain('E_SERVER');
-    expect(caps.reservedErrorCodes).toEqual(['E_RENDER', 'E_BROWSER_MISSING', 'E_TTS']);
+    expect(caps.reservedErrorCodes).toEqual([]);
+    expect(caps.commands).toEqual(expect.arrayContaining(['render', 'dialog import', 'dialog review', 'dialog apply', 'dialog undo', 'dialog recover', 'dialog repetition']));
   });
 });

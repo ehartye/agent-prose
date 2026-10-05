@@ -20,7 +20,9 @@ const ZERO_CEILING: Partial<Record<TargetKey, number>> = { contractionsPer1000: 
 function fitRange(key: TargetKey, v: number): [number, number] {
   const ceiling = ZERO_CEILING[key];
   if (v === 0 && ceiling !== undefined) return [0, ceiling];
-  return [round1(v * 0.75), round1(v * 1.25)];
+  const minimum = key === 'sentenceMean' ? 1 : (ZERO_CEILING[key] ?? 1) / 2;
+  const half = Math.max(v * 0.25, minimum);
+  return [round1(Math.max(0, v - half)), round1(v + half)];
 }
 
 /** The bible as YAML, with each target range on one line as [low, high]. */
@@ -69,10 +71,11 @@ export function registerProjectCommands(program: Command, io: Io): void {
     .requiredOption('--name <name>', 'display name')
     .requiredOption('--speaker <name>', 'a speaker this bible covers (repeat for more)', (v: string, all: string[] = []) => [...all, v])
     .option('--bio <text>', 'personality and background, at most 600 characters; set new --character <id> snapshots it into a brief')
+    .option('--avoid <text>', 'negative character guidance (repeat); brief text, not semantic enforcement', (v:string,all:string[]=[])=>[...all,v])
     .option('--description <text>', 'register and signature words (default: the name and a prompt to fill it in)')
     .option('--register <text>', 'e.g. gruff transactional')
     .option('--dir <dir>', 'project root, or any directory inside it (default: the current directory)')
-    .action((opts: { id: string; name: string; speaker: string[]; bio?: string; description?: string; register?: string; dir?: string }) => {
+    .action((opts: { id: string; name: string; speaker: string[]; bio?: string; avoid?:string[]; description?: string; register?: string; dir?: string }) => {
       if (!/^[a-z0-9-]+$/.test(opts.id)) throw new ProseError('E_USAGE', `Voice id "${opts.id}" must be lower-case letters, digits and hyphens`);
       const project = needProject(opts.dir ?? process.cwd());
       const path = join(voicesDir(project), `${opts.id}.yaml`);
@@ -89,6 +92,7 @@ export function registerProjectCommands(program: Command, io: Io): void {
         ...(opts.register ? { register: opts.register } : {}),
         description: opts.description ?? `${opts.name}. Describe register and signature words here.`,
         ...(opts.bio !== undefined ? { bio: opts.bio } : {}),
+        ...(opts.avoid?.length ? { negative:opts.avoid } : {}),
       });
       if (!parsed.success) {
         const issue = parsed.error.issues[0];
@@ -126,12 +130,13 @@ export function registerProjectCommands(program: Command, io: Io): void {
         ...(doc.register ? { register: doc.register } : {}),
         description: `Measured from ${basename(file)} (${stats.words} words). Describe register, signature words, sentence shape and motive here.`,
         samples, banned: [], catchphrases: [],
+        fitted:{provisional:true,source:basename(file),words:stats.words},
         targets: Object.fromEntries(TARGET_KEYS.map(k => [k, fitRange(k, stats[k])])),
       });
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, toYaml(bible));
       io.emit({
-        path, voice: bible,
+        path, voice: bible, basis:'Provisional fitted ranges; numerical observations do not define character personality',
         ...(stats.words < VOICE_MIN_WORDS ? { warning: `Only ${stats.words} words measured; voice.targets skips speakers under ${VOICE_MIN_WORDS} words, and ranges from so small a sample are noisy` } : {}),
       });
     });

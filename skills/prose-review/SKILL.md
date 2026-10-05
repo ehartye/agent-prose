@@ -134,12 +134,12 @@ marked; Keep marks the ones worth a duel.
 
 ## What gets learned
 
-Each pick is stored with its measured style, per project and per user. A pick among N shown
-variants counts as one duel in total: each variant it beat gets weight 1/(N-1). `prose taste stats`
-(for the current project; add `--all-projects` for every project) shows each predictor's hit rate,
-the model's abstentions, and how often the model beat, matched or lost to your sealed guess (on the pick only; shortlist hits mean something only for sets of four or more variants). The
-reveal at the pick compares both. If your hit rate is low you are guessing from your own taste, not
-theirs: offer more contrast, not more variants.
+`prose taste stats` reports hit rates and whether the model beat, matched or lost. Read [taste results](references/taste-results.md) for weighting and interpretation.
+
+## Reviews tied to game source
+For imported game lines, read [source round trips](../prose-dialog/references/roundtrip.md) before opening a set or applying a pick.
+Use the source-bound review command; change only its designated text. A short passage's direction score is uncertain,
+and a zero is not a quality verdict. Keep the source identity and gameplay metadata intact.
 
 ## Keep it honest
 

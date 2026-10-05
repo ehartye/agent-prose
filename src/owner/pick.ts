@@ -54,6 +54,7 @@ export function recordPick(project: string, set: PromptSet, pick: number, opts: 
 
 /** Why a sealed prediction can no longer be trusted (edited after sealing, or a shown variant changed), or null. */
 export function predictionProblem(project: string, set: PromptSet, p: Prediction): { reason: VoidReason; message: string } | null {
+  if (JSON.stringify(p.sourceRef) !== JSON.stringify(set.sourceRef)) return { reason:'edited', message:`The source reference for ${set.id} changed after prediction` };
   if (!sealValid(p)) return { reason: 'edited', message: `The sealed prediction for ${set.id} was edited after sealing` };
   for (const i of p.shown) {
     let now: string | null = null;
@@ -182,7 +183,7 @@ function recordPickLocked(project: string, set: PromptSet, pick: number, opts: P
   }
 
   ctx.heartbeat();
-  writeSet(project, { ...set, picked: pick, pickedAt: now.toISOString() });
+  writeSet(project, { ...set, picked: pick, pickedAt: now.toISOString(), ...(set.sourceRef ? {pickedHash:variantHash(project,set,pick)} : {}) });
   try { rmSync(pendingFile(project, set.id), { force: true, maxRetries: 10, retryDelay: 10 }); } catch { /* the pick is recorded; a leftover is ignored once set.json says picked */ }
   const file = set.variants.find(v => v.index === pick)!.file;
   const warnings = draftMovedOn(project, set);

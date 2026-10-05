@@ -60,7 +60,7 @@ function checkScheme(v: VerseStats, indexes: number[], scheme: string, free = ''
       const r = rhymeClass(pronounce(a), pronounce(b));
       const pair: PairResult = { first, other, cls: r.class, uncertain: r.uncertain };
       if (r.class === 'identity' || r.class === 'perfect') continue;
-      if (r.class === 'assonance' || r.class === 'consonance') out.slant.push(pair);
+      if (r.class === 'family' || r.class === 'assonance' || r.class === 'consonance') out.slant.push(pair);
       else if (r.class === 'eye' || r.uncertain) out.weak.push(pair);
       else out.warn.push(pair);
     }
@@ -183,7 +183,7 @@ const rhymeScheme: Evaluator = ({ m }) => {
   })));
   if (total.slant.length) {
     hits.push({
-      message: `Slant rhyme only (assonance or consonance, not a full rhyme): ${joinList(total.slant.map(p => pairText(v, p)))}${total.slant.some(p => p.uncertain) ? `; ${WEAKER}` : ''}`,
+      message: `Slant rhyme only (${total.slant.some(p => p.cls === 'family') ? 'family rhyme, ' : ''}assonance or consonance, not a full rhyme): ${joinList(total.slant.map(p => pairText(v, p)))}${total.slant.some(p => p.uncertain) ? `; ${WEAKER}` : ''}`,
       severity: 'info', line: srcLine(v, total.slant[0]!.other), measured: total.slant.map(p => ({ first: srcLine(v, p.first), other: srcLine(v, p.other), class: p.cls })),
       fix: 'Keep the slant rhyme on purpose, or choose a word that rhymes fully.',
     });
@@ -229,8 +229,21 @@ const syllables: Evaluator = ({ m }) => {
   const ctx = verseOf(m);
   if (!ctx) return [];
   if (ctx.v.declared?.syllables) return declaredSyllables(ctx.v);
-  if (!ctx.def.syllables) return [];
   const { v, def } = ctx;
+  if (!def.syllables) {
+    const meter = v.declared?.meter ?? def.meter;
+    if (!meter || !v.meter) return [];
+    return v.meter.flatMap((scan): Hit[] => {
+      const l = v.lines[scan.line]!;
+      if ([l.syllables, l.syllablesAlt].some(n => fitsMeter(n, scan.expected, meter.foot === 'anapest'))) return [];
+      const weak = l.guessed.length || l.syllablesAlt !== undefined;
+      return [{
+        message: `Line ${l.line} has ${rangeText(l)} syllables; the ${meter.foot} meter expects ${scan.expected}, allowing a feminine ending${meter.foot === 'anapest' ? ' or a headless anapest' : ''}${weak ? `; ${WEAKER}` : ''}`,
+        line: l.line, measured: { syllables: l.syllables, ...(l.syllablesAlt !== undefined ? { alt: l.syllablesAlt } : {}), want: scan.expected },
+        fix: 'Read the meter aloud; add or cut syllables if the departure is unintended.',
+      }];
+    });
+  }
   const target = def.syllables!;
   return v.lines.slice(0, target.length).flatMap((l, i) => {
     const want = target[i]!;
@@ -299,9 +312,11 @@ const FOOT_NAME = { iamb: 'iambic', trochee: 'trochaic', anapest: 'anapestic', d
 
 const meterDeviation: Evaluator = ({ m }) => {
   const ctx = verseOf(m);
-  if (!ctx?.v.meter || !ctx.def.meter) return [];
+  if (!ctx?.v.meter) return [];
   const { v, def } = ctx;
-  const name = FOOT_NAME[def.meter!.foot];
+  const meter = v.declared?.meter ?? def.meter;
+  if (!meter) return [];
+  const name = FOOT_NAME[meter.foot];
   const hits: Hit[] = v.meter!.filter(l => !l.skipped && l.deviations.length).map(l => ({
     message: `Line ${srcLine(v, l.line)}: stress falls against the ${name} meter at syllable${l.deviations.length === 1 ? '' : 's'} ${joinList(l.deviations.map(d => String(d + 1)))} (meter is advisory)`,
     line: srcLine(v, l.line), measured: { syllables: l.syllables, deviations: l.deviations },
@@ -396,7 +411,8 @@ const ambiguous: Evaluator = ({ m }) => {
       const target = ctx.v.declared?.syllables ? targets[i] ?? undefined : ctx.def.syllables?.[i];
       if (target !== undefined) return n === target;
       const meter = ctx.v.meter?.find(x => x.line === i);
-      return meter && ctx.def.meter ? fitsMeter(n, meter.expected, ctx.def.meter.foot === 'anapest') : null;
+      const definition = ctx.v.declared?.meter ?? ctx.def.meter;
+      return meter && definition ? fitsMeter(n, meter.expected, definition.foot === 'anapest') : null;
     };
     const a = fits(lo);
     const b = fits(hi);

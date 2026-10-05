@@ -35,13 +35,13 @@ export function parseDialog(source: string): ParsedDialog {
   const who = (raw: string) => { const { name, extension } = splitSpeaker(raw); return { speaker: name || raw, ext: extension ? { extension } : {} }; };
   g.nodes.forEach((n, ni) => {
     const { speaker, ext } = who(n.speaker);
-    blocks.push({ kind: 'line', text: n.text, line: lineAt(['nodes', ni, 'text']), speaker, meta: { node: n.id, ...ext } });
+    blocks.push({ kind: 'line', text: n.text, line: lineAt(['nodes', ni, 'text']), speaker, meta: { node: n.id, ...(n.limit ? { limit:n.limit } : {}), ...(n.sourceKind ? { sourceKind:n.sourceKind } : {}), ...ext } });
     (n.variants ?? []).forEach((text, k) => blocks.push({
       kind: 'line', text, line: lineAt(['nodes', ni, 'variants', k]), speaker, meta: { node: n.id, variant: k + 1, ...ext },
     }));
     (n.choices ?? []).forEach((c, ci) => blocks.push({
       kind: 'choice', text: c.text, line: lineAt(['nodes', ni, 'choices', ci, 'text']),
-      meta: { node: n.id, to: c.to, ...(c.condition ? { condition: c.condition } : {}) },
+      meta: { node: n.id, to: c.to, ...(c.limit ? { limit:c.limit } : {}), ...(c.condition ? { condition: c.condition } : {}) },
     }));
   });
   g.barks.forEach((b, bi) => {

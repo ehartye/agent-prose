@@ -23,6 +23,9 @@ export const VoiceSchema = z.strictObject({
   description: z.string().min(1),
   /** Personality and background, brief material only (no lint rule reads it): `set new --character <id>` snapshots it. */
   bio: z.string().trim().min(1).max(600).optional(),
+  negative: z.array(z.string().trim().min(1).max(160)).max(8).optional(),
+  catchphraseMaxPer1000: z.number().nonnegative().optional(),
+  fitted: z.strictObject({ provisional:z.literal(true), source:z.string(), words:z.number().int().nonnegative() }).optional(),
   samples: z.array(z.string().min(1)).default([]),
   banned: z.array(z.string().min(1)).default([]),
   catchphrases: z.array(z.string().min(1)).default([]),

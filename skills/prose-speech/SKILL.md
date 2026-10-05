@@ -53,6 +53,11 @@ to it — undershooting is as common as overshooting.
 
 ## Delivery notes
 
+For a reading copy, use `prose render <draft> --to pdf --out <new-file.pdf>` (PDF needs prose-setup
+with `--pdf`). HTML works offline too. Breath marks and page times are planning estimates, not a timed rehearsal.
+Cloud read-aloud requires explicit `--tts openai --audio-out <new-file.wav>`; it sends spoken text to
+OpenAI using `OPENAI_API_KEY` and creates AI-generated audio. Read the export's warnings before sharing.
+
 Add short delivery notes where they help: pauses for laughter in a large room, where to look up
 for direct lines, which line to slow down. Put each one in `[brackets]` on its own line so it is
 not timed (a bracket inside a sentence is counted as speech and listed as a placeholder).

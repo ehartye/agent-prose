@@ -578,7 +578,7 @@ is funny, in character or worth hearing twice is for the writer and the owner.
 | `dialog.choices.fallback` | A choice set includes at least one unconditional choice. | warn | none | n/a | lint |
 | `dialog.line.box` | Each line fits the form's text box (default 40 characters × 2 lines). | warn | the form's text box | A source's figure | lint |
 | `dialog.barks.variety` | Bark pools have more than one line and no near-repeats (word overlap ≥ 0.6). | warn | 0.6 jaccard | This plugin's choice (derived) | lint |
-| `length.target` | A draft with a declared target lands within ±10% of it. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
+| `length.target` | A draft with a declared target lands within ±10% of it; page-derived script minute targets use the provisional ±20% timing band. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
 | `dialog.revisit.variety` | A node the player can reach more than once has rotating variants. | warn | none | n/a | lint |
 | `dialog.graph.exit` | From the start, an ending is reachable without depending on any condition. | warn | none | n/a | lint |
 | `voice.targets` | Each voiced speaker's measured style stays inside the voice bible's target ranges. | warn | none | n/a | lint |

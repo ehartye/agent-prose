@@ -32,7 +32,7 @@ export function jaccard(a: string, b: string): number {
 
 const targets = (n: DialogNode) => [...(n.choices ?? []).map(c => c.to), ...(n.next ? [n.next] : [])];
 
-export function checkGraph(graph: Pick<DialogGraph, 'nodes' | 'barks' | 'nodeLines' | 'nodeLineByIndex' | 'barkLines' | 'start'>): DialogIssue[] {
+export function checkGraph(graph: Pick<DialogGraph, 'nodes' | 'barks' | 'nodeLines' | 'nodeLineByIndex' | 'barkLines' | 'start' | 'entries'>): DialogIssue[] {
   const issues: DialogIssue[] = [];
   // first-wins line per id; a duplicate reports its own line
   const ids = new Map<string, number>();
@@ -46,12 +46,13 @@ export function checkGraph(graph: Pick<DialogGraph, 'nodes' | 'barks' | 'nodeLin
     if (!n.choices?.length && !n.next && !n.end) issues.push({ kind: 'dead-end', node: n.id, line });
     if (n.choices?.length && n.choices.every(c => c.condition)) issues.push({ kind: 'no-fallback', node: n.id, line });
   }
-  const start = graph.start ?? graph.nodes[0]?.id;
-  if (start !== undefined && !ids.has(start)) issues.push({ kind: 'dangling', node: '(start)', to: start, line: 1 });
+  const starts = graph.entries ?? [graph.start ?? graph.nodes[0]?.id].filter((x): x is string => x !== undefined);
+  for (const start of starts) if (!ids.has(start)) issues.push({ kind:'dangling', node:graph.entries?'(entry)':'(start)', to:start, line:1 });
+  const start = starts.find(s=>ids.has(s));
   if (start !== undefined && ids.has(start)) {
     const byId = new Map(graph.nodes.map(n => [n.id, n]));
     const seen = new Set<string>();
-    const queue = [start];
+    const queue = [...starts.filter(s=>ids.has(s))];
     while (queue.length) {
       const id = queue.shift()!;
       if (seen.has(id)) continue;
@@ -85,11 +86,11 @@ export function checkGraph(graph: Pick<DialogGraph, 'nodes' | 'barks' | 'nodeLin
   };
   // An end node is exempt only when it has fewer than two incoming links.
   for (const n of graph.nodes) {
-    if (!ids.has(n.id) || n.variants?.length || n.end && (incoming.get(n.id) ?? 0) < 2) continue;
+    if (!ids.has(n.id) || n.revisit === 'intentional' || n.variants?.length || n.end && (incoming.get(n.id) ?? 0) < 2) continue;
     if (!openly.has(n.id)) continue;
     if ((incoming.get(n.id) ?? 0) >= 2 || onCycle(n.id)) issues.push({ kind: 'repeat-without-variants', node: n.id, line: ids.get(n.id)! });
   }
-  if (start !== undefined && ids.has(start)) {
+  for (const start of starts.filter(s=>ids.has(s))) {
     // From the start, follow only unconditional edges; an ending must be reachable that way.
     const seen = new Set<string>();
     const stack = [start];
@@ -114,8 +115,8 @@ export function measureDialog(doc: Doc, form: Form): DialogStats {
   const boxLines = form.boxLines ?? 2;
   const overflow = doc.blocks
     .filter(b => DIALOG_TEXT_KINDS.has(b.kind))
-    .map(b => ({ line: b.line, chars: b.text.length, lines: wrapCount(b.text, boxChars), text: b.text }))
-    .filter(o => o.lines > boxLines);
+    .map(b => ({ line: b.line, chars: b.text.length, lines: wrapCount(b.text, boxChars), text: b.text, limit: typeof b.meta?.limit === 'number' ? b.meta.limit : undefined }))
+    .filter(o => o.limit !== undefined ? o.chars > o.limit : o.lines > boxLines);
   const pools = new Map<string, Array<{ b: Block; i: number }>>();
   doc.blocks.forEach((b, i) => {
     if (b.kind !== 'bark') return;

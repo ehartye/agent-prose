@@ -136,12 +136,13 @@ describe('the song guide', () => {
     const cls = (a: string, b: string) => rhymeClass(pronounce(a), pronounce(b)).class;
     for (const [a, b] of [['fire', 'desire'], ['light', 'tonight']] as const) expect(cls(a, b), `${a}/${b}`).toBe('perfect');
     expect(cls('bare', 'bear')).toBe('identity');
-    for (const [a, b] of [['home', 'alone'], ['mud', 'truck'], ['love', 'blush']] as const) expect(cls(a, b), `${a}/${b}`).toBe('assonance');
+    for (const [a, b] of [['life', 'tide'], ['snow', 'rose']] as const) expect(cls(a, b), `${a}/${b}`).toBe('assonance');
+    for (const [a, b] of [['mud', 'truck'], ['love', 'blush'], ['strum', 'hung']] as const) expect(cls(a, b), `${a}/${b}`).toBe('family');
     expect(cls('stone', 'plane')).toBe('consonance');
     for (const [a, b] of [['love', 'move'], ['where', 'here']] as const) expect(cls(a, b), `${a}/${b}`).toBe('eye');
     expect(cls('done', 'dim')).toBe('none');
     expect(rhymeClass(pronounce('wind'), pronounce('sinned'))).toEqual({ class: 'perfect', uncertain: true });
-    expect(flat).toContain('There is no `family` class');
+    expect(flat).toContain('The `family` class follows Pattison');
   });
 
   it('says what the trust tags do for the words it names', () => {
@@ -155,11 +156,11 @@ describe('the song guide', () => {
     expect(flat).toContain('reads `9/8`');
   });
 
-  it('rejects the hymn labels it says are rejected, and accepts the written-out counts', () => {
-    for (const bad of ['CM', '8686', '8.7.8.7.D']) expect(() => lintSource(withForm('One line here now', `syllables: ${bad}\n`)), bad).toThrow(/syllables/);
+  it('normalizes hymn labels and accepts the written-out counts', () => {
+    for (const alias of ['CM', '8686', '8.7.8.7.D']) expect(() => lintSource(withForm('One line here now', `syllables: "${alias}"\n`)), alias).not.toThrow();
     expect(lintSource(withForm('One line here now\nTwo here\nThree line here now\nFour here', 'syllables: 8.7.8.7\n')).errors).toEqual([]);
     expect(lintSource(withForm('One line here now', 'syllables: 8.7.8.7.8.7.8.7\n')).errors).toEqual([]);
-    expect(body).toContain('`CM`, `8686` and `8.7.8.7.D` are\nrejected with `E_SCHEMA`');
+    expect(flat).toContain('`8.6.8.6` normalize to common-meter counts');
   });
 
   it('divides syllables by beatsPerLine and does not use the tempo, and reads the label forms', () => {

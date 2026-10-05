@@ -291,12 +291,11 @@ a planning figure. The BBC says a single TV drama runs 60 to 90 minutes [4]. Obs
 given, and from 6 to 10 scenes (Will & Grace) to 84 (The Crown) [8].
 
 **Targets.** Lint compares `Target: 3 pages` with measured pages and `Target: 22 minutes` with estimated
-minutes, and warns outside plus or minus 10 percent, this plugin's own tolerance (`length.target`). That is
-narrower than the estimate's own 20 percent, so a miss is a prompt to check, not a failure. Measured here: a
-centered marker such as `>COLD OPEN<` above the first scene heading adds a whole page to the multi-cam estimate,
-because the heading starts a new page; the cold open below measures 0.76 pages without the marker and 1.76 with
-it. Subtract a page, or read `scenesDetail` in `prose measure`, which leaves it out. Maintainer judgement: for a
-hard length, read the script aloud with pauses for business and laughs.
+minutes. Page and word targets use plus or minus 10 percent, this plugin's own tolerance (`length.target`);
+page-derived minute targets use the estimate's 20 percent timing band. A miss is a prompt to check, not a failure.
+A centered marker such as `>COLD OPEN<` before the first scene consumes its printed lines without padding
+a full page; later scenes and explicit page breaks still start new pages. Maintainer judgement: for a hard
+length, read the script aloud with pauses for business and laughs. Stage-play runtime remains provisional.
 
 ## What good looks like
 
@@ -410,8 +409,8 @@ That's the part I did.
 ```
 
 What to notice. "A man on a scooter" lands mid-line and the line goes on, the thrown-away placement [23]. The
-scene stays inside its premise [10], and the short lines leave room to laugh. Measured here: it runs 0.76 pages
-(1.76 with the marker) and plans at 0.34 minute, well short of the 4 to 4.5 pages observed for Call Me Kat, so
+scene stays inside its premise [10], and the short lines leave room to laugh. Measured here: it runs 0.8 pages
+(0.76 without the marker) and plans at 0.36 minute, well short of the 4 to 4.5 pages observed for Call Me Kat, so
 it is a shape to copy and not a length [2].
 
 ### A scene entered late
@@ -568,7 +567,7 @@ owner.
 | `script.unclosed-note` | Every Fountain double-bracket note ([[ … ]]) is closed with ]]. | warn | none | n/a | lint |
 | `comedy.serious-moments` | Stop joking when a scene turns genuinely serious; a joke that stays should keep the pain visible. | warn | none | n/a | judgement |
 | `comedy.premise` | Jokes grow from the scene's comic premise. | warn | none | n/a | judgement |
-| `length.target` | A draft with a declared target lands within ±10% of it. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
+| `length.target` | A draft with a declared target lands within ±10% of it; page-derived script minute targets use the provisional ±20% timing band. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
 | `script.multicam.caps-action` | Multi-cam action and description are written in ALL CAPS. | warn | none | n/a | lint |
 | `script.unprinted-marker` | Act markers (COLD OPEN, ACT, TAG, END OF ...) are centered >text<, not # sections. | info | none | n/a | lint |
 | `voice.targets` | Each voiced speaker's measured style stays inside the voice bible's target ranges. | warn | none | n/a | lint |
