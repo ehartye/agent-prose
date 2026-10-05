@@ -70,8 +70,9 @@ describe('offline render exports', () => {
     writeFileSync(out, 'owner text');
     await expect(render(fixture('keynote.md'), { to: 'html', out })).rejects.toMatchObject({ code: 'E_CONFLICT' });
     expect(readFileSync(out, 'utf8')).toBe('owner text');
-    const alias = join(dir, 'alias.md'); linkSync(fixture('keynote.md'), alias);
-    await expect(render(fixture('keynote.md'), { to: 'md', out: alias })).rejects.toMatchObject({ code: 'E_CONFLICT' });
+    const aliasSource = join(dir, 'source.md'); writeFileSync(aliasSource, readFileSync(fixture('keynote.md')));
+    const alias = join(dir, 'alias.md'); linkSync(aliasSource, alias);
+    await expect(render(aliasSource, { to: 'md', out: alias })).rejects.toMatchObject({ code: 'E_CONFLICT' });
     await expect(render(fixture('pilot.fountain'), { to: 'json', out: join(dir, 'bad.json') })).rejects.toMatchObject({ code: 'E_USAGE' });
     await expect(render(fixture('keynote.md'), { to: 'html', out: join(dir, 'ok.html'), audioOut: join(dir, 'speech.wav') })).rejects.toMatchObject({ code: 'E_USAGE' });
     expect(readdirSync(dir).filter(n => /render|ok\.html|bad\.json/.test(n))).toEqual([]);
