@@ -8,7 +8,8 @@ import { distance, featureVector, type FeatureVector } from './features.ts';
 import { BARELY_CHANGED_AT, DUPLICATE_AT, SIMILAR_AT, similarity } from './similarity.ts';
 import { basePath, variantPath, type PromptSet } from './sets.ts';
 import { MIN_VARIANTS } from './sets.ts';
-import { round2 } from '../text.ts';
+import { round2, words } from '../text.ts';
+import { isDeepStrictEqual } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { originalRefs } from './original.ts';
 import { unitsOf } from '../reading/units.ts';
@@ -41,6 +42,13 @@ export interface CheckResult {
 
 const proseText = (doc: Doc) => doc.blocks.filter(b => PROSE_KINDS.has(b.kind)).map(b => b.text).join('\n');
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Source-bound reviews change one text leaf; all speaker, condition and routing data is protected. */
+function sourceStructure(doc: Doc, slotId: string): unknown {
+  if (!doc.graph || doc.graph.nodes.filter(n => n.id === slotId).length !== 1) return null;
+  const { nodeLines, nodeLineByIndex, barkLines, ...graph } = doc.graph;
+  return { ...graph, nodes: graph.nodes.map(n => n.id === slotId ? { ...n, text: '' } : n) };
+}
 
 /**
  * For a revision (a set with an `original`): the base lines outside the selection, as normalised text. A variant that no
@@ -83,7 +91,10 @@ interface Loaded { doc: Doc; text: string; vec: FeatureVector }
 
 export function checkSet(project: string, set: PromptSet): CheckResult {
   const baseDoc = loadDocument(basePath(project, set), { form: set.form });
-  const baseText = proseText(baseDoc);
+  const reviewText = (doc: Doc) => set.sourceRef
+    ? doc.graph?.nodes.find(n => n.id === set.sourceRef!.slotId)?.text ?? ''
+    : proseText(doc);
+  const baseText = reviewText(baseDoc);
   const baseVec = featureVector(baseDoc);
   const baseErrors = new Set(lint(baseDoc).errors.map(f => f.rule));
   let outside: string[] = [];
@@ -107,7 +118,20 @@ export function checkSet(project: string, set: PromptSet): CheckResult {
     if (typeof declared === 'string' && declared.toLowerCase() !== set.form) {
       out.reasons.push(`form-changed: declares ${declared.toLowerCase()}, the set is ${set.form}`);
     }
-    const text = proseText(doc);
+    if (set.sourceRef) {
+      const baseStructure = sourceStructure(baseDoc, set.sourceRef.slotId);
+      const candidateStructure = sourceStructure(doc, set.sourceRef.slotId);
+      if (baseStructure === null || candidateStructure === null || !isDeepStrictEqual(baseStructure, candidateStructure)) {
+        out.reasons.push('source-structure-changed: only the designated line text may change');
+      }
+    }
+    const text = reviewText(doc);
+    if (set.sourceRef) {
+      const node = doc.graph?.nodes.find(n => n.id === set.sourceRef!.slotId);
+      if (node?.limit !== undefined && text.length > node.limit) {
+        out.reasons.push(`source-limit-exceeded: ${text.length} characters exceeds ${node.limit}`);
+      }
+    }
     const vec = featureVector(doc);
     loaded.set(v.index, { doc, text, vec });
     out.words = Math.round(2 ** vec.length);
@@ -126,6 +150,10 @@ export function checkSet(project: string, set: PromptSet): CheckResult {
     if (v.direction) {
       const score = round2(directionScore(baseVec, vec, v.direction));
       out.movement = { direction: v.direction, score, moved: score >= moveMin(v.direction) };
+      // Forty words is a reporting convention, not a validated cutoff for artistic judgement.
+      if (Math.min(words(baseText).length, words(text).length) < 40) {
+        out.warnings.push(`direction-uncertain: ${v.direction} is a measured proxy on a short passage; a zero score cannot judge this edit's quality`);
+      }
       if (!out.movement.moved && out.reasons.length === 0) out.warnings.push(`weak-direction: ${v.direction} moved ${score} (needs at least ${moveMin(v.direction)})`);
     }
     if (outside.length) {

@@ -77,8 +77,9 @@ below is Maintainer judgement and says so.
   [19]; findings on guessed lines are weaker, and names, slang and coined words are guessed.
 - Advisory meter. Stress is shown per word, and only words of two or more syllables carry real stress; every
   one-syllable word is `?` because function words bend to the music. The engine's meter check
-  (`verse.meter.deviation`) does not run on songs, so nothing checks a lyric's stress against a foot. Read the stress
-  column yourself.
+  (`verse.meter.deviation`) runs when the draft declares `meter: {foot: iamb, feet: 5}` (or trochee, anapest,
+  dactyl or common). This is advisory textual scansion; it does not measure alignment with music. Read the stress
+  column and sing the text to check the intended performance.
 - Syllables per beat. Declare `tempo`, and `beatsPerLine` if the line is not four beats, and `scan` divides each
   line's syllables by `beatsPerLine` and reports the mean and range, with no threshold. Convention: the tempo value
   only switches the figure on; the division does not use it. The figure says how crowded a line is, not whether
@@ -216,10 +217,11 @@ These definitions rest on one encyclopedia article, one database record and two 
 explanation was read.
 
 What the engine does. Declare the pattern in the front matter (`syllables: 8.6.8.6`, `scheme: xaxa`). Lint then checks
-the syllables of every line and, with that scheme, that lines 2 and 4 of each stanza rhyme. Measured here: `CM`, `8686` and `8.7.8.7.D` are
-rejected with `E_SCHEMA`, so write the counts out (`8.7.8.7.8.7.8.7`). The engine has an iambic "common" foot for
-its meter check (four feet, then three), but no form turns it on, so a hymn text's stress is checked by you. Whether a
-stress deviation is acceptable is a convention with no source, and the plugin sets no tolerance.
+the syllables of every line and, with that scheme, that lines 2 and 4 of each stanza rhyme. `CM`, `8686` and
+`8.6.8.6` normalize to common-meter counts; `8.7.8.7.D` doubles that pattern. Arrays retain multi-digit counts.
+Declare `meter: {foot: common, feet: 4}` for alternating four/three-foot iambic textual scansion, or another
+known foot and a positive count. Stress findings are advisory and do not establish musical alignment.
+Whether a stress deviation is acceptable is a convention with no source; the plugin sets no musical tolerance.
 
 Matching a text to any tune of its meter, step by step (Maintainer judgement): declare the meter, scan, fix every count,
 then read the stress column for iambic lines (weak, strong, weak, strong...) and fix each polysyllable that lands wrong.
@@ -240,14 +242,17 @@ The plugin's classes (conventions that follow Prosodic's definitions [22], read 
 |---|---|---|
 | `perfect` | same sounds from the last stressed vowel, different onset | fire/desire, light/tonight |
 | `identity` | the same word, or the same sounds and onset | bare/bear |
-| `assonance` | same stressed vowel, different tail | home/alone, mud/truck, love/blush |
+| `family` | same stressed vowel, related codas by manner | mud/truck, love/blush, strum/hung |
+| `assonance` | same stressed vowel, unrelated tail | life/tide, snow/rose |
 | `consonance` | same tail, different vowel | stone/plane |
 | `eye` | spelled alike, sounds differ | love/move, where/here |
 | `none` | | done/dim |
 
-There is no `family` class: Pattison's family examples (mud/truck, love/blush) come out as `assonance`, so the plugin
-cannot tell a family rhyme from a plain vowel rhyme. `scan` letters count `perfect` and `identity` only, and a `near`
-scheme also counts assonance and consonance. A pair that depends on a second pronunciation is marked uncertain
+The `family` class follows Pattison's related-coda convention [3]. Our conservative mapping requires
+equal-length consonant codas with corresponding stops, fricatives or nasals of the same manner. It is a
+maintainer implementation convention. His read/cheap assonance example conflicts with that mapping: D/P are
+both stops and read has alternate pronunciations, so the tool keeps the uncertainty rather than hardcoding it.
+`scan` letters count `perfect` and `identity` only, and a `near` scheme also counts family, assonance and consonance. A pair that depends on a second pronunciation is marked uncertain
 (wind/sinned is `perfect` only through a variant), and dialect rhymes (gone/on) can be wrong because the dictionary is
 US English. `verse.form.rhyme-scheme` warns only for a certain non-rhyme and gives slant, eye and guessed pairs as info.
 Hirjee and Brown, in an abstract on rap, say imperfect and internal rhymes matter and can be modelled
@@ -591,13 +596,14 @@ breaks are not sentence boundaries, and `style.echo` does not run on songs, beca
 | `ai.artifact` | No leaked chatbot markup or unfilled placeholders. | error | none | n/a | lint |
 | `draft.placeholders` | Bracketed placeholders are listed until filled. | info | none | n/a | lint |
 | `ai.vocabulary` | Three or more distinct era-tagged AI vocabulary terms in one draft are flagged. | warn | 3 distinct terms | This plugin's choice (derived) | lint |
-| `length.target` | A draft with a declared target lands within ±10% of it. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
+| `length.target` | A draft with a declared target lands within ±10% of it; page-derived script minute targets use the provisional ±20% timing band. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
 | `voice.targets` | Each voiced speaker's measured style stays inside the voice bible's target ranges. | warn | none | n/a | lint |
 | `voice.bible-valid` | Every voice bible in the project loads: valid YAML and schema, id matching the file name, unique ids, and each speaker claimed by one bible. | error | none | n/a | lint |
 | `voice.banned` | A speaker never uses a word their voice bible bans. | warn | none | n/a | lint |
 | `voice.unvoiced` | In a project with voice bibles, every speaker resolves to one. | info | none | n/a | lint |
 | `verse.form.rhyme-scheme` | End rhymes follow the scheme, the form's or the one the draft declares in its frontmatter (a letter per line, x for an unconstrained line): each rhyme group matches its first line. | warn | none | n/a | lint |
-| `verse.form.syllables` | Each line fits the syllable pattern: the haiku's 5, 7, 5 (soft, info), or one the draft declares in its frontmatter for a tune or hymn meter such as 8.6.8.6 (the author's own requirement, warn). | warn | none | n/a | lint |
+| `verse.form.syllables` | Each line fits a declared syllable pattern, the form's known meter length with tolerated variation, or the soft haiku count. | warn | none | n/a | lint |
+| `verse.meter.deviation` | Lines where a polysyllabic word's stress contradicts its slot in the form's or author's declared textual meter are listed (advisory). | info | none | n/a | lint |
 | `verse.pronunciation.guessed` | Words missing from the pronouncing dictionary are listed; verdicts on their lines are weaker. | info | none | n/a | lint |
 | `verse.pronunciation.ambiguous` | Words with several pronunciations are listed only where the reading matters: an end word whose rhyme depends on it, or a word that decides whether a line fits a declared syllable or meter count. | info | none | n/a | lint |
 | `verse.format.markup` | A verse line that starts like Markdown (a dash, a number and period, or >) is read as a list item, step or quote, not a line. | warn | none | n/a | lint |

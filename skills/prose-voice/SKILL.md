@@ -18,9 +18,10 @@ is enough to start; samples are optional. The schema and a worked example are in
 2. If the character already has lines in a draft, fit a bible from them:
    `prose voice fit <draft> --speaker GRIMBLE --id grimble`. It records samples and measured
    ranges (sentence length, contractions, hedges, exclamations).
+   Fitted ranges are provisional observations; they do not define the character's personality.
 3. If the character has no lines yet, create the bible from a description, with no draft:
    `prose voice new --id grimble --name Grimble --speaker GRIMBLE --bio "<personality and background, at most 600 characters>"`
-   (also `--register`, `--description`, repeat `--speaker`). Samples and targets start empty, so
+   (also `--register`, `--description`, repeat `--speaker` and `--avoid` for negative guidance). Samples and targets start empty, so
    `voice.targets` has nothing to check until you add samples or fit one. `prose voice show <id>` prints a bible.
 4. Edit the bible by hand: `bio` (who they are, what they want, where they come from), `register`, a one-paragraph `description` that names the character's
    motive and conversational habit (pushy, flighty, reticent, transactional), five signature
@@ -29,6 +30,8 @@ is enough to start; samples are optional. The schema and a worked example are in
 The `bio` is also review material: `prose set new <draft> --character <voice-id>` snapshots it into the
 brief the owner sees above the variants (see prose-review). Edit the bio, then take a fresh snapshot
 for an open set with `prose set brief <id> --character <voice-id>`. There is no separate character file.
+Negative guidance is included in that snapshot and requires human judgement. Optional
+`catchphraseMaxPer1000` is an owner-set reporting threshold for `prose dialog repetition`, not a default rule.
 
 ## Write in the voice
 

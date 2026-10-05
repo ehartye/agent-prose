@@ -65,8 +65,8 @@ describe('verse rules in the table', () => {
     for (const id of ['verse.pronunciation.guessed', 'verse.pronunciation.ambiguous', 'verse.format.markup', 'verse.line-break.purpose']) expect(byId(id).forms, id).toEqual(VERSE_FORMS);
   });
 
-  it('meter.deviation covers every form that declares a meter', () => {
-    const declared = FORMS.filter(f => f.verse?.meter).map(f => f.id).sort();
+  it('meter.deviation covers every verse form, since an author may declare textual meter', () => {
+    const declared = FORMS.filter(f => f.verse).map(f => f.id).sort();
     expect([...(byId('verse.meter.deviation').forms as string[])].sort()).toEqual(declared);
   });
 
@@ -436,7 +436,11 @@ describe('verse lint end to end', () => {
       const r = make();
       expect(r.form).toBe(form);
       expect(r.ok).toBe(true);
-      expect(r.warnings.map(w => `${w.rule}: ${w.message}`)).toEqual([]);
+      if (form === 'sonnet-petrarchan') {
+        // This historical fixture is fourteen octosyllabic lines, so it exposes the repaired meter-length check.
+        expect(r.warnings).toHaveLength(14);
+        expect(r.warnings.every(w => w.rule === 'verse.form.syllables')).toBe(true);
+      } else expect(r.warnings.map(w => `${w.rule}: ${w.message}`)).toEqual([]);
       expect(r.judgement.map(j => j.rule)).toContain('verse.line-break.purpose');
     });
   }

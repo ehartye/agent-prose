@@ -2,15 +2,6 @@
   "schema": "prose/references@1",
   "references": [
     {
-      "id": "pattison-prosody",
-      "authors": "Pat Pattison (Berklee Online)",
-      "year": 2022,
-      "title": "Prosody in Music and Songwriting",
-      "url": "https://online.berklee.edu/takenote/prosody-in-music-and-songwriting/",
-      "kind": "practitioner",
-      "note": "Teacher's article, one opinion with illustrative examples: prosody means every element supporting the central message; stable against unstable meaning; perfect, family and assonance rhyme. Not evidence."
-    },
-    {
       "id": "pattison-romantic",
       "authors": "Pat Pattison (Berklee Online)",
       "year": 2024,

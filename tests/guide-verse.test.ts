@@ -188,7 +188,9 @@ describe('the verse guide', () => {
     expect(flat).toContain('six info findings');
 
     const short = lint(loadDocument(fixture('verse/petrarchan-clean.md')));
-    expect(all(short)).toEqual([]);
+    expect(short.warnings).toHaveLength(14);
+    expect(short.warnings.every(f => f.rule === 'verse.form.syllables')).toBe(true);
+    expect(flat).toContain('draws fourteen meter-length warnings');
     expect(measure(loadDocument(fixture('verse/petrarchan-clean.md'))).verse!.lines.every(l => l.syllables === 8)).toBe(true);
     expect(measure(loadDocument(fixture('verse/petrarchan-clean.md'))).verse!.lines).toHaveLength(14);
 

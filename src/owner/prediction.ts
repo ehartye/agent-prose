@@ -6,7 +6,7 @@ import { ProseError } from '../errors.ts';
 import { checkSet } from './check.ts';
 import { withSetLock, writeFileAtomic, type LockContext, type LockOptions } from './fsutil.ts';
 import { setDir } from './paths.ts';
-import { readSet, variantPath, type PromptSet } from './sets.ts';
+import { readSet, variantPath, SourceRefSchema, type PromptSet } from './sets.ts';
 
 export const PredictionSchema = z.strictObject({
   schema: z.literal('prose/prediction@1'),
@@ -20,13 +20,14 @@ export const PredictionSchema = z.strictObject({
   /** Variant index -> SHA-256 of that variant's text at predict time (BOM removed, line endings made LF). */
   hashes: z.record(z.string(), z.string().regex(/^[0-9a-f]{64}$/)),
   /** SHA-256 over the fields above, so an edit after the owner's pick is detectable. */
+  sourceRef: SourceRefSchema.optional(),
   seal: z.string().regex(/^[0-9a-f]{64}$/),
 });
 export type Prediction = z.infer<typeof PredictionSchema>;
 
-type Sealed = Pick<Prediction, 'set' | 'pick' | 'shortlist' | 'why' | 'at' | 'shown' | 'hashes'>;
+type Sealed = Pick<Prediction, 'set' | 'pick' | 'shortlist' | 'why' | 'at' | 'shown' | 'hashes' | 'sourceRef'>;
 const sealOf = (p: Sealed) =>
-  createHash('sha256').update(JSON.stringify({ set: p.set, pick: p.pick, shortlist: p.shortlist, why: p.why, at: p.at, shown: p.shown, hashes: p.hashes })).digest('hex');
+  createHash('sha256').update(JSON.stringify({ set: p.set, pick: p.pick, shortlist: p.shortlist, why: p.why, at: p.at, shown: p.shown, hashes: p.hashes, ...(p.sourceRef ? {sourceRef:p.sourceRef} : {}) })).digest('hex');
 
 export const sealValid = (p: Prediction) => p.seal === sealOf(p);
 const file = (project: string, id: string) => join(setDir(project, id), 'prediction.json');
@@ -74,6 +75,7 @@ function writePredictionLocked(project: string, set: PromptSet, input: Predictio
     shortlist: [...new Set(input.shortlist)].filter(i => i !== input.pick).sort((a, b) => a - b),
     why: input.why.trim(), at: (input.now ?? new Date()).toISOString(),
     shown: [...check.keep],
+    ...(set.sourceRef ? {sourceRef:set.sourceRef} : {}),
     hashes: Object.fromEntries(check.keep.map(i => [String(i), variantHash(project, set, i)])),
   };
   const prediction = PredictionSchema.parse({ schema: 'prose/prediction@1', ...base, seal: sealOf(base) });

@@ -92,7 +92,7 @@ Take me home
     const { json: s } = prose('scan', sonnet);
     expect(s.syllablesPerBeat).toBeNull();
     expect(s.legend[0]).toMatch(/^Stress: 1 stressed, 2 secondary, 0 unstressed, \? flexible/);
-    expect(s.legend[1]).toBe('Scheme counts perfect and identity rhymes; near also counts assonance and consonance (slant rhymes).');
+    expect(s.legend[1]).toBe('Scheme counts perfect and identity rhymes; near also counts family, assonance and consonance (slant rhymes).');
     expect(s.legend).toHaveLength(2);
   });
 

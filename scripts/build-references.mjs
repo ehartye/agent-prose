@@ -6,9 +6,11 @@ import { GUIDE_REFERENCES, REFERENCES, RULES } from '../src/craft/rules.ts';
 import { ALL_LEXICONS } from '../src/measure/lexicon.ts';
 import { AUDIT_SOURCES } from '../src/audit/detectors.ts';
 import { renderReferences } from '../src/craft/references.ts';
+import { loadGuide } from '../src/craft/guides.ts';
 
 const target = join(import.meta.dirname, '..', 'REFERENCES.md');
-const text = renderReferences(REFERENCES, RULES, ALL_LEXICONS, AUDIT_SOURCES, GUIDE_REFERENCES);
+const text = renderReferences(REFERENCES, RULES, ALL_LEXICONS, AUDIT_SOURCES,
+  GUIDE_REFERENCES.map(g => ({ ...g, sources: loadGuide(g.family).sources })));
 if (process.argv.includes('--check')) {
   let current = '';
   try { current = readFileSync(target, 'utf8').replaceAll('\r\n', '\n'); } catch {}

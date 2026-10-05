@@ -57,6 +57,7 @@ export function registerSetCommands(program: Command, io: Io): void {
       const project = needProject(draftArg !== undefined ? dirname(resolve(draftArg)) : (opts.dir ?? process.cwd()));
       let brief: BriefInput | Brief | undefined;
       let redo: { of: string; original?: PromptSet['original']; feedback: Feedback } | undefined;
+      let sourceRef: PromptSet['sourceRef'];
       let draft = draftArg as string;
       const notes: string[] = [];
       if (opts.redo !== undefined) {
@@ -69,13 +70,16 @@ export function registerSetCommands(program: Command, io: Io): void {
             hint: old.picked !== undefined ? 'It was picked; start a new set from the draft with prose set new <draft>' : `The owner has not sent it back; present it: prose reading open --set ${old.id}`,
           });
         }
+        sourceRef = old.sourceRef;
         redo = { of: old.id, ...(old.original ? { original: old.original } : {}), feedback: { closest: old.sentBack.closest, reasons: old.sentBack.reasons, ...(old.sentBack.note !== undefined ? { note: old.sentBack.note } : {}) } };
         brief = old.brief;
         draft ??= resolve(project, old.source);
         if (!existsSync(draft)) throw new ProseError('E_NOT_FOUND', `The draft ${old.source} that set ${old.id} was made from is not there`, { hint: 'Pass the draft: prose set new <draft> --redo <set-id>' });
       } else if (opts.briefFrom !== undefined) {
         if (opts.character !== undefined || opts.context !== undefined) throw new ProseError('E_USAGE', '--brief-from copies a brief, so it cannot be mixed with --character or --context', { hint: 'Edit afterwards with prose set brief <id>' });
-        const from = readSet(project, opts.briefFrom).brief;
+        const prior = readSet(project, opts.briefFrom);
+        sourceRef = prior.sourceRef;
+        const from = prior.brief;
         if (!from) throw new ProseError('E_USAGE', `Set ${opts.briefFrom} has no brief to copy`, { hint: 'Pass --character and --context instead' });
         brief = opts.briefConfirmed ? { ...from, confirmedAt: new Date().toISOString() } : from;
       } else {
@@ -89,6 +93,7 @@ export function registerSetCommands(program: Command, io: Io): void {
         }
       }
       const s = createSet(project, draft, {
+        ...(sourceRef ? { sourceRef } : {}),
         ...(brief ? { brief } : {}),
         ...(redo ? { redo } : {}),
         ...(opts.lines !== undefined ? { lines: opts.lines } : {}),
@@ -102,6 +107,7 @@ export function registerSetCommands(program: Command, io: Io): void {
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: false } : null,
         excluded: s.excluded ?? null,
+        ...(s.sourceRef ? { sourceRef: s.sourceRef } : {}),
         ...(redo ? { redoOf: redo.of, feedback: feedbackView(project, redo.of, redo.feedback) } : {}),
         ...(notes.length ? { notes } : {}),
         next: `${redo ? `This redoes ${redo.of}: do not repeat the directions the owner rejected (see feedback). ` : ''}${s.brief && !s.brief.confirmedAt ? `The brief is not confirmed: show it to the owner and, once they agree, run prose set brief ${s.id} --confirmed. ` : ''}${s.excluded ? `${s.excluded.length} struck line${s.excluded.length === 1 ? ' is' : 's are'} excluded: leave ${s.excluded.length === 1 ? 'it' : 'them'} exactly as ${s.excluded.length === 1 ? 'it is' : 'they are'} in every variant (set check rejects an edit). ` : ''}Rewrite each variant file in place (keep the format and header), then run: prose set check ${s.id}`,
@@ -164,6 +170,7 @@ export function registerSetCommands(program: Command, io: Io): void {
         brief: s.brief ? briefView(s.brief) : null,
         original: s.original ? { source: s.original.source, lines: originalLines(s.original), stale: isStale(project, s.original) } : null,
         excluded: s.excluded ?? null,
+        ...(s.sourceRef ? { sourceRef: s.sourceRef } : {}),
         prediction: existsSync(`${setDir(project, id)}/prediction.json`),
         keep: check.keep, next: presentNext(check.keep, check.next),
         variants: s.variants.map(v => {

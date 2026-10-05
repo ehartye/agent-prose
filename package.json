@@ -1,6 +1,6 @@
 {
   "name": "agent-prose",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Writing-craft toolkit for coding agents: drafts in native formats (Fountain, Markdown, dialog YAML), measured and linted against cited craft rules per form and register",
@@ -40,11 +40,15 @@
   },
   "license": "MIT",
   "dependencies": {
+    "acorn": "8.18.0",
     "commander": "15.0.0",
+    "markdown-it": "15.0.2",
+    "playwright": "1.63.0",
     "yaml": "2.9.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@types/markdown-it": "14.2.0",
     "@types/node": "26.6.4",
     "typescript": "7.0.2",
     "vitest": "5.0.3"

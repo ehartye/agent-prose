@@ -14,6 +14,8 @@ import { registerSetCommands } from './commands/set.ts';
 import { registerStrikeCommands } from './commands/strike.ts';
 import { registerTasteCommands } from './commands/taste.ts';
 import { registerVerseCommands } from './commands/verse.ts';
+import { registerRenderCommands } from './commands/render.ts';
+import { registerDialogCommands } from './commands/dialog.ts';
 
 export function buildProgram(io: Io): Command {
   const program = new Command('prose')
@@ -33,6 +35,8 @@ export function buildProgram(io: Io): Command {
   registerStrikeCommands(program, io);
   registerTasteCommands(program, io);
   registerVerseCommands(program, io);
+  registerRenderCommands(program, io);
+  registerDialogCommands(program, io);
   return program;
 }
 

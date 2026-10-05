@@ -3,11 +3,12 @@ import type { GuideReferences, Reference, Rule } from './rules.ts';
 /** Escape characters that would break a Markdown table cell. */
 const cell = (s: string) => s.replaceAll('|', '\\|');
 
-export function renderReferences(refs: Reference[], rules: Rule[], lexicons: Array<{ id: string; sources: string[] }>, audit: Array<{ id: string; sources: string[] }> = [], guides: GuideReferences[] = []): string {
+export function renderReferences(refs: Reference[], rules: Rule[], lexicons: Array<{ id: string; sources: string[] }>, audit: Array<{ id: string; sources: string[] }> = [], guides: Array<GuideReferences & { sources?: string[] }> = []): string {
   const citedBy = (id: string) => [
     ...rules.filter(r => r.sources.includes(id)).map(r => r.id),
     ...lexicons.filter(l => l.sources.includes(id)).map(l => `lexicon:${l.id}`),
     ...audit.filter(a => a.sources.includes(id)).map(a => `audit:${a.id}`),
+    ...guides.filter(g => g.sources?.includes(id)).map(g => `guide:${g.family}`),
   ].sort();
   const rows = [...refs]
     .sort((a, b) => a.id.localeCompare(b.id))

@@ -4,10 +4,10 @@ export type ErrorCode =
 
 /** Codes the CLI can emit today. */
 export const ERROR_CODES: ErrorCode[] = ['E_USAGE', 'E_SCHEMA', 'E_PARSE', 'E_NOT_FOUND', 'E_PROJECT',
-  'E_RUNTIME_MISSING', 'E_SERVER', 'E_CONFLICT', 'E_PREDICTION_REQUIRED', 'E_INTERNAL'];
+  'E_RUNTIME_MISSING', 'E_SERVER', 'E_CONFLICT', 'E_PREDICTION_REQUIRED', 'E_RENDER', 'E_BROWSER_MISSING', 'E_TTS', 'E_INTERNAL'];
 
-/** Codes reserved for planned features (rendering, cloud read-aloud). */
-export const RESERVED_ERROR_CODES: ErrorCode[] = ['E_RENDER', 'E_BROWSER_MISSING', 'E_TTS'];
+/** Retained in the capabilities contract for future planned features. */
+export const RESERVED_ERROR_CODES: ErrorCode[] = [];
 
 export interface ErrorJson { code: ErrorCode; message: string; pointer?: string; hint?: string; [detail: string]: unknown }
 

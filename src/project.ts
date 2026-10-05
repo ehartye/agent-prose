@@ -41,7 +41,7 @@ export function initProject(dir: string, { home = homedir() }: HomeOption = {}):
   if (created) writeFileSync(file, JSON.stringify({ schema: 'prose/project@1' }, null, 2) + '\n');
   // Sets, taste data, strike logs (which hold struck text) and review queues are working files; voice bibles and project.json stay trackable.
   const ignore = join(root, PROJECT_DIR, '.gitignore');
-  if (!existsSync(ignore)) writeFileSync(ignore, 'sets/\ntaste/\nstrikes/\nqueues/\n');
+  if (!existsSync(ignore)) writeFileSync(ignore, 'sets/\ntaste/\nstrikes/\nqueues/\ndialog-applies/\n');
   return { dir: root, created, ...(parent ? { shadows: parent } : {}) };
 }
 

@@ -51,7 +51,7 @@ function legendOf(stats: VerseStats, wantShown: boolean): string[] {
   ];
   return [
     'Stress: 1 stressed, 2 secondary, 0 unstressed, ? flexible (one-syllable words) or unknown (guessed words); only multi-syllable words show real stress.',
-    'Scheme counts perfect and identity rhymes; near also counts assonance and consonance (slant rhymes).',
+    'Scheme counts perfect and identity rhymes; near also counts family, assonance and consonance (slant rhymes).',
     ...(parts.length ? [`Declared pattern: ${parts.join('; ')}.`] : []),
   ];
 }

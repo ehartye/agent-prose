@@ -1,4 +1,5 @@
 import { ProseError } from './errors.ts';
+import type { Foot } from './verse/meter.ts';
 
 /**
  * An author-declared syllable pattern and rhyme scheme for a verse draft (words written for an existing tune or hymn
@@ -7,9 +8,9 @@ import { ProseError } from './errors.ts';
  */
 export type SyllablePattern = number[] | Record<string, number[]>;
 export type SchemePattern = string | Record<string, string>;
-export interface Declared { syllables: SyllablePattern | null; scheme: SchemePattern | null }
+export interface Declared { syllables: SyllablePattern | null; scheme: SchemePattern | null; meter?: { foot: Foot; feet: number } }
 
-const SYLLABLES_HINT = 'syllables accepts a list [8, 6, 8, 6], a string "8.6.8.6", "8 6 8 6" or "8,6,8,6", or a map by section: {verse: [8, 6, 8, 6], chorus: [7, 7, 8]}';
+const SYLLABLES_HINT = 'syllables accepts a list [8, 6, 8, 6], a string "8.6.8.6", "8 6 8 6" or "8,6,8,6", aliases "CM"/"8686", double notation "8.7.8.7.D", or a map by section: {verse: [8, 6, 8, 6], chorus: [7, 7, 8]}';
 const SCHEME_HINT = 'scheme accepts one letter per line as a string ("abcb", "xaxa"; x is an unconstrained line), or a map by section: {verse: abcb, chorus: aabb}';
 
 const isMap = (raw: unknown): raw is Record<string, unknown> => typeof raw === 'object' && raw !== null && !Array.isArray(raw);
@@ -20,6 +21,12 @@ function oneSyllables(raw: unknown, pointer: string): number[] {
   let items: unknown[];
   if (Array.isArray(raw)) items = raw;
   else if (typeof raw === 'string') {
+    const notation = raw.trim().toUpperCase();
+    if (notation === 'CM' || notation === '8686') return [8, 6, 8, 6];
+    if (/\.D$/.test(notation)) {
+      const pattern = oneSyllables(notation.slice(0, -2), pointer);
+      return [...pattern, ...pattern];
+    }
     items = raw.trim() === '' ? [] : raw.trim().split(/[\s.,]+/);
     const bad = items.find(t => typeof t === 'string' && !/^\d+$/.test(t));
     if (bad !== undefined) throw fail('syllables', pointer, `${bad === '' ? 'has an empty count (a trailing separator?)' : `has ${JSON.stringify(bad)}, which is not a whole number`}; separate counts with . , or a space, such as "8.6.8.6"`);
@@ -52,11 +59,22 @@ function read<T>(key: 'syllables' | 'scheme', raw: unknown, one: (v: unknown, po
   return out;
 }
 
-/** The declared pattern from a document's metadata; null when neither key is present. Throws E_SCHEMA when one is malformed. */
+/** Declared counts, rhyme scheme and optional textual meter; null when absent. Throws E_SCHEMA when malformed. */
 export function readDeclared(meta: Record<string, unknown>): Declared | null {
   const syllables = read('syllables', meta.syllables, oneSyllables) as SyllablePattern | null;
   const scheme = read('scheme', meta.scheme, oneScheme) as SchemePattern | null;
-  return syllables === null && scheme === null ? null : { syllables, scheme };
+  let meter: Declared['meter'];
+  if (meta.meter != null) {
+    const raw = meta.meter;
+    if (!isMap(raw) || !['iamb', 'trochee', 'anapest', 'dactyl', 'common'].includes(String(raw.foot)) ||
+      typeof raw.feet !== 'number' || !Number.isInteger(raw.feet) || raw.feet < 1) {
+      throw new ProseError('E_SCHEMA', 'meter: needs a known foot and a positive whole-number feet count', {
+        pointer: '/meter', hint: 'meter: {foot: iamb, feet: 5}; feet: iamb, trochee, anapest, dactyl, common. Textual scansion is advisory, not alignment with music.',
+      });
+    }
+    meter = { foot: raw.foot as Foot, feet: raw.feet };
+  }
+  return syllables === null && scheme === null && !meter ? null : { syllables, scheme, ...(meter ? { meter } : {}) };
 }
 
 /** The pattern as the author would write it: `8.6.8.6`, `xaxa`, or `verse 8.6.8.6; chorus 7.7.8`. */

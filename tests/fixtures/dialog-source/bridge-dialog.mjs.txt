@@ -1,0 +1,115 @@
+// Bridge crew dialog as data, shaped for the planned dialog contract (wiki: dialog-tiers-and-contracts).
+// Every line: id, speaker, tier ('story' | 'info'), text, optional variants.
+// A condition is {flag:'coreRepaired'} (a chapter flag) and/or {stage:[...]} (a propulsion stage, see bridgeStage in bridge.mjs)
+// and/or {gifted:'cap'} (the Overseer has given that robot a treat, see treats.mjs).
+// The first variant whose condition holds replaces text. Voices: docs/voice/bridge-crew.md. Keep texts plain ASCII.
+export const SPEAKERS=['tally','vector','cap','overseer'];
+export const TIERS=['story','info'];
+export const LINE_MAX=150;
+export const LABEL_MAX=30;
+export const SCENE_BEATS=[3,6];
+export const MIN_TOPICS=3;
+export const MAX_TOPICS=5;
+
+export const STATUS_LINES={
+  staffed:'The robot watch runs the ship. The humans run the growing. Each department files the other under "supporting".',
+};
+
+// Contract fields (src/dialog-contract.mjs): voice key (docs/voice page), one fallback line per tier, sceneQuest and topic quest ids from STORY_QUESTS.
+export const BRIDGE_DIALOG={
+ tally:{
+  headline:'TALLY-4, filing.',voice:'bridge-crew',sceneQuest:'c1.*',
+  fallback:{story:'File it and I will get to it. I always get to it.',quest:'No open requests. Suspicious. Check the other forms.',info:'Nothing on that. I could invent a form for it.'},
+  arrivalLine:{id:'tally.arrival',speaker:'tally',tier:'story',text:'Awake. Filing the awakening. Invoice to follow.'},
+  intro:{id:'tally.intro',speaker:'tally',tier:'info',text:'Cargo discipline is restored. The humans still call inventory lunch. Unlike the humans, my records survive vacuum, spills and soup.'},
+  scene:[
+   {id:'tally.scene.1',speaker:'tally',tier:'story',text:'TALLY-4, cargo clerk, awake and filing. My ledger has the landing craft grounded, pending six fasteners. That requisition is a generation old.'},
+   {id:'tally.scene.2',speaker:'overseer',tier:'story',text:"Your ledger is a generation behind. The fasteners went in and the lander's serviced. Check the dock log before you embarrass the paper.",
+    variants:[{id:'tally.scene.2#core',when:{flag:'coreRepaired'},text:"Your ledger is a generation behind. The lander's serviced and the core is mended. Check the dock log before you embarrass the paper."}]},
+   {id:'tally.scene.3',speaker:'tally',tier:'story',text:'Verified. Requisition closed. I would like it noted that closing it produced a feeling. Filing the feeling under "Completed."'},
+   {id:'tally.scene.4',speaker:'overseer',tier:'story',text:'Does the feeling get its own form, or are you billing it by the hour?'},
+   {id:'tally.scene.5',speaker:'tally',tier:'story',text:'Form 7-F, Emotions, Minor, in duplicate. You may witness it. The fee is waived this once. Wing nuts are accepted in lieu of gratitude.'},
+  ],
+  topics:[
+   {id:'tally.topic.requisitions',speaker:'tally',tier:'story',quest:['c1.*','c2.*'],label:'Open requisitions',
+    text:'One open: propulsion core lining, grown and not bought. I have no form for grown. I am drafting one. It has a section for soil.',
+    variants:[
+     {id:'tally.topic.requisitions#maneuver',when:{flag:'maneuverSeen'},text:'All local requisitions closed. Open: Brindle Reach, supplies unknown, route unknown. Filed under "Ambitious."'},
+     {id:'tally.topic.requisitions#core',when:{flag:'coreRepaired'},text:'Core lining: closed. Open: the first maneuver, pending Mara. I have never wanted a signature so much.'},
+    ]},
+   {id:'tally.topic.paperwork',speaker:'tally',tier:'info',label:'Why the paperwork?',
+    text:'A nut may be a snack or a structural fastener. Until it declares its intentions, I prepare both forms. Humans eat first and file never.'},
+   {id:'tally.topic.worth',speaker:'tally',tier:'info',label:'What is in it for you?',
+    text:'Satisfaction. Also fasteners. A neat coil of cable files itself. Spare circuit boards make me almost warm. This is not a hint. It is a hint.'},
+   {id:'tally.topic.donations',speaker:'tally',tier:'info',when:{gifted:'tally'},label:'About those gifts',
+    text:'You have given this department gifts. I opened a file. The file has a tab. The tab reads "Suspiciously Nice." Please do not make me close it.'},
+  ],
+ },
+ vector:{
+  headline:'VECTOR-2, on heading.',voice:'bridge-crew',sceneQuest:['c1.*','c2.*'],
+  fallback:{story:'No new bearing. I will not invent one.',quest:'No side routes charted. I do not guess at detours.',info:'Outside my data. I decline to estimate.'},
+  arrivalLine:{id:'vector.arrival',speaker:'vector',tier:'story',text:'Online. Position exact. Organics: unverified.'},
+  intro:{id:'vector.intro',speaker:'vector',tier:'info',text:'Navigation standing by. Agricultural command has requested a route with good drainage. I have logged it as a joke. Please confirm.'},
+  scene:[
+   {id:'vector.scene.1',speaker:'vector',tier:'story',text:'VECTOR-2, navigator. My charts show the Brindle Reach lane open, two days out. I do not guess, so that is a fact.'},
+   {id:'vector.scene.2',speaker:'overseer',tier:'story',text:'A fact with a generation of dust on it. That lane failed and Brindle Reach is waiting on us. Refresh your charts.',
+    variants:[{id:'vector.scene.2#cruising',when:{stage:['cruising']},text:'A fact with a generation of dust on it. That lane failed, we are bound for Wayfarer Relay, and Brindle Reach is waiting. Refresh your charts.'}]},
+   {id:'vector.scene.3',speaker:'vector',tier:'story',text:'Refreshing... confirmed. The lane is gone. Distance to Brindle Reach: unknown. I decline to estimate it.'},
+   {id:'vector.scene.4',speaker:'overseer',tier:'story',text:"A rough number would do. Nobody's grading."},
+   {id:'vector.scene.5',speaker:'vector',tier:'story',text:'I am. Rough numbers become coordinates, and coordinates become incidents. Authorize a survey and I will give you an exact one.'},
+  ],
+  topics:[
+   {id:'vector.topic.report',speaker:'vector',tier:'story',quest:['c1.*','c2.*'],label:'Navigation report',
+    text:'The core can support our first maneuver. Interstellar routes still need surveying. I will not substitute confidence for coordinates.',
+    variants:[
+     {id:'vector.topic.report#cruising',when:{stage:['cruising']},text:'Sustained cruise confirmed. The next local relay lies ahead. Brindle Reach remains beyond this system; I will not confuse progress with arrival.'},
+     {id:'vector.topic.report#limited',when:{stage:['limited']},text:'Departure successful. Continuing is under review. The core is sound; thermal transfer needs attention before a sustained burn.'},
+     {id:'vector.topic.report#maneuver',when:{stage:['maneuver']},text:'First maneuver logged. Long-range routes still need surveying. Until then I hold an exact bearing on the greenhouse.'},
+    ]},
+   {id:'vector.topic.scanners',speaker:'vector',tier:'info',label:'Anything on the scanners?',
+    text:'One rotating object, six centimetres across, plus or minus half a millimetre. Threat: airborne tomato. Collision avoidance has been informed.'},
+   {id:'vector.topic.guess',speaker:'vector',tier:'info',label:'Why not just guess?',
+    text:'A guess is a coordinate with confidence and no evidence. Organics run on those. Precision is a service; a good coil of cable sharpens my tolerances.'},
+   {id:'vector.topic.outside',speaker:'vector',tier:'info',label:'What is out there?',
+    text:'Vacuum, mostly. We survive it unassisted. Organics need an atmosphere and a hat. Cinder has ash and a sincere wind. Shelter the seedlings.'},
+   {id:'vector.topic.gifts',speaker:'vector',tier:'info',when:{gifted:'vector'},label:'About the gifts',
+    text:'Gifts received: logged. Motive: unknown. I decline to estimate it. My tolerances are measurably better. Coincidence: unverified.'},
+  ],
+ },
+ cap:{
+  headline:'CAP-0, on watch.',voice:'bridge-crew',sceneQuest:'c2.*',
+  fallback:{story:'Nothing new. Try not to fix that on your own.',quest:'No side orders. Enjoy it. It will not last.',info:'No comment. Formally and informally.'},
+  arrivalLine:{id:'cap.arrival',speaker:'cap',tier:'story',text:'The watch is awake. Try not to leak on anything.'},
+  intro:{id:'cap.intro',speaker:'cap',tier:'info',text:'The watch is at full readiness. The human contingent is at full compost. Coordination is excellent, provided nobody coordinates.'},
+  scene:[
+   {id:'cap.scene.1',speaker:'cap',tier:'story',text:"Well, if it isn't the head dirt-dwelling meatbag... I mean, good morning, Overseer. How can we help you?"},
+   {id:'cap.scene.2',speaker:'overseer',tier:'story',text:'Morning, Cap. Ship to run, plants to save. Join the endeavor, or shall I leave a note?'},
+   {id:'cap.scene.3',speaker:'cap',tier:'story',text:'Ah yes, let me take a break from protecting the precious organics from the vacuum of space to feign interest in your endeavor.'},
+   {id:'cap.scene.4',speaker:'overseer',tier:'story',text:"You're dating yourself. Humans perfected manners in artificials a while ago. Your programmer must have been a real people person."},
+   {id:'cap.scene.5',speaker:'cap',tier:'story',text:'Filed as accurate. Formally: we are not going anywhere with the core in that shape. Last time it flexed, we lost a deck and a vending machine.'},
+   {id:'cap.scene.6',speaker:'overseer',tier:'story',text:"Somebody's behind on their ship-mail, eh, sleepyhead? Check your diagnostics."},
+  ],
+  closer:{id:'cap.scene.closer',speaker:'cap',tier:'story',
+   text:'Reading... lining fitted, maneuver logged. You moved my ship without me. Formally: the core is sound. Thanks accepted in circuit boards.',
+   variants:[
+    {id:'cap.scene.closer#cruising',when:{stage:['cruising']},text:'Reading... core sound, cruise sustained, Wayfarer Relay ahead. We are cruising and I am the last to know. Fine. Formally: carry on.'},
+    {id:'cap.scene.closer#limited',when:{stage:['limited']},text:'Reading... core sound, cooling limited, departure logged. We left without me. Fine. Formally: carry on, with caution.'},
+   ]},
+  topics:[
+   {id:'cap.topic.status',speaker:'cap',tier:'story',quest:'c2.*',label:'Watch status',
+    text:'Core sound. Last I remember it was not. One maneuver logged. I am told a generation passed. I am treating it as a long shift.',
+    variants:[
+     {id:'cap.topic.status#cruising',when:{stage:['cruising']},text:'Sustained cruise toward Wayfarer Relay. The precious organics are fine. I checked. Twice. For no reason.'},
+     {id:'cap.topic.status#limited',when:{stage:['limited']},text:'Core sound, cooling limited. Short cooled maneuvers only. I would like it noted that I said "limited" first.'},
+    ]},
+   {id:'cap.topic.orders',speaker:'cap',tier:'info',label:'Standing orders',
+    text:'Keep our people safe. Keep the lanes clear. Never interrupt a harvest with a drill. Underlined twice. Enthusiasm is billable, in circuit boards.'},
+   {id:'cap.topic.command',speaker:'cap',tier:'info',label:'Who is in command?',
+    text:'You set our purpose. We keep the ship ready. I requested a ceremonial hat; Pip issued a colander. Its ventilation exceeds specification.'},
+   {id:'cap.topic.humans',speaker:'cap',tier:'info',label:'Why guard the humans?',
+    text:'You know WE can survive in space. Organics leak, bruise and need air every few minutes. Someone has to hold the door. Strictly professional.'},
+   {id:'cap.topic.bribes',speaker:'cap',tier:'info',when:{gifted:'cap'},label:'Is that a bribe?',
+    text:'Bribery is a strong word. I prefer unsolicited morale. Formally, I did not ask. Informally, my left pocket is open. Do not read into that.'},
+  ],
+ },
+};

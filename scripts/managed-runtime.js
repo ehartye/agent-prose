@@ -6,6 +6,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
+import { createRequire } from 'node:module';
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { closeSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 
@@ -110,7 +111,23 @@ const node = (root, code) => execFileSync(process.execPath, ['--input-type=modul
 export function checkDependencies(root) {
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 24) throw new Error(`agent-prose runs TypeScript directly and needs Node 24 or newer; this is Node ${process.versions.node}`);
-  node(root, "await import('zod'); await import('commander'); await import('yaml');");
+  node(root, "await import('zod'); await import('commander'); await import('yaml'); await import('markdown-it'); await import('playwright'); await import('acorn');");
+}
+
+/** Only --pdf setup installs the pinned package's paired headless shell. */
+export function installPdfBrowser(root, { home = managedHome() } = {}) {
+  const require = createRequire(join(root, 'package.json'));
+  const cli = join(dirname(require.resolve('playwright/package.json')), 'cli.js');
+  execFileSync(process.execPath, [cli, 'install', 'chromium', '--only-shell'], {
+    cwd: root, windowsHide: true, stdio: ['ignore', 2, 2], timeout: 300_000,
+    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: join(home, 'browsers') },
+  });
+  return inspectPdfBrowser(root, { home });
+}
+
+export function inspectPdfBrowser(root, { home = managedHome() } = {}) {
+  const path = node(root, `const {browserExecutable}=await import('./src/render/pdf.ts'); console.log(browserExecutable(${JSON.stringify(join(home, 'browsers'))}));`);
+  return { installed: existsSync(path), executable: path, repair: 'node scripts/setup.js --pdf' };
 }
 
 export function installRuntime(source, { home = managedHome(), npm = runNpm, checkDependencies: check = checkDependencies } = {}) {

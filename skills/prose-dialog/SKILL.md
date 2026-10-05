@@ -27,6 +27,9 @@ what lint checks. Run `prose guide` to list every guide.
 
 ## Before writing
 
+For existing game source, read [source round trips](references/roundtrip.md): import supported static data,
+review one identified slot, and apply recorded picks through a digest-guarded plan with undo.
+
 1. **List the states the conversation can open in** — quest not started, offered, refused, active,
    complete, failed — including states other systems test (a bark that checks
    `state != complete` means `complete` is reachable). Every state needs an entry path, and the
@@ -58,6 +61,9 @@ For many lines to judge at once, use the prose-review-batch skill.
 2. Work through the `judgement` list lint prints, one rule at a time.
 3. Run `prose measure <file>` and report: nodes, choices, bark pools, the longest line in
    characters against the box, and total recorded voice-over in minutes.
+
+Use `prose dialog repetition <files...>` for exact repetition across files and speakers; inspect
+intentional catchphrases separately. Source imports preserve metadata in their sidecar, not in the review graph.
 
 Never write "every line fits" or "all branches connect" without the lint run that shows it. If
 the CLI cannot run in this environment, check by hand — count each line's characters against the

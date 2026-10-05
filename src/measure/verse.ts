@@ -55,14 +55,14 @@ export interface VerseStats {
   stanzas: Array<{ section: string | null; start: number; count: number }>;
   count: { lines: number; stanzas: number };
   syllables: { mean: number; sd: number; min: number; max: number };
-  /** End-rhyme letters over all lines (identity and perfect), and also counting assonance and consonance. */
+  /** End-rhyme letters over all lines (identity and perfect), and also counting family, assonance and consonance. */
   scheme: string;
   nearScheme: string;
   /** Rhymed pairs of lines, as indexes into `lines`. */
   pairs: RhymePair[];
   /** Exact repeated lines (lowercase, punctuation stripped) with their source line numbers. */
   repeats: Array<{ text: string; lines: number[] }>;
-  /** Present only when the form declares meter; `line` indexes into `lines`. */
+  /** Present when the form or author declares textual meter; `line` indexes into `lines`. */
   meter: MeterLine[] | null;
   /** Word counts by pronunciation source across the whole text. */
   trust: { dict: number; affix: number; guessed: number; words: number };
@@ -258,7 +258,8 @@ export function measureVerse(doc: Doc, form: Form): VerseStats | null {
     nearScheme: rhyme.nearScheme,
     pairs: rhyme.pairs,
     repeats: repeatsOf(lines),
-    meter: def.meter ? checkMeter(analyses, def.meter, feetPerLine(def, spans, analyses.length)) : null,
+    meter: declared?.meter ? checkMeter(analyses, declared.meter)
+      : def.meter ? checkMeter(analyses, def.meter, feetPerLine(def, spans, analyses.length)) : null,
     trust: { dict: count('dict'), affix: count('affix'), guessed: count('guessed'), words: sources.length },
     markup,
     directions,

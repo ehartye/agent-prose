@@ -19,6 +19,8 @@ Every command prints JSON (except `--help` and `--version`); failures print `{"e
 
 Run `/agent-prose:prose-setup` after every install or update; it installs the managed runtime
 (Node 24+ required). From a clone, `node scripts/setup.js` does the same.
+For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headless Chromium;
+`--check --pdf --json` verifies it. HTML, Markdown and dialogue JSON exports need no browser.
 
 ## Skills
 
@@ -47,6 +49,12 @@ Run `/agent-prose:prose-setup` after every install or update; it installs the ma
 | `prose parse <file>` | the block IR with source line numbers |
 | `prose measure <file>` | style, lexicon, spoken, script, dialog and per-speaker features |
 | `prose lint <file>` | errors, warnings, info and the judgement rules for the draft's form |
+| `prose render <file> --to pdf\|html\|md\|json --out <new-path> [--tts openai --audio-out <new.wav> --voice <id>]` | offline reading copies or dialogue JSON with a manifest; explicit cloud audio is AI-generated PCM/WAV |
+| `prose dialog import <source> --out <draft.dialog.yaml> --manifest <manifest.json> [--root <source-root>]` | statically extract supported game dialogue into a review draft and source identity sidecar |
+| `prose dialog review <draft> --manifest <manifest> --id <slot> [--directions <csv>]` | create a source-bound set that permits edits only to that slot's text |
+| `prose dialog apply --manifest <manifest> --sets <csv> [--confirm <digest>] [--dir <project>]` | dry-run exact picked changes, then apply the matching digest through a recovery journal |
+| `prose dialog undo --id <apply-id>` / `prose dialog recover --id <apply-id> --mode complete\|restore` | restore unchanged outputs or recover interrupted writes; both accept `--dir` |
+| `prose dialog repetition <files...> [--dir <project>]` | report exact repetitions across drafts or manifests, including cross-speaker reuse and configured catchphrases |
 | `prose audit <file> [--form <id>] [--text]` | hard artifacts (leaked chat markup, chat residue), phrasing or structure hallmarks some readers associate with AI-generated text, by family (including stock openers, announcement and roadmap sentences, "dive in", "whether you're", "worth noting", marketing verbs, a restating closer and dense lists of three) with its evidence tier, a reason and a revision direction, and measured context (em dashes, sentence variation, lists of three); findings only, never a verdict on who wrote it; verse forms are skipped |
 | `prose scan <file> [--form <id>] [--text] [--words]` | syllables, stress, rhyme scheme and meter of a verse draft (US English pronunciations; JSON, or `--text` for a table) |
 | `prose pronounce <word...>` | the dictionary pronunciation, syllables, stress and rhyme key of each word, with its source (dict, affix or guessed) |
@@ -164,9 +172,9 @@ the registered projects, so the link the owner was given works again after the n
 append-only `events.jsonl`, `reveal.json`); each draft's strikes are an append-only log in `.agent-prose/strikes/<key>/`. The per-user `server.json` in `~/.agent-prose` holds the access token and
 the registered projects (`AGENT_PROSE_HOME` moves it).
 
-**Not included.** No cloud text-to-speech (the browser's voice only; cloud audio belongs to the planned render command).
+The reading page uses the device's voice. Cloud audio is a separate, explicit render operation.
 
-`prose init` writes `.agent-prose/.gitignore` so sets, taste data, review queues and strike logs (which hold struck text) stay out of version control (an existing project keeps its own file: add `strikes/` and `queues/` to it);
+`prose init` writes `.agent-prose/.gitignore` so sets, taste data, review queues, strike logs and dialogue apply journals stay out of version control (an existing project keeps its own file: add `strikes/`, `queues/` and `dialog-applies/` to it);
 voice bibles stay trackable. Per-user taste logs live under `~/.agent-prose/taste` (override with
 `AGENT_PROSE_HOME`). `AGENT_PROSE_HOME` moves both the managed runtime and the taste logs; to reinstall,
 remove `releases/<key>`, not the directory: it also holds your taste history.
@@ -192,6 +200,25 @@ Trimmed output of the set commands (paths and long fields shortened):
 { "sessions": 1, "agent": { "predicted": 1, "hits": 1, "shortlistHits": 1, "voided": 0, "rate": 1 },
   "recent": { "window": 10, "agentRate": 1 }, "verdicts": { "project": { "rows": 2 }, "global": { "rows": 2 } } }
 ```
+
+## Reading copies and source round trips
+
+`prose render speech.md --to pdf --out speech-reading.pdf` creates a formatted reading copy.
+Fountain supports PDF/HTML; Markdown supports PDF/HTML/Markdown; dialogue YAML supports JSON with
+an `<out>.manifest.json` sidecar. Exports refuse existing paths and source aliases, and recover interrupted
+publication without overwriting unrelated changes. Speech copies include breath cues and per-page
+timing estimates. Multi-camera dialogue is double-spaced; stage timing remains provisional.
+
+Cloud audio is opt-in: add `--tts openai --audio-out speech.wav` to a PDF/HTML render and set
+`OPENAI_API_KEY`. Spoken text is sent to OpenAI and WAV metadata labels the result AI-generated.
+Chunking may introduce seams, and print duration is not measured audio duration. The fixed
+`gpt-4o-mini-tts-2025-12-15` provider snapshot is scheduled to shut down January 6, 2027; migrating
+to its Realtime replacement requires a separate integration. See [OpenAI's deprecation notice](https://developers.openai.com/api/docs/deprecations).
+
+For existing game data, [the source round-trip workflow](skills/prose-dialog/references/roundtrip.md)
+keeps gameplay metadata in a hashed sidecar, accepts only recorded picks and edits only selected text.
+Source changes require a fresh import. Run the game's own contract validators after applying changes.
+Numerical direction scores on short lines and fitted voice ranges are provisional; the owner judges quality.
 
 ## Draft formats
 
@@ -332,7 +359,7 @@ are timed by pages, so `wpm` there is an error. A bad `project.json` is `E_SCHEM
 
 ## Rules and citations
 
-`prose rules` lists 55 rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
+`prose rules` lists the craft rules, each tied to a source. Citations are in [REFERENCES.md](REFERENCES.md)
 and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Craft guides
@@ -350,7 +377,9 @@ A craft reference guide for each family of forms lives in `craft/guides/`, and `
 
 ## Roadmap
 
-Shipped: the LAN reading page with duels and read-aloud, and the taste model (summary, sealed model prediction, uncertainty-chosen duels). Planned next: PDF and reading-copy rendering. See [the design spec](docs/superpowers/specs/2026-10-02-agent-prose-design.md).
+Shipped: the LAN reading workspace, taste model, offline reading-copy rendering with opt-in cloud audio,
+guarded game dialogue source round trips, and the craft-guide corrections. Linux CLI skill evaluations
+in CI remain on the roadmap. See [the implementation design](docs/superpowers/specs/2026-10-04-roadmap-render-dialog-fixes-design.md).
 
 ## Acknowledgements
 

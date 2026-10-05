@@ -76,7 +76,7 @@ The engine can check line and stanza counts, end-rhyme groups, the haiku's soft 
 the draft declares, villanelle refrains, the sestina's rotation and envoi, a polysyllable's stress against its slot
 (advisory), and which words are guessed or ambiguous. It cannot judge whether the poem is good, an image fresh, a
 break earned, or where the turn falls; it does not check the ballad's stress count, kigo, the cut or the limerick's
-twist or how the poem sounds aloud, and it does not flag a sonnet line of the wrong length (see the meter part).
+twist or how the poem sounds aloud. Known meter lengths use the scansion fit rules (see the meter part).
 
 ## Anatomy and conventions
 
@@ -114,11 +114,11 @@ line may drop its first weak syllable, and nothing is above `info`. It runs for 
 and 5, two on 3 and 4) and both sonnets (five iambs). In the scan's stress column `1`, `2` and `0` are stressed,
 secondary and unstressed, and `?` a one-syllable or guessed word.
 
-Measured here: the engine does not compare a sonnet or limerick line's length with its meter. A fourteen-line draft in
-eight-syllable lines lints with no findings as a Petrarchan sonnet, so read the `syl` column (10, or 11 with a
-feminine ending, for pentameter). To make lint count, declare `syllables: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
-10, 10, 10]` in the frontmatter and write the sonnet as one block with no blank lines. A declared pattern is the
-author's own requirement, so a miss is a warning, and a line of 11 syllables is a miss.
+Measured here: a fourteen-line Petrarchan draft in eight-syllable lines now draws fourteen meter-length warnings.
+Without declared counts, sonnets allow 10 syllables or 11 with a feminine ending; limericks use their line-specific
+feet and permit a headless anapest. These use the same fit as advisory scansion, with pronunciation caveats.
+An explicit `syllables` pattern takes precedence: declare fourteen 10s in one stanza to require exactly 10,
+or a section map for labelled sections. Such a pattern is the author's requirement, and an 11-syllable line misses it.
 
 ### Rhyme: types, and the classes this plugin uses
 
@@ -678,17 +678,17 @@ and the owner.
 | `ai.artifact` | No leaked chatbot markup or unfilled placeholders. | error | none | n/a | lint |
 | `draft.placeholders` | Bracketed placeholders are listed until filled. | info | none | n/a | lint |
 | `ai.vocabulary` | Three or more distinct era-tagged AI vocabulary terms in one draft are flagged. | warn | 3 distinct terms | This plugin's choice (derived) | lint |
-| `length.target` | A draft with a declared target lands within ±10% of it. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
+| `length.target` | A draft with a declared target lands within ±10% of it; page-derived script minute targets use the provisional ±20% timing band. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
 | `voice.targets` | Each voiced speaker's measured style stays inside the voice bible's target ranges. | warn | none | n/a | lint |
 | `voice.bible-valid` | Every voice bible in the project loads: valid YAML and schema, id matching the file name, unique ids, and each speaker claimed by one bible. | error | none | n/a | lint |
 | `voice.banned` | A speaker never uses a word their voice bible bans. | warn | none | n/a | lint |
 | `voice.unvoiced` | In a project with voice bibles, every speaker resolves to one. | info | none | n/a | lint |
 | `verse.form.line-count` | The form fixes the line count: sonnet 14, villanelle 19, sestina 39, limerick 5, haiku 3, and ballad stanzas of 4. | warn | none | n/a | lint |
 | `verse.form.rhyme-scheme` | End rhymes follow the scheme, the form's or the one the draft declares in its frontmatter (a letter per line, x for an unconstrained line): each rhyme group matches its first line. | warn | none | n/a | lint |
-| `verse.form.syllables` | Each line fits the syllable pattern: the haiku's 5, 7, 5 (soft, info), or one the draft declares in its frontmatter for a tune or hymn meter such as 8.6.8.6 (the author's own requirement, warn). | warn | none | n/a | lint |
+| `verse.form.syllables` | Each line fits a declared syllable pattern, the form's known meter length with tolerated variation, or the soft haiku count. | warn | none | n/a | lint |
 | `verse.form.refrain` | Villanelle refrains repeat verbatim at the required lines (A1 at 1, 6, 12, 18; A2 at 3, 9, 15, 19). | warn | none | n/a | lint |
 | `verse.form.end-words` | Sestina stanzas rotate the first stanza's six end words in the fixed order, and the envoi holds all six. | warn | none | n/a | lint |
-| `verse.meter.deviation` | Lines where a polysyllabic word's stress contradicts its slot in the form's meter are listed (advisory). | info | none | n/a | lint |
+| `verse.meter.deviation` | Lines where a polysyllabic word's stress contradicts its slot in the form's or author's declared textual meter are listed (advisory). | info | none | n/a | lint |
 | `verse.pronunciation.guessed` | Words missing from the pronouncing dictionary are listed; verdicts on their lines are weaker. | info | none | n/a | lint |
 | `verse.pronunciation.ambiguous` | Words with several pronunciations are listed only where the reading matters: an end word whose rhyme depends on it, or a word that decides whether a line fits a declared syllable or meter count. | info | none | n/a | lint |
 | `verse.rhyme.every-line` | Free verse of six or more lines where every end word rhymes with another line is flagged as a sameness signal. | info | 6 lines | This plugin's choice (derived) | lint |

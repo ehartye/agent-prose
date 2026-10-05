@@ -8,7 +8,8 @@ import { letterKey, rhymeAnchors, type Pronunciation } from './pronounce.ts';
  *   identity    the same normalised word. Words that sound alike from the stressed vowel on AND share the onset
  *               (bare/bear) are also reported as identity: nothing new is rhymed.
  *   perfect     same phones from the last stressed vowel to the end (`variantKeys`) and a different onset.
- *   assonance   same stressed vowel (first element of the rhyme key), different tail.
+ *   family      same stressed vowel and different onset, with related equal-length codas by manner (Pattison convention).
+ *   assonance   same stressed vowel (first element of the rhyme key), unrelated tail.
  *   consonance  same non-empty tail after the stressed vowel, different vowel.
  *   eye         the words share their last 3 or more letters (case-insensitive) but are not identity or perfect, AND
  *               sound gives no better class than assonance, consonance or none, AND the shared spelling is more than a
@@ -31,11 +32,18 @@ import { letterKey, rhymeAnchors, type Pronunciation } from './pronounce.ts';
  * Guessed words have only a letters-based key; a guessed word is compared with letter keys on both sides (the
  * dictionary word's key is rebuilt from its spelling), and a match is at best perfect with `uncertain: true`.
  */
-export type RhymeClass = 'identity' | 'perfect' | 'assonance' | 'consonance' | 'eye' | 'none';
+export type RhymeClass = 'identity' | 'perfect' | 'family' | 'assonance' | 'consonance' | 'eye' | 'none';
 
 export interface RhymePair { a: number; b: number; class: RhymeClass; uncertain: boolean }
 
-const CLASS_RANK: Record<RhymeClass, number> = { identity: 5, perfect: 4, assonance: 3, consonance: 2, eye: 1, none: 0 };
+const CLASS_RANK: Record<RhymeClass, number> = { identity: 6, perfect: 5, family: 4, assonance: 3, consonance: 2, eye: 1, none: 0 };
+
+// Pattison's examples pair stops (mud/truck), fricatives (love/blush) and nasals (strum/hung).
+// Equal-length codas whose corresponding consonants share manner are our conservative implementation of
+// his "phonetically related" convention, not a universal phonological definition of rhyme.
+const CODA_FAMILIES = [['P', 'B', 'T', 'D', 'K', 'G'], ['F', 'V', 'TH', 'DH', 'S', 'Z', 'SH', 'ZH'], ['M', 'N', 'NG']];
+const relatedCodas = (a: string[], b: string[]) => a.length > 0 && a.length === b.length &&
+  a.every((phone, i) => phone === b[i] || CODA_FAMILIES.some(f => f.includes(phone) && f.includes(b[i]!)));
 
 const lettersOf = (word: string) => word.toLowerCase().replace(/[^a-z]/g, '');
 
@@ -73,7 +81,7 @@ function keyClass(ka: string, kb: string, sameOnset: boolean): RhymeClass {
   if (ka === kb) return sameOnset ? 'identity' : 'perfect';
   const [va, ...ta] = ka.split(' ');
   const [vb, ...tb] = kb.split(' ');
-  if (va === vb) return 'assonance';
+  if (va === vb) return !sameOnset && relatedCodas(ta, tb) ? 'family' : 'assonance';
   if (ta.length > 0 && ta.join(' ') === tb.join(' ')) return 'consonance';
   return 'none';
 }
@@ -109,7 +117,7 @@ export function rhymeClass(a: Pronunciation, b: Pronunciation): { class: RhymeCl
 /**
  * Rhyme letters over end words. Letters are assigned in order of first appearance; a word joins the first group whose
  * first member it rhymes with (greedy against the group's first member, not union-find, so a chain a~b, b~c with a!~c
- * does not merge). `scheme` counts identity and perfect; `nearScheme` also assonance and consonance. A null end word is
+ * does not merge). `scheme` counts identity and perfect; `nearScheme` also family, assonance and consonance. A null end word is
  * '-' and takes no part in any pair. `pairs` lists every non-'none' pair of non-null end words, a < b.
  */
 export function scheme(endWords: Array<Pronunciation | null>): { scheme: string; nearScheme: string; pairs: RhymePair[] } {
@@ -136,5 +144,5 @@ export function scheme(endWords: Array<Pronunciation | null>): { scheme: string;
     }).join('');
   };
   const strict = (c: RhymeClass) => c === 'identity' || c === 'perfect';
-  return { scheme: letters(strict), nearScheme: letters(c => strict(c) || c === 'assonance' || c === 'consonance'), pairs };
+  return { scheme: letters(strict), nearScheme: letters(c => strict(c) || c === 'family' || c === 'assonance' || c === 'consonance'), pairs };
 }

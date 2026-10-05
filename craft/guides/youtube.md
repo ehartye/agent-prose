@@ -82,9 +82,9 @@ VO: Same dishwasher, same shelf, same load. One glass is fine. The other is ruin
 - **Labels are stripped.** `VO:`, `NARRATOR:`, `HOST:` and `VOICEOVER:` come off before counting.
 - **Notes and titles are not counted.** A paragraph that is only `[text in brackets]`, an HTML comment and a
   `#` heading are not speech.
-- **Ranges are minutes and seconds.** `0:00–0:06` works with an en dash, em dash or hyphen. A range written
-  with hours, such as `1:02:00–1:03:00`, is not read, and the segment is skipped without a warning; for a long
-  video write minutes past 59, as in `75:00–76:00`, and check the segments in `prose measure`.
+- **Ranges accept minutes or hours.** `0:00–0:06`, `75:00–76:00` and `1:02:00–1:03:00` work with an en dash,
+  em dash or hyphen. Seconds and hour-format minutes must be 00–59. Malformed ranges get a source-line
+  warning, and timestamps are stripped from spoken text. Check the segments in `prose measure`.
 
 `prose parse <file>` shows how each block was classified and on which line; `prose measure <file>` shows the
 spoken words, the estimated runtime and, per segment, the start, end, seconds, words and words per minute.
@@ -280,7 +280,9 @@ stays at 180. An invalid value stops the run with an error, because every figure
 
 **What `youtube.segment.pace` does.** For each timestamped segment it divides the spoken words by the
 segment's seconds and warns above 180 words per minute, saying how many words to cut. A segment whose end is
-not after its start gets a warning that it has no duration. Directions are not counted. The BBC recommends
+not after its start gets a warning that it has no duration. Source lines accept `m:ss` (minutes may exceed 99)
+or `h:mm:ss`; seconds and hour-format minutes must be 00–59, and malformed ranges warn at their source line.
+Timestamps and directions are not counted. The BBC recommends
 subtitles at 160 to 180 words per minute [20]; that is a subtitle reading speed, and the 180 cap on spoken
 segments is this plugin's own choice, made so that they can be captioned legibly. The rule does not say a
 segment is too slow, and passing it does not make a segment speakable: 170 words per minute in long sentences
@@ -572,7 +574,7 @@ script's surface; whether the opening keeps the promise is for the writer and th
 | `ai.vocabulary` | Three or more distinct era-tagged AI vocabulary terms in one draft are flagged. | warn | 3 distinct terms | This plugin's choice (derived) | lint |
 | `spoken.duration.report` | Spoken drafts report read-aloud time at the form's planning WPM. | info | none | n/a | lint |
 | `youtube.promise-delivery` | The first 30 seconds confirm the title and thumbnail promise, and the video delivers it. | warn | 30 seconds | A source's figure | judgement |
-| `length.target` | A draft with a declared target lands within ±10% of it. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
+| `length.target` | A draft with a declared target lands within ±10% of it; page-derived script minute targets use the provisional ±20% timing band. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
 | `youtube.segment.pace` | No timestamped segment runs faster than 180 words per minute. | warn | 180 wpm | This plugin's choice (derived) | lint |
 | `voice.targets` | Each voiced speaker's measured style stays inside the voice bible's target ranges. | warn | none | n/a | lint |
 | `voice.bible-valid` | Every voice bible in the project loads: valid YAML and schema, id matching the file name, unique ids, and each speaker claimed by one bible. | error | none | n/a | lint |

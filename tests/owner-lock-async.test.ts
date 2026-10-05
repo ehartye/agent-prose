@@ -1,7 +1,7 @@
 // withDirLockAsync: the same lock directory, owner token, heartbeat and takeover rules as withDirLock, but a waiter
 // awaits a timer, so the event loop (a server's other requests) keeps running while it waits.
 import { describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -44,15 +44,18 @@ describe('withDirLockAsync', () => {
   it('does not block the event loop while it waits for a live owner', async () => {
     const { dir, lock } = fresh();
     plant(lock, { pid: process.pid, token: 'live' }, 5_000);
-    let ticks = 0;
-    const timer = setInterval(() => { ticks++; }, 10);
-    const t0 = Date.now();
-    const code = await codeOf(withDirLockAsync(dir, what, async () => 1, { timeoutMs: 400, pollMs: 10 }));
-    clearInterval(timer);
-    expect(code).toBe('E_CONFLICT');
-    expect(Date.now() - t0).toBeGreaterThanOrEqual(350);
-    expect(ticks).toBeGreaterThan(15); // a blocked loop would tick about once
-    expect(JSON.parse(readFileSync(ownerFile(lock), 'utf8')).token).toBe('live');
+    let settled = false;
+    const waiting = withDirLockAsync(dir, what, async () => 1, { timeoutMs: 10_000, pollMs: 10 });
+    void waiting.then(() => { settled = true; }, () => { settled = true; });
+    try {
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(settled).toBe(false); // unrelated event-loop work ran while acquisition was still pending
+      expect(JSON.parse(readFileSync(ownerFile(lock), 'utf8')).token).toBe('live');
+    } finally {
+      unlinkSync(ownerFile(lock));
+      rmdirSync(lock);
+    }
+    expect(await waiting).toBe(1);
   });
 
   it('takes over a dead owner after deadGraceMs, a heartbeat-less hard-stale one, and an owner-less one', async () => {

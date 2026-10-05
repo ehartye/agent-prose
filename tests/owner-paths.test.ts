@@ -51,7 +51,7 @@ describe('project ignore file', () => {
     const dir = tmp('prose-ign-');
     initProject(dir, { home: tmp('prose-home-') });
     const file = join(dir, '.agent-prose', '.gitignore');
-    expect(readFileSync(file, 'utf8')).toBe('sets/\ntaste/\nstrikes/\nqueues/\n');
+    expect(readFileSync(file, 'utf8')).toBe('sets/\ntaste/\nstrikes/\nqueues/\ndialog-applies/\n');
     writeFileSync(file, 'sets/\n');
     initProject(dir, { home: tmp('prose-home-') });
     expect(readFileSync(file, 'utf8')).toBe('sets/\n');

@@ -551,7 +551,7 @@ is for the writer.
 | `draft.placeholders` | Bracketed placeholders are listed until filled. | info | none | n/a | lint |
 | `ai.vocabulary` | Three or more distinct era-tagged AI vocabulary terms in one draft are flagged. | warn | 3 distinct terms | This plugin's choice (derived) | lint |
 | `spoken.duration.report` | Spoken drafts report read-aloud time at the form's planning WPM. | info | none | n/a | lint |
-| `length.target` | A draft with a declared target lands within ±10% of it. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
+| `length.target` | A draft with a declared target lands within ±10% of it; page-derived script minute targets use the provisional ±20% timing band. | warn | 0.1 fraction | This plugin's choice (derived) | lint |
 | `voice.targets` | Each voiced speaker's measured style stays inside the voice bible's target ranges. | warn | none | n/a | lint |
 | `voice.bible-valid` | Every voice bible in the project loads: valid YAML and schema, id matching the file name, unique ids, and each speaker claimed by one bible. | error | none | n/a | lint |
 | `voice.banned` | A speaker never uses a word their voice bible bans. | warn | none | n/a | lint |

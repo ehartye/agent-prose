@@ -96,6 +96,7 @@ export const EVALUATORS: Record<string, Evaluator> = {
   ...VERSE_EVALUATORS,
 
   'youtube.segment.pace': ({ m, rule }) => m.segments.flatMap(s => {
+    if (s.invalid) return [{ message: `Segment ${s.start}–${s.end} has an invalid timestamp`, line: s.line, measured: s, fix: 'Use m:ss or h:mm:ss with seconds and hour-format minutes from 00 to 59.' }];
     if (s.seconds <= 0) return [{ message: `Segment ${s.start}–${s.end} has no duration`, line: s.line, measured: s, fix: 'Make the end timestamp later than the start.' }];
     if (rule.value === null || s.wpm <= rule.value) return [];
     return [{ message: `${s.start}–${s.end}: ${s.words} words in ${s.seconds} s is ${s.wpm} wpm (cap ${rule.value}); cut about ${s.words - Math.floor((rule.value * s.seconds) / 60)} words`, line: s.line, measured: s, fix: 'Cut words or widen the segment.' }];
@@ -104,7 +105,8 @@ export const EVALUATORS: Record<string, Evaluator> = {
   'length.target': ({ m, rule, doc }) => (m.target?.checks ?? []).flatMap(c => {
     if (c.measured === null) return [{ message: `Target is in ${c.unit}, but this form (${doc.form}) cannot measure ${c.unit}`, line: null }];
     const off = c.ratio! - 1;
-    if (rule.value === null || Math.abs(off) <= rule.value) return [];
+    const tolerance = c.unit === 'minutes' && m.script ? 0.2 : rule.value;
+    if (tolerance === null || Math.abs(off) <= tolerance) return [];
     const pct = `${off > 0 ? '+' : ''}${Math.round(off * 100)}%`;
     const verb = off > 0 ? 'cut' : 'add';
     const wpm = m.spoken?.wpm;
@@ -189,8 +191,9 @@ export const EVALUATORS: Record<string, Evaluator> = {
     line: null, measured: m.spoken,
   }],
 
-  'script.runtime.report': ({ m }) => !m.script ? [] : [{
-    message: `About ${m.script.pages} pages, ${m.script.minutes} min (range ${m.script.band[0]}\u2013${m.script.band[1]} min)`,
+  'script.runtime.report': ({ m, doc }) => !m.script ? [] : [{
+    message: `About ${m.script.pages} pages, ${m.script.minutes} min (range ${m.script.band[0]}\u2013${m.script.band[1]} min)` +
+      (doc.form === 'stage-play' ? '; provisional screenplay-layout timing; confirm with a measured rehearsal' : ''),
     line: null, measured: m.script,
   }],
 

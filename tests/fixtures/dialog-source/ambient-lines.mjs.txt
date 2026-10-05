@@ -1,0 +1,261 @@
+// Ambient speech content: who can speak, where they appear, and what they say when nobody has asked them anything.
+// Pure data (no DOM, no imports). src/ambient-speech.mjs chooses from it; src/ambient-bubbles.mjs draws it.
+// Voice rules live in docs/voice/bridge-crew.md (robots) and docs/ambient-speech.md (everyone else). In short:
+// cozy, never cruel; the player is "Overseer" or "you", never "he" or "she"; plain ASCII (the bitmap font has no
+// curly quotes); at most AMBIENT_LINE_MAX characters so a bubble stays small on a phone.
+//
+// The shapes follow docs/dialog-contract.md so a later phase can validate this file with validateContract:
+//   speaker = {id, name, role, kind:'character', portrait, voice}     (id /^[a-z][a-z0-9-]*$/, name <= 16, role <= 24)
+//   line    = {id, text, kind, places?, stages?, when?, near?, mood?}
+//     kind   'quip' | 'musing' | 'observation' | 'hum' | 'overseer' (a remark about the Overseer)
+//     places rooms/places the line fits: 'bridge' 'hub' 'kitchen' 'workshop' 'dock' 'cinder' 'rime' (default: everywhere the speaker stands)
+//     stages story chapters it fits: 'c0' the opening garden, 'c1' first propulsion, 'c2' a home in motion (default: all)
+//     when   a dialog-contract condition read against the game state ({flag:'motion.cruising'}), data only
+//     near   'player' (the speaker stands close to the player) or 'garden-ready' (a crop is ready to harvest)
+//     mood   'bright' (the first two thirds of the day) or 'quiet' (the evening)
+//   exchange = {id, a, b, lines:[{speaker,text},{speaker,text}], places?, stages?, when?}   two bubbles, one after the other
+
+export const AMBIENT_LINE_MAX = 96;
+export const KINDS = Object.freeze(['quip', 'musing', 'observation', 'hum', 'overseer']);
+export const PLACES = Object.freeze(['bridge', 'hub', 'kitchen', 'workshop', 'dock', 'cinder', 'rime']);
+export const STAGES = Object.freeze(['c0', 'c1', 'c2']);
+export const NEAR_TAGS = Object.freeze(['player', 'garden-ready']);
+export const MOODS = Object.freeze(['bright', 'quiet']);
+
+const ALL = ['c0', 'c1', 'c2'];
+const person = (id, name, role, appears) => Object.freeze({ id, name, role, kind: 'character', portrait: id, voice: `${id}-voice`, appears });
+
+// appears: where the world draws this speaker, and in which story stages they are there (the bridge robots wake at saved milestones).
+export const SPEAKERS = Object.freeze({
+  tally: person('tally', 'TALLY-4', 'Cargo clerk', [{ place: 'bridge', stages: ['c1', 'c2'] }]),
+  vector: person('vector', 'VECTOR-2', 'Navigator', [{ place: 'bridge', stages: ['c1', 'c2'] }]),
+  cap: person('cap', 'CAP-0', 'Watch coordinator', [{ place: 'bridge', stages: ['c2'] }]),
+  pip: person('pip', 'PIP', 'Cook', [{ place: 'kitchen', stages: ALL }]),
+  mara: person('mara', 'MARA', 'Shipwright', [{ place: 'workshop', stages: ALL }]),
+  sprocket: person('sprocket', 'SPROCKET', 'Farm droid', [{ place: 'hub', stages: ALL }]),
+  nine: person('nine', 'NINE', 'Field science', [{ place: 'hub', stages: ALL }, { place: 'cinder', stages: ['c1', 'c2'] }, { place: 'rime', stages: ['c2'] }]),
+  nori: person('nori', 'NORI', 'Young resident', [{ place: 'hub', stages: ALL }]),
+  vey: person('vey', 'VEY', 'Visiting wayfinder', [{ place: 'hub', stages: ALL }]),
+  tavi: person('tavi', 'TAVI', 'Courier', [{ place: 'dock', stages: ALL }]),
+  ilex: person('ilex', 'ILEX', 'Cinder grower', [{ place: 'cinder', stages: ['c1', 'c2'] }]),
+  sen: person('sen', 'SEN', 'Seedling keeper', [{ place: 'rime', stages: ['c2'] }]),
+});
+
+const L = (id, kind, text, tags = {}) => Object.freeze({ id, kind, text, ...tags });
+const f = flag => ({ flag });
+
+export const POOLS = Object.freeze({
+  // CAP-0: sardonic, protective, formal when annoyed. Care disguised as procedure. Never admits fondness.
+  cap: Object.freeze([
+    L('cap-count', 'quip', 'Watch status: every precious organic accounted for. Do not make me recount.'),
+    L('cap-airlocks', 'quip', 'I checked the airlocks. Twice. For no reason.'),
+    L('cap-formally', 'quip', 'Formally: nothing happened this watch. I would like that to continue.'),
+    L('cap-vacuum', 'quip', 'Somebody has to guard the squishy ones from the vacuum. It is a living.'),
+    L('cap-hum', 'hum', 'Hm. Hm. Hmmmm. Standing orders, but with a beat.'),
+    L('cap-colander', 'quip', 'That colander is a ceremonial hat. I will not be taking questions.'),
+    L('cap-survive', 'quip', 'We can survive in space, you know. The organics need a thermostat and a snack.'),
+    L('cap-third-order', 'observation', 'Third standing order: never interrupt a harvest with a drill. Underlined. Twice.'),
+    L('cap-quiet-core', 'musing', 'The core is quiet. I do not trust a quiet core. I trust it a little.'),
+    L('cap-dim', 'musing', 'Lights low, corridors quiet. Best part of any watch. Do not tell the humans.', { mood: 'quiet' }),
+    L('cap-first-said', 'quip', 'I would like it noted that I said it first. Whatever it was. I said it first.'),
+    L('cap-soup', 'observation', 'Soup in the corridor again. I am not saying who. I am saying Pip.'),
+    L('cap-last-one', 'overseer', 'Sorry. Habit. You stand like the last Overseer. Fewer sighs, though.', { near: 'player' }),
+    L('cap-hello', 'overseer', 'Overseer. Good. I was running out of things to pretend not to watch.', { near: 'player' }),
+    L('cap-ready', 'observation', 'A crop is ready. Somebody harvest it before Pip starts negotiating with it.', { near: 'garden-ready' }),
+    L('cap-departure', 'observation', 'That departure was smooth. I would like it noted that I said it would be.', { when: f('motion.departed') }),
+    L('cap-cruise', 'observation', 'We are under way. The organics have not noticed. I intend to keep it that way.', { when: f('motion.cruising') }),
+  ]),
+  // TALLY-4: pedant who files everything, including feelings. No contractions, no slang, never rude to a person.
+  tally: Object.freeze([
+    L('tally-fondness', 'quip', 'Form 7-F, Emotions, Minor, filed. The emotion was fondness. I will not elaborate.'),
+    L('tally-lunch', 'quip', 'Inventory count: correct. Humans call this lunch. I have filed an objection.'),
+    L('tally-nut', 'observation', 'A nut may be a snack or a fastener. I have prepared both forms.'),
+    L('tally-stamp-hum', 'hum', 'Stamp, stamp, stamp. Hm hm hmmm. The rhythm is not billable.'),
+    L('tally-fasteners', 'musing', 'I counted the fasteners. Then I counted them again. All present. Relieved. Filed.'),
+    L('tally-triplicate', 'quip', 'Triplicate is not a threat. It is a lifestyle.'),
+    L('tally-gratitude', 'quip', 'Finding lost things: waived. Gratitude: billable. Receipts accepted.'),
+    L('tally-tree-falls', 'musing', 'If a crate is moved and nobody logs it, did it move? I logged it. It moved.'),
+    L('tally-quiet', 'musing', 'Quiet shift. Zero discrepancies. I find this suspicious, and also lovely.', { mood: 'quiet' }),
+    L('tally-airborne', 'observation', 'I have reclassified the airborne tomato as unscheduled cargo. It disagreed. In flight.'),
+    L('tally-soul', 'quip', 'Pip says my filing has no soul. I added a soul field. It is blank. Pending.'),
+    L('tally-stand', 'overseer', 'Overseer, you are near my desk. This requires a form. Stand there. It is waived.', { near: 'player' }),
+    L('tally-ready', 'observation', 'A harvest is ready. File it before eating it. Eating it first is also fine. Billable.', { near: 'garden-ready' }),
+    L('tally-certificate', 'quip', 'The landing craft is serviced. I have a certificate. I have framed the certificate.', { when: f('chapter.landerServiced') }),
+  ]),
+  // VECTOR-2: cautious and exact. States what it knows, then the edge of what it does not. Never guesses.
+  vector: Object.freeze([
+    L('vector-bearing', 'observation', 'Bearing to the greenhouse: confirmed. Bearing to everything else: surveying.'),
+    L('vector-tolerance', 'quip', 'Position logged. Tolerance, plus or minus one metre. I decline to estimate further.'),
+    L('vector-atmosphere', 'quip', 'Organics require an atmosphere. We accommodate the preference.'),
+    L('vector-tomato', 'observation', 'One rotating object on the scanners. Six centimetres. Threat: airborne tomato.'),
+    L('vector-hum', 'hum', 'Hm hm hmmm. Tuned to two hundred twenty hertz. Off-key harmony will be logged.'),
+    L('vector-drainage', 'quip', 'Agricultural command requested a route with good drainage. Logged. Sincerely.'),
+    L('vector-coordinates', 'quip', 'I will not substitute confidence for coordinates. I have both. They are filed apart.'),
+    L('vector-charts', 'musing', 'The charts predate our sleep. The stars moved on without consulting them. Refreshing.'),
+    L('vector-star', 'musing', 'A star is a coordinate that glows. The glowing is not required. It is appreciated.'),
+    L('vector-quiet', 'musing', 'The deck is quiet. Quiet is a measurement. It is a good one.', { mood: 'quiet' }),
+    L('vector-perimeter', 'overseer', 'Overseer inside the navigation perimeter. Welcome. Please do not touch the stars.', { near: 'player' }),
+    L('vector-ready', 'observation', 'A crop is ready for harvest. Bearing: down the lift, then left. Exact enough.', { near: 'garden-ready' }),
+    L('vector-pending', 'observation', 'First maneuver pending. Lining fitted. I am ready. I am also cautious.', { when: { all: [f('chapter.coreRepaired'), { flag: 'chapter.maneuverSeen', is: false }] } }),
+    L('vector-departed', 'observation', 'Departure logged. The silo moved, and the soup did not spill. Both recorded.', { when: f('motion.departed') }),
+    L('vector-cruise', 'observation', 'Sustained cruise confirmed. Wayfarer Relay ahead. Brindle Reach lies beyond this system.', { when: f('motion.cruising') }),
+  ]),
+  // Pip: cook, kitchen, warm and unhurried. Food as a way of saying things.
+  pip: Object.freeze([
+    L('pip-hum', 'hum', 'Hm hm hmmm... a little salt, a little thyme, a little luck.'),
+    L('pip-soup', 'quip', 'Soup is just a tomato with a plan.'),
+    L('pip-simmer', 'observation', 'Something is simmering. It might be dinner. It might be a lesson.'),
+    L('pip-pinch', 'quip', 'Anyone who says just a pinch has never measured a pinch.'),
+    L('pip-ship-hum', 'musing', 'If the ship hums, I hum back. It is only polite.'),
+    L('pip-robots', 'observation', 'The robots keep filing my soup. TALLY-4 calls it inventory. I call it love.'),
+    L('pip-seasoning', 'musing', 'Seasoning is just kindness in a jar.'),
+    L('pip-bit', 'quip', 'Dinner is in a bit. A bit means soon. A bit also means do not ask.'),
+    L('pip-lamps', 'musing', 'Lamps low, kettle on. This is my favourite hour.', { mood: 'quiet' }),
+    L('pip-hum-two', 'hum', 'Hmm hmm hm, hm hm hmmmm. Mm.'),
+    L('pip-stool', 'overseer', 'Pull up a stool, Overseer. Everything tastes better with company.', { near: 'player' }),
+    L('pip-ripe', 'observation', 'I can smell a ripe tomato from here. Somebody out there is sitting on dinner.', { near: 'garden-ready' }),
+    L('pip-mint', 'observation', 'The mint is watching the stars from its planter. I think it approves.', { when: f('projects.planter') }),
+    L('pip-moving', 'musing', 'A kitchen that moves, and the soup does not spill. I have checked. Often.', { stages: ['c2'] }),
+  ]),
+  // Mara: shipwright, workshop. Practical, dry, fond of tools. Treats engineering as a conversation.
+  mara: Object.freeze([
+    L('mara-hum', 'hum', 'Hm hm hmmm... torque, torque, torque.'),
+    L('mara-idea', 'quip', 'Everything here is held together by a good idea and four fasteners.'),
+    L('mara-creak', 'observation', 'The ship creaks. That is fine. The silence is when I worry.'),
+    L('mara-rattle', 'quip', 'If it rattles, it is loose. If it hums, it is happy. If neither, call me.'),
+    L('mara-wrench', 'musing', 'A good wrench is a conversation you can hold in one hand.'),
+    L('mara-core', 'observation', 'Engineering says the core is steady. Engineering also says that on bad days.'),
+    L('mara-robots', 'quip', 'The robots keep asking for circuit boards. I keep asking for a thank-you. Same rate.'),
+    L('mara-tidy', 'musing', 'Lights low, tools tidy. A tidy bench is a promise.', { mood: 'quiet' }),
+    L('mara-pliers', 'quip', 'Nothing here is broken. It is only waiting for the right person with the right pliers.'),
+    L('mara-hum-two', 'hum', 'Hm hm hm hmmm. Where did I put the little one? There. Always there.'),
+    L('mara-toolbox', 'overseer', 'Mind the toolbox, Overseer. It bites. Not hard. Mostly.', { near: 'player' }),
+    L('mara-lining', 'musing', 'Grow it, fit it, hold it. That is all engineering is.', { stages: ['c1'] }),
+    L('mara-coupling', 'musing', 'Heat wants to go somewhere. The coupling just gives it directions.', { stages: ['c2'] }),
+  ]),
+  // Sprocket: farm droid, tireless and cheerful, counts things out loud.
+  sprocket: Object.freeze([
+    L('sprocket-reserve', 'quip', 'Seed reserve: topped up. Beep. Proud.'),
+    L('sprocket-hum', 'hum', 'Hm hm hmmm. Tick tick tock. That is the seed counting song.'),
+    L('sprocket-rule', 'observation', 'Two seeds per family. That is the rule. I follow it with enthusiasm.'),
+    L('sprocket-shroud', 'observation', 'My shroud is for corrosive places. Today is not a corrosive place. Today is a good place.'),
+    L('sprocket-three', 'quip', 'I water, I count, I hum. Three functions, and I love all three.'),
+    L('sprocket-soil', 'observation', 'The soil is warm and slightly smug.'),
+    L('sprocket-tomato', 'musing', 'If I were a seed I would be a tomato. Round. Hopeful. Occasionally airborne.'),
+    L('sprocket-beeps', 'hum', 'Beep. Boop. Beeeep. That is my good morning. I use it all day.'),
+    L('sprocket-sprinklers', 'musing', 'Lights low, sprinklers off. I count the beds twice, to hear the number twice.', { mood: 'quiet' }),
+    L('sprocket-seeds', 'overseer', 'Hello, Overseer! Seeds? Seeds. I have seeds.', { near: 'player' }),
+    L('sprocket-ding', 'observation', 'Ding! A crop is ready. I have been waiting to say ding.', { near: 'garden-ready' }),
+    L('sprocket-moving', 'musing', 'We are moving. The seeds do not mind. I mind a little. A nice kind of mind.', { stages: ['c2'] }),
+  ]),
+  // Nine: field scientist. Curious, exact, gently funny. "Change one thing. Pay attention."
+  nine: Object.freeze([
+    L('nine-method', 'quip', 'Change one thing. Pay attention. Write it down.'),
+    L('nine-hum', 'hum', 'Hm hm hmm. Hypothesis hum. Not peer reviewed.'),
+    L('nine-ash', 'observation', 'The ash holds heat longer than the air does. Noted. Underlined.', { places: ['cinder'] }),
+    L('nine-wind', 'observation', 'Wind on the ridge is abrasive. Kilnleaf prefers shelter. So do I.', { places: ['cinder'] }),
+    L('nine-roots', 'observation', 'Warm roots, cold fronds. One plant, two opinions about weather.', { places: ['rime'] }),
+    L('nine-frost', 'musing', 'Frost does not hurry. Good lesson for a scientist. Bad lesson for a snack.', { places: ['rime'] }),
+    L('nine-slow', 'musing', 'A garden is an experiment with a very slow answer.', { places: ['hub'] }),
+    L('nine-weather', 'observation', 'Weather report: unreasonable possibilities. I believe it. I checked.', { places: ['hub'] }),
+    L('nine-hum-all', 'observation', 'Observation: everyone on this ship hums. Conclusion: it is working.'),
+    L('nine-trials', 'quip', 'Three trials, three results, zero tidy conclusions. Excellent day.'),
+    L('nine-listen', 'musing', 'Quiet is an instrument. I listen to it.', { mood: 'quiet' }),
+    L('nine-shroud', 'musing', 'A shroud is only a coat for being brave.'),
+    L('nine-sample', 'overseer', 'Overseer, would you hold this sample? Do not let it touch the soup.', { near: 'player' }),
+    L('nine-ready', 'observation', 'That crop is ready. Please note the time. Then note the taste.', { near: 'garden-ready', places: ['hub'] }),
+  ]),
+  // Nori: a child, curious and loud in a good way. Makes friends with machines.
+  nori: Object.freeze([
+    L('nori-hum', 'hum', 'Hm hm hmm hm hmmm. La la.'),
+    L('nori-bird', 'observation', 'I saw a bird today. Maybe it was a leaf. It flapped.'),
+    L('nori-stars', 'musing', 'Do you think the stars know we are here? I waved. Just in case.'),
+    L('nori-line', 'quip', 'TALLY-4 told me to stand in a line. I was the line.'),
+    L('nori-loud', 'quip', 'If I were a tomato I would be a loud one.'),
+    L('nori-remember', 'musing', 'I am going to remember everything today. Even the boring parts.'),
+    L('nori-stir', 'quip', 'Pip lets me stir if I say please twice. I say it three times to be safe.'),
+    L('nori-clouds', 'quip', 'Counting clouds. There are none. Counting anyway.'),
+    L('nori-sleepy', 'musing', 'It is getting sleepy-time light. The good kind.', { mood: 'quiet' }),
+    L('nori-overseer', 'overseer', 'Can I be an Overseer too, Overseer? I would be a small one.', { near: 'player' }),
+    L('nori-ripe', 'observation', 'That one is ripe! I know because it looks smug.', { near: 'garden-ready' }),
+    L('nori-moving', 'musing', 'We are MOVING! It feels like a big hug that goes somewhere.', { stages: ['c2'] }),
+  ]),
+  // Vey: four-armed, mothlike wayfinder, a visitor. Courteous, a little formal, enchanted by small things.
+  vey: Object.freeze([
+    L('vey-hum', 'hum', 'Hm hmmm hum. A migrating tune. It remembers the long way round.'),
+    L('vey-light', 'observation', 'The light here is warm and kind. We have little of it where I come from.'),
+    L('vey-hands', 'quip', 'Four hands, and I still cannot decide what to carry. Carry on, as you say.'),
+    L('vey-found', 'musing', 'The stars are cold, but they are good at being found. I like being found by them.'),
+    L('vey-wind', 'observation', 'At home the wind has names. Here the vents do. I am learning them.'),
+    L('vey-map', 'musing', 'A garden is a map you grow instead of draw. I find this wonderful.'),
+    L('vey-count', 'quip', 'I counted the stars from the window. Then again, for luck.'),
+    L('vey-dusk', 'musing', 'Dusk is when everyone is a little more honest. I enjoy it.', { mood: 'quiet' }),
+    L('vey-flap', 'quip', 'I flap when I am pleased. It is a habit. It may also be a sign.'),
+    L('vey-walk', 'overseer', 'Overseer. I am told that is a small word for a large job. May I walk beside you?', { near: 'player' }),
+    L('vey-ripe', 'observation', 'That one is ripe. I can tell by its colour. And by its smugness.', { near: 'garden-ready' }),
+    L('vey-moving', 'musing', 'A home that moves is a home with a heart. I think we agree.', { stages: ['c2'] }),
+  ]),
+  // Tavi: the courier. Wry, a little tired, grateful, speaks in parcels and deadlines.
+  tavi: Object.freeze([
+    L('tavi-hum', 'hum', 'Hm hm hm hmmm. Courier song. No words. Just deadlines.'),
+    L('tavi-promise', 'musing', 'Every package is a promise with a label on it.'),
+    L('tavi-smell', 'observation', 'The dock smells like warm metal and plans.'),
+    L('tavi-wing', 'quip', 'My courier wing is bent but my spirits are straight. Mostly.'),
+    L('tavi-crate', 'quip', 'Docking bay rule one: never trust a crate that is warmer than you are.'),
+    L('tavi-robots', 'observation', 'The robots upstairs keep trying to log me as cargo. I have not corrected them yet.'),
+    L('tavi-delivered', 'quip', 'Delivered: one smile, one sigh, one very slow tomato. Signed for.'),
+    L('tavi-night', 'musing', 'The dock goes quiet in the evening. The crates settle like sleepy pets.', { mood: 'quiet' }),
+    L('tavi-spare', 'overseer', 'Overseer, if you have a spare hour, I have a spare worry. Fair trade.', { near: 'player' }),
+    L('tavi-mail', 'musing', 'Brindle Reach is waiting on us. The mail does not know. The mail is optimistic.', { when: f('chapter.courierArrived') }),
+    L('tavi-lander', 'observation', 'Good work on the landing craft. I only stared at it a little. Admiringly.', { when: f('chapter.landerServiced') }),
+    L('tavi-moving', 'musing', 'Strange, being on a ship that moves. Even the mail feels adventurous.', { stages: ['c2'] }),
+  ]),
+  // Ilex: Cinder grower. Laconic, practical, dry about the weather and fond of slow things.
+  ilex: Object.freeze([
+    L('ilex-ash', 'musing', 'Ash is not the end of soil. It is the start of a different recipe.'),
+    L('ilex-hum', 'hum', 'Hm hmm hmmm. Wind song. It gets in the leaves.'),
+    L('ilex-kilnleaf', 'observation', 'Kilnleaf drinks slow and holds on. Takes after the ground it lives on.'),
+    L('ilex-shelter', 'quip', 'Shelter the sprout from the wind and it forgives you the rest.'),
+    L('ilex-sky', 'observation', 'The sky here is orange before it is anything else. I like it. I have no choice about that.'),
+    L('ilex-cracks', 'musing', 'If the ground cracks, it is saying something. Listen first, patch second.'),
+    L('ilex-trays', 'quip', 'Camp trays tick over like slow clocks. I check them like they owe me money.'),
+    L('ilex-cold', 'musing', 'Cold comes down fast out here. Then the stars show up. Fair trade.', { mood: 'quiet' }),
+    L('ilex-hum-two', 'hum', 'Hm hm hm. That is the tune for maybe it will rain. It will not.'),
+    L('ilex-look-up', 'overseer', 'Visitors always look up, Overseer. The good stuff is under the ash.', { near: 'player' }),
+    L('ilex-tomato', 'quip', 'Gift me a tomato and I will remember it all year. Unless I eat it. Then, all week.'),
+    L('ilex-panels', 'observation', 'Take the panels home when they are ready. The silo needs them more than the ash does.', { stages: ['c1'] }),
+  ]),
+  // Sen: seedling keeper on Rime. Gentle, patient, talks to the plants.
+  sen: Object.freeze([
+    L('sen-roots', 'observation', 'Warm roots on the ridge, cold fronds in the cleft. One plant, two moods.'),
+    L('sen-hum', 'hum', 'Hmm hm hmmm. The seedlings like it when I hum. Or they are very polite.'),
+    L('sen-frost', 'musing', 'Frost melts when a good idea touches it.'),
+    L('sen-patience', 'quip', 'I keep the seedling rooms warm with patience, mostly. A little braid helps.'),
+    L('sen-water', 'quip', 'Water slowly. Seedlings do not appreciate hurry. Neither do I.'),
+    L('sen-wind', 'observation', 'The wind here cuts clean. Nice and honest.'),
+    L('sen-music', 'musing', 'Warm roots, patient leaves, cold wind. Together they make a kind of music.'),
+    L('sen-blue', 'musing', 'When the light goes blue, the frost sings. I swear it.', { mood: 'quiet' }),
+    L('sen-promise', 'musing', 'Every cutting is a small promise. I keep a lot of promises.'),
+    L('sen-hum-two', 'hum', 'Hm hm hmmm. Frost, frost, thaw.'),
+    L('sen-closer', 'overseer', 'Come closer, Overseer. The little ones like visitors. They lean.', { near: 'player' }),
+    L('sen-tomato', 'quip', 'A tomato from a far silo. I will tell the seedlings. They will not believe it.'),
+  ]),
+});
+
+// Robot-to-robot (and other) two-bubble exchanges. The first speaker talks; the second answers once the first has finished.
+const X = (id, a, b, first, second, tags = {}) => Object.freeze({ id, a, b, lines: Object.freeze([Object.freeze({ speaker: a, text: first }), Object.freeze({ speaker: b, text: second })]), ...tags });
+export const EXCHANGES = Object.freeze([
+  X('x-vector-cap-morale', 'vector', 'cap', 'Captain. Core temperature nominal. Morale unmeasured.', 'Morale is excellent. I have no data. That is how I know.'),
+  X('x-tally-vector-nut', 'tally', 'vector', 'VECTOR-2, I require a bearing for the missing wing nut.', 'It is in your left manipulator. Bearing: down. Distance: zero.'),
+  X('x-cap-vector-calm', 'cap', 'vector', 'VECTOR-2, route us somewhere calm.', 'Calm is not a coordinate. I can offer low drainage and no comets.'),
+  X('x-tally-cap-hat', 'tally', 'cap', 'Captain, the colander hat is a ventilation fixture. I must file it as such.', 'It is a ceremonial hat. Strike that from the record.'),
+  X('x-vector-tally-way', 'vector', 'tally', 'TALLY-4, your inventory is in my way.', 'My inventory is in its assigned place. Your way is in the wrong place.'),
+  X('x-cap-tally-survive', 'cap', 'tally', 'We can survive in space, you know. Unlike the precious organics.', 'Noted. They also survive soup. This is not in my manual.'),
+  X('x-tally-cap-fondness', 'tally', 'cap', 'Captain, I filed Form 7-F today. Subject: fondness. Subject of subject: the humans.', 'Shred it. No. Keep it. Seal it. Do not tell them. They would be insufferable.'),
+  X('x-vector-cap-charts', 'vector', 'cap', 'Captain, I have refreshed the charts. They were stale.', 'Of course they were stale. Everything was. Carry on, navigator.', { stages: ['c2'] }),
+  X('x-cap-vector-cruise', 'cap', 'vector', 'Navigator. Are we still moving?', 'Confirmed. Sustained cruise. You may stop checking. You will not.', { stages: ['c2'], when: f('motion.cruising') }),
+]);
+
+// All lines for one speaker as a flat list (data only; the selector filters by tag).
+export const poolFor = id => POOLS[id] ?? [];
+export const allLines = () => Object.entries(POOLS).flatMap(([speaker, lines]) => lines.map(line => ({ ...line, speaker })));

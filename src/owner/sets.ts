@@ -61,6 +61,8 @@ export const ExcludedSchema = z.strictObject({
 });
 export const MAX_EXCLUDED = 200;
 
+export const SourceRefSchema = z.strictObject({ schema:z.literal('prose/dialog-source@1'), manifest:z.string().refine(isAbsolute), manifestHash:z.string().regex(/^[0-9a-f]{64}$/), slotId:z.string().min(1), slotHash:z.string().regex(/^[0-9a-f]{64}$/) });
+
 export const SetSchema = z.strictObject({
   schema: z.literal('prose/set@1'),
   id: z.string().regex(/^[a-z0-9-]+$/),
@@ -76,6 +78,7 @@ export const SetSchema = z.strictObject({
   variants: z.array(VariantSchema).min(MIN_VARIANTS).max(MAX_VARIANTS),
   picked: z.number().int().optional(),
   pickedAt: z.string().optional(),
+  pickedHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   /**
    * The owner rejected every variant ("none of these"): the set is closed, like a picked one, and never receives a pick.
    * The agent makes a new set with `set new --redo <id>`. Never set together with `picked`.
@@ -89,6 +92,7 @@ export const SetSchema = z.strictObject({
   original: OriginalSchema.optional(),
   /** Lines with a pending strike when the set was made. Variants are still full copies; these are not to be edited. */
   excluded: z.array(ExcludedSchema).min(1).max(MAX_EXCLUDED).optional(),
+  sourceRef: SourceRefSchema.optional(),
 });
 
 /** A set that takes no more judgements: picked, or sent back with none of its variants wanted. */
@@ -187,7 +191,7 @@ function relSource(project: string, draft: string): string {
 }
 
 export interface CreateOptions {
-  directions?: string[]; count?: number; now?: Date; id?: string;
+  directions?: string[]; count?: number; now?: Date; id?: string; sourceRef?: PromptSet['sourceRef'];
   /** The brief to record: new words, or (a refine round) another set's brief taken whole, confirmation included. */
   brief?: BriefInput | Brief;
   /** Line refs ("12", "12-13", comma list) of the draft this set revises: snapshotted as `original`. */
@@ -238,7 +242,7 @@ export function createSet(project: string, draft: string, opts: CreateOptions = 
     });
     const set = SetSchema.parse({
       schema: 'prose/set@1', id, uid: randomBytes(6).toString('hex'), createdAt: now.toISOString(), form: doc.form, format: doc.format,
-      source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}), ...(opts.redo ? { redoOf: opts.redo.of, feedback: opts.redo.feedback } : {}), ...(excluded.length ? { excluded } : {}),
+      ...(opts.sourceRef ? {sourceRef:opts.sourceRef} : {}), source: relSource(project, draft), base: `base${ext}`, directions, variants, ...(brief ? { brief } : {}), ...(original ? { original } : {}), ...(opts.redo ? { redoOf: opts.redo.of, feedback: opts.redo.feedback } : {}), ...(excluded.length ? { excluded } : {}),
     });
     writeFileAtomic(join(tmp, 'set.json'), JSON.stringify(set, null, 2) + '\n');
     renameSync(tmp, dir);

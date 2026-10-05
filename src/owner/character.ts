@@ -10,7 +10,7 @@ const ID_SHAPE = /^[a-z0-9-]+$/;
 /** The text a brief keeps from a bible: its bio, else "Name. Description", cut to the brief's limit. Taken once, so a later bible edit never changes a set. */
 export function snapshotOf(v: Voice): string {
   const joined = v.description.startsWith(`${v.name}.`) ? v.description : `${v.name}. ${v.description}`;
-  const text = (v.bio ?? joined).replace(/\r\n?/g, '\n').trim();
+  const text = [(v.bio ?? joined), ...(v.negative?.length ? [`Avoid: ${v.negative.join('; ')}`] : [])].join('\n').replace(/\r\n?/g, '\n').trim();
   return text.length > MAX_CHARACTER ? `${text.slice(0, MAX_CHARACTER - 1)}…` : text;
 }
 
