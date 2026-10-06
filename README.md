@@ -31,6 +31,7 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-instruct` | User instructions, how-to procedures, troubleshooting, help articles and technical docs |
 | `prose-formal` | Academic and professional prose: abstracts, papers, reports, proposals, memos, email |
 | `prose-script` | Sitcom (multi- and single-cam), TV drama, stage play in Fountain; YouTube scripts in Markdown |
+| `prose-storyboard` | Visual storyboards for scripts, quests and full campaigns: editable scene/panel JSON, choices and character tracks, rendered as a standalone illustrated HTML board |
 | `prose-speech` | Toasts, eulogies, keynotes, talks and remarks, timed to a target length |
 | `prose-comedy` | Jokes, alternate lines and punch-up passes with distinct comic mechanisms |
 | `prose-review` | Variant sets for choosing between rewrites: checked for sameness, a sealed guess of the owner's pick, the pick recorded |
