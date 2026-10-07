@@ -1,7 +1,7 @@
 ---
 name: prose-speech
 description: Write and check speeches with agent-prose - toasts, eulogies, keynotes, talks and remarks for small rooms, large halls or recordings - written for the ear and measured for spoken duration, sentence length and breath units against cited speechwriting rules.
-when_to_use: Use when asked for a speech, toast, wedding or best-man speech, eulogy, keynote, talk, remarks, an address, a presentation script or a TED-style talk, or when prose lint reports spoken.* or length.target findings. YouTube and video narration is prose-script; jokes inside a speech can use prose-comedy.
+when_to_use: Use when asked for a speech, toast, wedding or best-man speech, eulogy, keynote, talk, remarks, an address, a standalone presentation script or a TED-style talk, or when prose lint reports spoken.* or length.target findings. Full slide plans use prose-presentation; webinar production uses prose-webinar. YouTube narration is prose-script; jokes inside a speech can use prose-comedy.
 ---
 # prose-speech
 
