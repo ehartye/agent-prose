@@ -2,7 +2,8 @@
 
 A writing-craft toolkit for coding agents. agent-prose covers game dialogue (quest conversations, barks
 and branching), user instructions and technical docs, academic and professional prose, multi-camera and
-single-camera sitcom, TV drama, stage plays, YouTube scripts and speeches, each with its own register.
+single-camera sitcom, TV drama, stage plays, YouTube scripts, speeches, professional presentations and
+webinars, each with its own register.
 Agents draft in native formats — Fountain for screen and stage, Markdown with frontmatter for speeches,
 instructions, documents and YouTube scripts, and a typed YAML graph for game dialogue — and the `prose`
 CLI parses, measures and lints each draft against cited craft rules for its form.
@@ -33,6 +34,8 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-script` | Sitcom (multi- and single-cam), TV drama, stage play in Fountain; YouTube scripts in Markdown |
 | `prose-storyboard` | Visual storyboards for scripts, quests and full campaigns: editable scene/panel JSON, choices and character tracks, rendered as a standalone illustrated HTML board |
 | `prose-speech` | Toasts, eulogies, keynotes, talks and remarks, timed to a target length |
+| `prose-presentation` | Professional slide plans, executive decisions, customer talks and training: evidence, speaker notes, accessible visuals, timing and rehearsal |
+| `prose-webinar` | Webinar production: timed run sheets, presenter/moderator cues, interaction, demo recovery, rehearsal and follow-up |
 | `prose-comedy` | Jokes, alternate lines and punch-up passes with distinct comic mechanisms |
 | `prose-review` | Variant sets for choosing between rewrites: checked for sameness, a sealed guess of the owner's pick, the pick recorded |
 | `prose-voice` | Voice bibles for characters, brands and speakers (bio, samples, ranges), made from a description or fitted from lines, and checked on every draft |
@@ -43,6 +46,17 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-audit` | Audit a draft for generic or formulaic prose (stock openers, hollow significance, formula sentence shapes, chat residue, model-era vocabulary) and revise it by span toward specifics; never judges who wrote it |
 
 ## Commands
+
+For professional presentation planning, use `/agent-prose:prose-presentation`; for a webinar
+production package, use `/agent-prose:prose-webinar`. They produce editable slide briefs or run
+sheets, evidence gaps, speaker/moderator cues, accessible-material checks and rehearsal plans.
+PowerPoint and Google Slides files use the available presentation tool. Webinar platform controls
+and distribution use the user's chosen service and authorization.
+
+Prepared narration stays in a separate supported speech-form file. Its word-rate estimate covers
+spoken text; demos, polls, discussion, loading and contingency occupy separate event time. A timed
+rehearsal verifies the total slot. See the [presentation reference](skills/prose-presentation/references/presentation-craft.md)
+and [webinar production reference](skills/prose-webinar/references/webinar-production.md).
 
 | Command | Does |
 |---|---|
