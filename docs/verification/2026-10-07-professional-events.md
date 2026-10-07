@@ -25,6 +25,6 @@ A metadata-only routing check covered eight prompts: wedding toast, YouTube tuto
 
 Independent implementation review found no critical or major blockers and verified that the shared marketplace change touches only agent-prose's version and description. It found that bracketed stage directions require blank-line paragraph separation; both references now state this correctly. The shipped examples already used that formatting.
 
-The first PR commit passed Ubuntu and Windows CI. Final-head CI, merge, tag and marketplace publication are verified through the release workflow. Actual PowerPoint/Google Slides export, live platform configuration, captions, rehearsal, customer data and distribution were not part of these simulated planning tasks and are not claimed as tested.
+The first PR commit passed Ubuntu and Windows CI. The release workflow must verify final-head CI, merge, tag and marketplace publication before reporting completion. Actual PowerPoint/Google Slides export, live platform configuration, captions, rehearsal, customer data and distribution were not part of these simulated planning tasks and are not claimed as tested.
 
 Full paired outputs, independent reviews, routing output and the late-demo result are retained in the release's `professional-events-evaluation.zip` artifact. The source research and original pre-authoring baseline remain in the repository.
