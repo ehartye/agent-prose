@@ -37,7 +37,7 @@ For customers, separate demonstrated capabilities, staged examples and measured 
 
 Convention: a 12-minute decision slot might allow 8 minutes for prepared explanation, 3 for discussion and 1 for the decision. The actual schedule controls the script budget. At 130 words per minute, 8 scripted minutes would be about 1,040 words before subtracting planned pauses or other non-speech time. A timed run is the delivery check; rate-based duration is an estimate.
 
-Keep the slide plan, evidence ledger, run sheet and rehearsal notes in separate planning files. Use speech frontmatter only in a file containing narration. Speaker/slide labels are headings; stage directions occupy their own bracketed line. Prose counts an inline bracket or a plain `PRESENTER:` label as speech.
+Keep the slide plan, evidence ledger, run sheet and rehearsal notes in separate planning files. Use speech frontmatter only in a file containing narration. Speaker/slide labels are headings; stage directions occupy a separate bracketed paragraph, with blank lines before and after. A line break alone does not separate a direction from narration. Prose counts an inline bracket or a plain `PRESENTER:` label as speech.
 
 This short script demonstrates formatting, not a complete 12-minute presentation:
 

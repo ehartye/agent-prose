@@ -28,19 +28,19 @@ Convention: these rows demonstrate a 45-minute customer session, not a universal
 | 33:00–42:00 | Moderator + presenter | Selected Q&A | Read questions aloud; log unanswered ones |
 | 42:00–45:00 | Presenter + moderator | Recap, resource and close | Keep the closing action even after an overrun |
 
-In the actual run sheet, add specific asset/slide ids, exact audience prompts, private cues, a recovery action and any optional cut. The demo slot includes its narration; do not add it twice. The planning script budget is the total slot minus unscripted/interactive time, loading, pauses, handoffs and contingency. Fixed speech rate is a planning assumption; rehearsal checks the full elapsed schedule.
+In the actual run sheet, add specific asset/slide ids, exact audience prompts, private cues, a recovery action and any optional cut. Each cut must identify content actually supplied in the package. Keep live cues compact and supporting preparation details in separate sections. The demo slot includes its narration; do not add it twice. The planning script budget is the total slot minus unscripted/interactive time, loading, pauses, handoffs and contingency. Fixed speech rate is a planning assumption; rehearsal checks the full elapsed schedule.
 
 ## Interaction and Q&A
 
 Convention: use interaction to inform the next explanation, practice a task or check understanding. Do not insert a poll on a fixed engagement timer. Specify the exact question/options, purpose, launch/close owner, response window, accessible equivalent, and how the presenter uses the result. If no one responds or the control fails, give a prepared example and continue without attributing it to attendees.
 
-For Q&A, set the route, moderation owner and response plan. Group duplicates and prioritize relevance over popularity alone. The moderator reads written questions aloud and avoids exposing names or details contrary to the event's anonymity promise. Admit an unknown answer and assign an owner/date; do not improvise financial or product claims. Give panelists directed prompts and time cues, then synthesize disagreements honestly.
+For Q&A, set the route, moderation owner and response plan. Prepare a few useful seed questions with supported answers for an empty queue, labeled as prepared questions rather than audience submissions. Group duplicates and prioritize relevance over popularity alone. The moderator reads written questions aloud and avoids exposing names or details contrary to the event's anonymity promise. Admit an unknown answer and assign an owner/date; do not improvise financial or product claims. Give panelists directed prompts and time cues, then synthesize disagreements honestly.
 
 WAI notes that polls and rapid activities may be inaccessible to some participants; accessible copies and visual descriptions support people who cannot use screen sharing. [WAI checklist](https://www.w3.org/WAI/teach-advocate/accessible-presentations/). Section508.gov recommends accommodation request routes, accessible interactive controls, reading written questions aloud and rehearsing accommodations. It is guidance in a federal-agency context, not a legal determination for every webinar. [Accessible meetings](https://www.section508.gov/create/accessible-meetings/).
 
 ## Demo and connection recovery
 
-Convention: prepare a short scenario with its initial state, verified capability and expected outcome. Have the same story available in labeled screenshots or a captioned recording. Specify a bounded wait/retry, the private switch cue, fallback owner and hard stop; choose thresholds based on the slot and demonstrated platform behavior.
+Convention: prepare a short scenario with its initial state, verified capability and expected outcome. Have the same story available in labeled screenshots or a captioned recording. Specify a bounded wait/retry, the private switch cue, fallback owner and hard stop; choose thresholds based on the slot and demonstrated platform behavior. Prepare an abbreviated fallback for late failure: show the essential state/outcome within the remaining time rather than restarting a longer backup sequence. If the wait or playback would exceed the hard stop, skip directly to that short version and transition on time.
 
 Example recovery: if a prepared demo makes no useful progress for 30 seconds, the moderator cues “backup”; the presenter switches by 60 seconds rather than repeatedly retrying. Say: “The live environment is taking longer than expected. I'll use the prepared capture of this scenario.” Describe its essential visuals. These seconds are a rehearsal convention, not a sourced performance guarantee.
 
@@ -48,7 +48,7 @@ If sharing fails, the designated backup shares the deck/assets; if presenter con
 
 ## Spoken file example
 
-Use a separate script for prepared narration, not the full run sheet. Put each speaker label in a heading and each direction on its own bracketed line. An inline bracket or plain `MODERATOR:` label is counted as spoken text.
+Use a separate script for prepared narration, not the full run sheet. Put each speaker label in a heading and each direction in a separate bracketed paragraph, with blank lines before and after. A line break alone does not separate a direction from narration. An inline bracket or plain `MODERATOR:` label is counted as spoken text.
 
 ```md
 ---

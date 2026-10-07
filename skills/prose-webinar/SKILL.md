@@ -23,7 +23,7 @@ For each interaction, state its purpose, exact prompt, owner, allotted response 
 
 ## Recovery and rehearsal
 
-For a live demo, define the scenario, prepared state, expected visible result and backup assets. Agree a failure trigger, who calls the switch, audience wording and a hard stop. A screenshot or recorded fallback must be labeled and explain the same point; do not present it as a live result. Preserve Q&A and the closing action by cutting optional material.
+For a live demo, define the scenario, prepared state, expected visible result and backup assets. Agree a failure trigger, who calls the switch, audience wording and a hard stop. Include an abbreviated fallback for a failure near the slot's end. A screenshot or recorded fallback must be labeled and explain the same point; do not present it as a live result. Preserve Q&A and the closing action by cutting optional material.
 
 Assign ownership for presenter permissions, attendee view, captions/interpreting, audio/video, screen sharing, media sound, recording, live transition and links. Test the backup person's actual permissions. Practice mode may record; confirm recording state and avoid exposing rehearsal material. Rehearse the full schedule and force a demo/share/connection failure. Record actual times and outstanding checks. Mark an unperformed test as untested.
 
