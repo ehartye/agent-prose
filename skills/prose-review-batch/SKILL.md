@@ -1,6 +1,6 @@
 ---
 name: prose-review-batch
-description: Put many lines in front of the owner at once with agent-prose: one reading-page session over up to 50 variant sets, a queue the owner walks, choosing one draft per set and sending the picks together, each pick recorded like any other.
+description: Put many lines in front of the owner at once with agent-prose - one reading-page session over up to 50 variant sets, a queue the owner walks, choosing one draft per set and sending the picks together, each pick recorded like any other.
 when_to_use: Use when the owner has many lines to judge in one sitting - a dialog pass, a batch of barks, a script's worth of speeches, "review all of these", "give me the whole set of options" - or when sets are waiting for a pick and the owner wants to clear them from a phone or laptop. A single line or one set is prose-review; writing the drafts is prose-dialog, prose-script or the form's own skill.
 ---
 # prose-review-batch

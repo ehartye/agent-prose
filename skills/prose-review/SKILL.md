@@ -1,6 +1,6 @@
 ---
 name: prose-review
-description: Let the owner choose between rewrites with agent-prose: variant sets along named directions, sealed predictions of their pick, a reading page for the owner's phone or laptop, and picks recorded to learn their taste.
+description: Let the owner choose between rewrites with agent-prose - variant sets along named directions, sealed predictions of their pick, a reading page for the owner's phone or laptop, and picks recorded to learn their taste.
 when_to_use: Use when the owner should choose between versions - asked for several options, alternatives, "give me a few takes", a punch-up pass with options, or a pick between tones - or when the owner wants to read, hear or compare options on their phone or laptop, or asks for a link to review drafts, or when someone asks what the owner usually prefers or how often the agent guessed their pick. Writing a single draft is prose-script, prose-speech, prose-dialog, prose-instruct or prose-formal; joke quality inside an option is prose-comedy; checking one draft is prose lint.
 ---
 # prose-review
