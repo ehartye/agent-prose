@@ -13,7 +13,7 @@ describe('verse forms', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.slice(0, 15)).toEqual(OLD_IDS);
     for (const id of OLD_IDS) expect(getForm(id).verse).toBeUndefined();
-    expect(ids).toHaveLength(24);
+    expect(ids).toHaveLength(25);
   });
 
   it('adds the nine verse forms as unspoken markdown with a basis', () => {

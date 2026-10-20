@@ -1,0 +1,87 @@
+{
+  "check": "Mechanical file and text checks",
+  "method": "PowerShell Get-Content and .NET regex whitespace-token word count; title/header/separator lines excluded for body count. List markers and standalone symbols remain counted, making counts conservative.",
+  "lesson": {
+    "body_word_count": 294,
+    "total_whitespace_tokens": 306,
+    "requested_body_range": "250-350",
+    "in_range": true,
+    "worked_fractions_present": [
+      {
+        "text": "30/100",
+        "present": true
+      },
+      {
+        "text": "3/10",
+        "present": true
+      },
+      {
+        "text": "30/60",
+        "present": true
+      },
+      {
+        "text": "1/2",
+        "present": true
+      },
+      {
+        "text": "30/40",
+        "present": true
+      },
+      {
+        "text": "3/4",
+        "present": true
+      }
+    ]
+  },
+  "procedure": {
+    "body_word_count": 100,
+    "total_whitespace_tokens": 104,
+    "requested_body_maximum": 130,
+    "within_maximum": true,
+    "exact_ui_labels": [
+      {
+        "label": "Ready",
+        "exact_text_present": true
+      },
+      {
+        "label": "Save copy",
+        "exact_text_present": true
+      },
+      {
+        "label": "Copy saved",
+        "exact_text_present": true
+      },
+      {
+        "label": "Reset",
+        "exact_text_present": true
+      },
+      {
+        "label": "Open copy",
+        "exact_text_present": true
+      },
+      {
+        "label": "Busy",
+        "exact_text_present": true
+      },
+      {
+        "label": "Help",
+        "exact_text_present": true
+      }
+    ],
+    "timing_text_present": [
+      {
+        "text": "4 seconds",
+        "present": true
+      },
+      {
+        "text": "20 seconds",
+        "present": true
+      }
+    ],
+    "unsaved_changes_warning_present": true,
+    "password_warning_present": true,
+    "no_second_reset_instruction_present": true
+  },
+  "result": "Passed",
+  "failed_checks": []
+}

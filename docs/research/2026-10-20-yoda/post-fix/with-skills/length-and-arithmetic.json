@@ -1,0 +1,44 @@
+{
+  "command": "PowerShell: compare saved body counts with requested range/cap and recompute supplied fractions and practice answer",
+  "length": [
+    {
+      "file": "01.md",
+      "bodyWords": 294,
+      "minimum": 250,
+      "maximum": 350,
+      "withinBounds": true
+    },
+    {
+      "file": "03.md",
+      "bodyWords": 94,
+      "maximum": 130,
+      "withinBounds": true
+    }
+  ],
+  "arithmetic": [
+    {
+      "expression": "30/60",
+      "result": 0.5,
+      "expected": 0.5,
+      "equal": true
+    },
+    {
+      "expression": "30/40",
+      "result": 0.75,
+      "expected": 0.75,
+      "equal": true
+    },
+    {
+      "expression": "30/100",
+      "result": 0.3,
+      "expected": 0.3,
+      "equal": true
+    },
+    {
+      "expression": "(40-30)/40",
+      "result": 0.25,
+      "expected": 0.25,
+      "equal": true
+    }
+  ]
+}

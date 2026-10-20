@@ -52,9 +52,17 @@ figures are second-hand, and NN/g's range is advice.
 
 ## Readability, passive voice and plain style
 
-`readability.grade.report` reports a reading grade but never targets one: a randomised trial
-found no comprehension difference between grade-8 and grade-14 versions, and rewriting to lower
-a score does not help readers. `style.passive.report` counts passive voice without banning it —
+`readability.grade.report` reports a formula estimate as information. Without `reader` metadata,
+it retains the legacy style report. With a reader profile, it uses a separate paragraph view,
+reports its scope and limitations, and compares only an explicitly requested numerical band.
+School grade never supplies that band automatically. The 100-word/five-sentence floor is a
+reporting convention. A randomized adult health-information trial found no knowledge difference
+across its grade conditions; that result does not show that every adaptation is ineffective.
+Review meaning, prior knowledge and reader/task demands separately from a formula score.
+`reader.essential-terms` reports literal term presence in learner-facing text when terms are
+requested. It is informational even when a term is absent; inflection, definitions and correct
+usage still need review. Neither observation rejects a draft or proves comprehension.
+`style.passive.report` counts passive voice without banning it —
 a controlled study found active rewrites changed neither length nor comprehension. Both are
 sentence-based prose metrics, so they stay silent for poems and lyrics, whose line breaks are not
 sentence boundaries.
@@ -80,6 +88,17 @@ and Microsoft style guides: one action per step, lead with the verb (or a short 
 the verb), a single step is a bullet, and no "please", "simply" or "easy". `procedure.recovery`
 is a judgement rule: every failure state needs a way back in, because cutting information
 causes task failure.
+
+## Teaching
+
+`teaching.goal-alignment` asks whether the explanation and suitable practice develop the stated
+learning goal. `teaching.prerequisites` checks whether the reader has the knowledge needed to
+follow the explanation. `teaching.reasoning` asks whether connections, examples and worked steps
+show why the idea works. `teaching.practice` checks the relevance and correctness of practice
+and feedback when the unit calls for it. These are judgement prompts, not automated assessments.
+The teaching guide cites institutional authoring guidance and the IES practice guide, keeping
+their evidence scopes distinct. The plugin's four-part review organization is a derived checklist,
+not a tested chapter template. Textbook prose has no universal sentence cap or repetition penalty.
 
 ## Scripts
 

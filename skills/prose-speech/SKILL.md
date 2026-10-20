@@ -5,6 +5,9 @@ when_to_use: Use when asked for a speech, toast, wedding or best-man speech, eul
 ---
 # prose-speech
 
+A written textbook lesson uses prose-teach. Audience language adaptation can also use
+prose-reading-level; its written-text diagnostic does not measure listening comprehension.
+
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 

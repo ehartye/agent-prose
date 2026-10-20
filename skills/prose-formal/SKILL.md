@@ -5,6 +5,9 @@ when_to_use: Use when asked for an abstract, paper section, research summary, re
 ---
 # prose-formal
 
+Textbook lessons and educational explanations use prose-teach. For a stated school audience or
+reading-demand rewrite, also use prose-reading-level while retaining this task’s genre.
+
 `prose` below means `node "<plugin-root>/scripts/run-managed.js"`, where `<plugin-root>` is two
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 

@@ -1,0 +1,7 @@
+{
+  "schema": "prose/references@1",
+  "references": [
+    { "id": "ginns-conversational-text", "authors": "Ginns, Martin and Marsh", "year": 2013, "title": "Designing Instructional Text in a Conversational Style: A Meta-Analysis", "url": "https://eric.ed.gov/?id=EJ1036785", "kind": "peer-reviewed", "note": "Abstract reports retention and transfer benefits, with a duration boundary. Does not validate universal friendliness or every textbook chapter." },
+    { "id": "lupo-text-support", "authors": "Lupo, Tortorelli, Invernizzi, Ryoo and Strong", "year": 2019, "title": "An Exploration of Text Difficulty and Knowledge Support on Adolescents' Comprehension", "url": "https://ila.onlinelibrary.wiley.com/doi/10.1002/rrq.247", "kind": "peer-reviewed", "note": "Publisher abstract: 293 ninth graders, 24 texts over 12 weeks with instructional supports. Most showed similar comprehension; a small substantially below-average subgroup benefited from easier versions. Not equivalence or independent-reading validation." }
+  ]
+}

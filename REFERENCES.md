@@ -4,9 +4,13 @@ Generated from `craft/references.json` and `craft/guides/*.refs.json` by `npm ru
 
 | id | Source | Kind | Cited by |
 |---|---|---|---|
+| agrawal-answerability | Agrawal and Carpuat, 2024. [Do Text Simplification Systems Preserve Meaning? A Human Evaluation via Reading Comprehension](https://arxiv.org/html/2312.10126v2) | peer-reviewed | guide:teaching-prose, reader.essential-terms |
 | ar-25-50 | Headquarters, Department of the Army, 2020. [Army Regulation 25-50: Preparing and Managing Correspondence](https://www.maine.gov/dvem/policies/documents/AR%2025-50%20(10%20October%202020).pdf) | standard | formal.bluf, guide:formal-prose, plain.there-is, style.passive.report |
+| barayan-readability-control | Barayan, Camacho-Collados and Alva-Manchego, 2025. [Analysing Zero-Shot Readability-Controlled Sentence Simplification](https://arxiv.org/html/2409.20246v2) | peer-reviewed | guide:teaching-prose, reader.essential-terms |
 | bbc-subtitles | BBC. [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/) | style-guide | guide:speeches, guide:youtube, youtube.segment.pace |
+| bccampus-textbook-outline | Lauri M. Aesoph (BCcampus), 2018. [Textbook Outline](https://opentextbc.ca/selfpublishguide/chapter/textbook-outline/) | practitioner | guide:teaching-prose, teaching.goal-alignment, teaching.practice |
 | berklee-songwriting-tools | Berklee Online (Keys and Pattison). [Songwriting Tools and Techniques (course page)](https://online.berklee.edu/courses/songwriting-tools-and-techniques) | practitioner | guide:song, lyric.refrain.consistent, lyric.sections.line-match, lyric.stress-on-beat |
+| ccss-text-complexity | NGA Center and CCSSO, 2010. [Common Core ELA Appendix A: Text Complexity](https://achievethecore.org/content/upload/corestandards_appendix_a_text_complexity_ela.pdf) | standard | guide:teaching-prose, teaching.goal-alignment, teaching.prerequisites |
 | cmudict | Carnegie Mellon University Speech Group (cmusphinx/cmudict). [CMU US English pronouncing dictionary](https://github.com/cmusphinx/cmudict) | platform-doc | guide:song, guide:verse, verse.form.rhyme-scheme, verse.form.syllables, verse.meter.deviation, verse.pronunciation.ambiguous, verse.pronunciation.guessed |
 | commonmark-spec | MacFarlane (CommonMark). [CommonMark Spec](https://spec.commonmark.org/) | standard | guide:verse, verse.format.direction, verse.format.markup |
 | copyright-office-fair-use | US Copyright Office. [Fair Use Index](https://www.copyright.gov/fair-use/) | standard | guide:song, guide:youtube |
@@ -23,6 +27,7 @@ Generated from `craft/references.json` and `craft/guides/*.refs.json` by `npm ru
 | google-voice-tone | Google. [Voice and tone (Google developer documentation style guide)](https://developers.google.com/style/tone) | style-guide | guide:instruction-docs, lexicon:filler, procedure.filler |
 | gordon-magne-large-2011 | Gordon, Magne and Large, 2011. [EEG correlates of song prosody: a new look at the relationship between linguistic and musical rhythm](https://www.frontiersin.org/articles/10.3389/fpsyg.2011.00352/full) | peer-reviewed | guide:song, lyric.stress-on-beat |
 | gov-uk-25-words | GOV.UK (Inside GOV.UK blog), 2014. [Sentence length: why 25 words is our limit](https://insidegovuk.blog.gov.uk/2014/08/04/sentence-length-why-25-words-is-our-limit/) | style-guide | guide:formal-prose, guide:instruction-docs, style.sentence.max |
+| ies-study-learning | Pashler and colleagues (IES), 2007. [Organizing Instruction and Study to Improve Student Learning](https://ies.ed.gov/ncee/wwc/PracticeGuide/1) | review | guide:teaching-prose, teaching.practice, teaching.reasoning |
 | igda-locsig | IGDA Localization SIG, 2012. [Best Practices for Game Localization (v22)](https://igda-website.s3.us-east-2.amazonaws.com/wp-content/uploads/2021/04/09142137/Best-Practices-for-Game-Localization-v22.pdf) | practitioner | guide:game-dialogue, voice.banned, voice.bible-valid, voice.distinct, voice.unvoiced |
 | inkle-writing-with-ink | inkle. [Writing with ink](https://github.com/inkle/ink/blob/master/Documentation/WritingWithInk.md) | platform-doc | dialog.choices.fallback, dialog.graph.dangling, dialog.graph.dead-end, dialog.graph.exit, dialog.graph.unreachable, dialog.revisit.variety, guide:game-dialogue |
 | juzek-ward-delve | Juzek and Ward, 2024. [Why Does ChatGPT "Delve" So Much? Exploring the Sources of Lexical Overrepresentation in Large Language Models](https://arxiv.org/abs/2412.11385) | peer-reviewed | audit:vocabulary |
@@ -30,7 +35,7 @@ Generated from `craft/references.json` and `craft/guides/*.refs.json` by `npm ru
 | language-portal-readability | Language Portal of Canada, 2024. [Readability formulas, programs and tools: Do they work for plain language?](https://our-languages.canada.ca/en/blogue-blog/readability-formulas-eng) | review | guide:formal-prose, guide:instruction-docs, readability.grade.report |
 | liang-gpt-detectors-bias | Liang, Yuksekgonul, Mao, Wu and Zou, 2023. [GPT detectors are biased against non-native English writers](https://arxiv.org/abs/2304.02819) | peer-reviewed | audit:limits, guide:formal-prose |
 | liang-mapping-llm-use | Liang, Zhang, Wu, Izzo, Ouyang and others, 2024. [Mapping the Increasing Use of LLMs in Scientific Papers](https://arxiv.org/abs/2404.01268) | peer-reviewed | audit:vocabulary |
-| mac-readability-rct | Mac, Ayre, McCaffery, Boroumand, Bell, Muscat, 2025. [The Readability Study: A Randomised Trial of Health Information Written at Different Grade Reading Levels](https://pmc.ncbi.nlm.nih.gov/articles/PMC12119439/) | peer-reviewed | guide:formal-prose, guide:instruction-docs, readability.grade.report |
+| mac-readability-rct | Mac, Ayre, McCaffery, Boroumand, Bell, Muscat, 2025. [The Readability Study: A Randomised Trial of Health Information Written at Different Grade Reading Levels](https://pmc.ncbi.nlm.nih.gov/articles/PMC12119439/) | peer-reviewed | guide:formal-prose, guide:instruction-docs, guide:teaching-prose, readability.grade.report |
 | mcgraw-warren-2010 | A. Peter McGraw and Caleb Warren, 2010. [Benign violations: Making immoral behavior funny](https://leeds-faculty.colorado.edu/mcgrawp/pdf/mcgraw.warren.2010.pdf) | peer-reviewed | guide:screen-stage, guide:speeches |
 | microsoft-steps | Microsoft. [Writing step-by-step instructions (Microsoft Writing Style Guide)](https://learn.microsoft.com/en-us/style-guide/procedures-instructions/writing-step-by-step-instructions) | style-guide | guide:instruction-docs, procedure.step.imperative |
 | millar-budgell | Millar & Budgell, 2019. [The passive voice and comprehensibility of biomedical texts: an experimental study with 2 cohorts of chiropractic students](https://pmc.ncbi.nlm.nih.gov/articles/PMC6417867) | peer-reviewed | guide:formal-prose, style.passive.report |
@@ -38,6 +43,7 @@ Generated from `craft/references.json` and `craft/guides/*.refs.json` by `npm ru
 | nng-f-pattern | Kara Pernice (Nielsen Norman Group), 2017. [F-Shaped Pattern of Reading on the Web: Misunderstood, But Still Relevant](https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/) | practitioner | guide:formal-prose, guide:instruction-docs |
 | nng-how-users-read | Jakob Nielsen (Nielsen Norman Group), 1997. [How Users Read on the Web](https://www.nngroup.com/articles/how-users-read-on-the-web/) | practitioner | guide:formal-prose, guide:instruction-docs |
 | nng-plain-language-experts | Loranger (Nielsen Norman Group), 2017. [Plain Language Is for Everyone, Even Experts](https://www.nngroup.com/articles/plain-language-experts/) | practitioner | guide:formal-prose, guide:instruction-docs, style.sentence.max |
+| northwestern-textbook-authors | Sandoval-Lee and Womack (Northwestern Searle Center), 2026. [Inclusive Teaching for Textbook Authors](https://searle.northwestern.edu/resources/learning-teaching-guides/translating-principles-of-inclusive-teaching-for-textbook-authors.html) | practitioner | guide:teaching-prose, teaching.prerequisites, teaching.reasoning |
 | obermeier-2013 | Obermeier, Menninghaus, von Koppenfels, Raettig, Schmidt-Kassow, Otterbein and Kotz, 2013. [Aesthetic and emotional effects of meter and rhyme in poetry](https://www.frontiersin.org/articles/10.3389/fpsyg.2013.00010/full) | peer-reviewed | guide:verse, verse.form.rhyme-scheme, verse.meter.deviation |
 | padmakumar-diversity | Padmakumar & He, 2024. [Does Writing with Language Models Reduce Content Diversity?](https://arxiv.org/abs/2309.05196) | peer-reviewed | guide:game-dialogue, style.echo |
 | pattison-prosody | Pat Pattison (Berklee Online), 2022. [Prosody in Music and Songwriting](https://online.berklee.edu/takenote/prosody-in-music-and-songwriting/) | practitioner | guide:song, verse.form.rhyme-scheme |
@@ -214,6 +220,13 @@ Sources only a craft guide (`prose guide`) cites, from its `craft/guides/<family
 | w3c-wai-events | W3C Web Accessibility Initiative. [Making Events Accessible: Checklist for meetings, conferences, training, and presentations](https://www.w3.org/WAI/teach-advocate/accessible-presentations/) | standard | guide:speeches |
 | wcag-122 | W3C. [Understanding Success Criterion 1.2.2: Captions (Prerecorded)](https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html) | standard | guide:speeches |
 | zebregs-2015 | Simone Zebregs, Bas van den Putte, Peter Neijens and Anneke de Graaf, 2015. [The differential impact of statistical and narrative evidence on beliefs, attitude, and intention: a meta-analysis](https://pure.uva.nl/ws/files/2680645/167737_497142.pdf) | peer-reviewed | guide:speeches |
+
+### teaching-prose
+
+| id | Source | Kind | Cited by |
+|---|---|---|---|
+| ginns-conversational-text | Ginns, Martin and Marsh, 2013. [Designing Instructional Text in a Conversational Style: A Meta-Analysis](https://eric.ed.gov/?id=EJ1036785) | peer-reviewed | guide:teaching-prose |
+| lupo-text-support | Lupo, Tortorelli, Invernizzi, Ryoo and Strong, 2019. [An Exploration of Text Difficulty and Knowledge Support on Adolescents' Comprehension](https://ila.onlinelibrary.wiley.com/doi/10.1002/rrq.247) | peer-reviewed | guide:teaching-prose |
 
 ### verse
 

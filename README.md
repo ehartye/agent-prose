@@ -1,7 +1,8 @@
 # agent-prose
 
 A writing-craft toolkit for coding agents. agent-prose covers game dialogue (quest conversations, barks
-and branching), user instructions and technical docs, academic and professional prose, multi-camera and
+and branching), user instructions and technical docs, textbook teaching and audience-level adaptation,
+academic and professional prose, multi-camera and
 single-camera sitcom, TV drama, stage plays, YouTube scripts, speeches, professional presentations and
 webinars, each with its own register.
 Agents draft in native formats — Fountain for screen and stage, Markdown with frontmatter for speeches,
@@ -30,6 +31,8 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-setup` | Install, check and repair the managed `prose` runtime |
 | `prose-dialog` | Game dialogue: quest conversations, branching choices, barks and ambient lines as a checked YAML graph |
 | `prose-instruct` | User instructions, how-to procedures, troubleshooting, help articles and technical docs |
+| `prose-teach` | Textbook explanations, lessons and chapters with learner goals, examples, practice and source-backed reference excerpts |
+| `prose-reading-level` | Audience and reading-demand adaptation, including an average U.S. high school freshman, with meaning-preservation review |
 | `prose-formal` | Academic and professional prose: abstracts, papers, reports, proposals, memos, email |
 | `prose-script` | Sitcom (multi- and single-cam), TV drama, stage play in Fountain; YouTube scripts in Markdown |
 | `prose-storyboard` | Visual storyboards for scripts, quests and full campaigns: editable scene/panel JSON, choices and character tracks, rendered as a standalone illustrated HTML board |
@@ -44,6 +47,28 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-review-batch` | Many lines in one sitting: one reading-page queue over up to 50 sets, a choice per set staged and sent together, picks recorded like any other, `reading wait` returning them as they arrive |
 | `prose-strike` | Lines the owner wants gone: strikes recorded with a reason, read back, kept out of rewrites; removed only after the owner confirms the exact text (apply, undo) |
 | `prose-audit` | Audit a draft for generic or formulaic prose (stock openers, hollow significance, formula sentence shapes, chat residue, model-era vocabulary) and revise it by span toward specifics; never judges who wrote it |
+
+## Teaching and reader targeting
+
+Ask naturally: “Write this for an average U.S. high school freshman.” The reading-level skill treats that as a ninth-grade audience profile, with topic assumptions stated; it does not infer an exact formula score. Use prose-teach for a textbook lesson and prose-reading-level for audience adaptation within the original genre.
+
+Saved Markdown can carry a reader profile. The textbook form also requires teaching goals:
+
+```yaml
+form: textbook
+teaching:
+  unit: explanation
+  goals: [Explain how a claim differs from its supporting evidence.]
+reader:
+  language: en-US
+  schoolGrade: 9
+```
+
+An explicit text-level request may add `readingLevel: {scale: us-grade, range: [6, 8]}` inside `reader`; supported school/target grades are 4–12. `target` still means an approximate length or time aim. For word ranges or hard caps, keep the bounds in the brief and check body length separately. Run `prose measure lesson.md`, `prose lint lesson.md`, and `prose guide textbook --section anatomy --text`.
+
+The opt-in `readability` report identifies its paragraph scope, method, sample limits and essential-term observations. Its 100-word/five-sentence floor is a maintainer convention. A grade comparison is informational; it cannot certify comprehension or reject a variant. Existing `style.readingGrade` keeps its older measurement scope. Teaching judgments and factual preservation require review; actual student testing is reported separately.
+
+[Reference excerpts](skills/prose-teach/references/examples.md) include public-domain standards-selected texts across the school bands and an actual passage assessed in a simplification study, with attribution and reuse terms. The [adaptation reference](skills/prose-reading-level/references/reading-level.md) explains the evidence and limits. These features require agent-prose 0.10.0 or later; update the plugin and run `/agent-prose:prose-setup`. The [Yoda audit](docs/research/2026-10-20-yoda/README.md) records paired checks and their limits; educator and intended-reader testing remain separate.
 
 ## Commands
 
@@ -379,7 +404,7 @@ and the reasoning behind each topic in [craft/GUIDE.md](craft/GUIDE.md).
 
 ## Craft guides
 
-A craft reference guide for each family of forms lives in `craft/guides/`, and `prose guide` prints it. Every guide has the same eight sections: what the form is and who reads it, anatomy and conventions, length and timing, what good looks like, common failures and the habits behind them, how to revise, the rules that apply (generated from `craft/rules.json`, so it cannot drift) and numbered sources. Conventions are marked as conventions and unsourced advice as maintainer judgement. Read the section you need, not the whole guide, for example `prose guide barks --section anatomy --text`. All eight guides are available: game dialogue, instructions and technical docs, academic and professional prose, screen and stage scripts, YouTube scripts, speeches, poetry and verse forms, and song lyrics. To add one, see [Adding a craft guide](craft/GUIDE.md#adding-a-craft-guide).
+A craft reference guide for each family of forms lives in `craft/guides/`, and `prose guide` prints it. Every guide has the same eight sections: what the form is and who reads it, anatomy and conventions, length and timing, what good looks like, common failures and the habits behind them, how to revise, the rules that apply (generated from `craft/rules.json`, so it cannot drift) and numbered sources. Conventions are marked as conventions and unsourced advice as maintainer judgement. Read the section you need, not the whole guide, for example `prose guide barks --section anatomy --text`. All nine guides are available: game dialogue, instructions and technical docs, textbook teaching, academic and professional prose, screen and stage scripts, YouTube scripts, speeches, poetry and verse forms, and song lyrics. To add one, see [Adding a craft guide](craft/GUIDE.md#adding-a-craft-guide).
 
 
 ## Honesty notes

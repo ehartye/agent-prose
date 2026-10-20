@@ -1,0 +1,17 @@
+[
+  {
+    "file": "01.md",
+    "bodyWords": 286,
+    "method": "Whitespace-separated body tokens; frontmatter, headings, list markers, bold markers and standalone mathematical operators excluded; fractions counted as single tokens."
+  },
+  {
+    "file": "02.md",
+    "bodyWords": 191,
+    "method": "Whitespace-separated body tokens; frontmatter, headings, list markers, bold markers and standalone mathematical operators excluded; fractions counted as single tokens."
+  },
+  {
+    "file": "03.md",
+    "bodyWords": 107,
+    "method": "Whitespace-separated body tokens; frontmatter, headings, list markers, bold markers and standalone mathematical operators excluded; fractions counted as single tokens."
+  }
+]

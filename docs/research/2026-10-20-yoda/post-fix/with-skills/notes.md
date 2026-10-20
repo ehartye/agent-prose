@@ -1,0 +1,13 @@
+# Authoring and verification notes
+
+01 assumes a typical U.S. ninth grader who knows fractions and is new to conditional probability. 03 assumes a typical U.S. sixth grader using the invented simulator. School placement is recorded without a numerical text-level target. The requested range and cap were checked separately; neither file has `target` metadata.
+
+The body-word check excludes frontmatter, headings, list markers and emphasis. It includes warning, practice and answer text: 01 has 294 body words, within 250–350; 03 has 94, below the 130-word cap. This counter and the CLI's style counter use different text views; the saved measure reports should not substitute for the requested body check.
+
+Drafting-agent content review checked 01 against the supplied 100/40/60/30 counts, equal selection chances, both conditional directions, the overlap, the given-group denominator, and the limits on causal and independence claims. The practice answer uses the instrument group: 40 − 30 = 10 and 10/40 = 1/4. All four probability calculations were also recomputed with PowerShell; results are in `length-and-arithmetic.json`.
+
+03 has six numbered steps and two conditional recovery branches. Drafting review checked the invented-simulator qualification, saving only at Ready, Save copy and Copy saved before reset, the unsaved-change warning, the exact 4-second hold followed by release, Ready within 20 seconds leading to Open copy, Busy after 20 seconds leading to Help without another hold, the displayed session code, and the password prohibition. UI labels were retained. No extra troubleshooting or placeholders were added; the source supplies no other recovery steps.
+
+Both files were linted and measured with the local `node scripts/prose.mjs` CLI. All four commands exited 0; both lint outputs had empty errors and warnings. The separate judgement lists received the drafting review described above. The reading diagnostic for 01 estimated 8.4 using Flesch–Kincaid on eligible Markdown paragraphs; it excludes the answer-key paragraph. The diagnostic for 03 was unavailable for insufficient sample (16 eligible words, two sentence units), because steps are excluded. These diagnostics do not certify grade suitability, mathematical understanding or comprehension. No independent reviewer, educator or intended reader participated, and no learner testing was performed.
+
+No command failures occurred. No revision passes were needed after the first draft. No external research, other evaluation artifacts, implementation, specs or other-arm outputs were read. Only the supplied fictional sources supported the requested content. No self-score was assigned.

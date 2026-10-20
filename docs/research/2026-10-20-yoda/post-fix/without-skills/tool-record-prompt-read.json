@@ -1,0 +1,14 @@
+{
+  "check": "Read supplied prompt file",
+  "attempts": [
+    {
+      "attempt": 1,
+      "result": "No visible output after selecting the output property from the tool result. Repeated the read."
+    },
+    {
+      "attempt": 2,
+      "result": "Complete post-fix-prompts.json contents were returned."
+    }
+  ],
+  "command": "Get-Content -Raw -LiteralPath <repo>/docs/research/2026-10-20-yoda/post-fix-prompts.json"
+}

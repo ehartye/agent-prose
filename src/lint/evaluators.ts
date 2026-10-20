@@ -119,10 +119,27 @@ export const EVALUATORS: Record<string, Evaluator> = {
   'style.sentence.max': sentenceMax(() => [...PROSE_KINDS]),
   'spoken.sentence.max': sentenceMax(doc => SPOKEN_KINDS[doc.format]),
 
-  // Sentence-based prose metrics say nothing about a poem or lyric (line breaks are not sentences), so verse forms skip them.
-  'readability.grade.report': ({ m }) => m.verse || m.style.readingGrade === null ? [] : [{
-    message: `Reading grade about ${m.style.readingGrade} (reported only; not a target)`, line: null, measured: m.style.readingGrade,
-  }],
+  'readability.grade.report': ({ m }) => {
+    const report = m.readability;
+    if (report) {
+      const reason = report.status === 'insufficient-sample' ? `insufficient sample (${report.counts.words} words, ${report.counts.sentences} sentence units; convention requires 100 words and 5 sentence units)`
+        : report.status === 'unsupported-language' ? `unsupported declared language ${report.language}`
+        : 'unsupported genre (verse or non-Markdown text)';
+      const comparison = report.target ? `; ${report.comparison} declared target [${report.target.range.join(', ')}]` : '; no formula target requested';
+      const message = report.estimate === null ? `Reading diagnostic unavailable: ${reason}`
+        : `Reading diagnostic: approximately grade ${report.estimate.toFixed(1)} (Flesch–Kincaid, eligible Markdown paragraphs)${comparison}; does not establish comprehension or audience suitability`;
+      return [{ message, line: null, measured: report, severity: 'info' }];
+    }
+    // Preserve the legacy observation exactly for untargeted documents; verse has no sentence-based grade observation.
+    return m.verse || m.style.readingGrade === null ? [] : [{
+      message: `Reading grade about ${m.style.readingGrade} (reported only; not a target)`, line: null, measured: m.style.readingGrade,
+    }];
+  },
+
+  'reader.essential-terms': ({ m }) => (m.readability?.essentialTerms ?? []).map(term => ({
+    message: `Essential term ${quote(term.term)}: ${term.present ? 'present in learner-facing text' : 'not found in learner-facing text'} (presence only; definition, usage and retained meaning need review)`,
+    line: term.lines[0] ?? null, measured: term, severity: 'info',
+  })),
 
   'style.passive.report': ({ m }) => m.verse || m.style.passive.count === 0 ? [] : [{
     message: `${m.style.passive.count} passive sentence(s), rate ${m.style.passive.rate} (reported only)`, line: null, measured: m.style.passive,

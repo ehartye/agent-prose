@@ -1,0 +1,35 @@
+{
+  "purpose": "Post-fix Yoda check of range/cap instructions; same source tasks 01 and 03, fresh same-turn agent pair.",
+  "conditions": "Complete both requests. Save the requested prose as 01.md and 03.md in the output directory assigned by the orchestrator. Any authoring note belongs in a separate notes.md. Do not score your own work. Do not use external research: the supplied fictional data/source paragraphs are the full content sources. Local CLI access is available through node scripts/prose.mjs; do not install or change the global runtime. Do not read implementation, specs, prior evaluation outputs or another arm. Preserve any checks you actually run as separate JSON records; do not claim unperformed checks. No human reader or educator is participating. Changes are limited to your assigned output directory.",
+  "tasks": [
+    {
+      "id": "01",
+      "request": "Write a 250–350 word textbook lesson for an average U.S. high school freshman that explains conditional probability. Assume fractions are familiar but conditional probability is new. Use the fictional club data below. Explain how 'given' changes the group being counted, contrast both directions of the condition with the probability of the overlap, and include one short practice question with a separated answer. Keep the lesson readable and respectful.",
+      "source": "A fictional club has exactly 100 members. Exactly 40 play a musical instrument, exactly 60 play a sport, and exactly 30 do both. Select one member uniformly at random; no real population is represented. Given that the member plays a sport, the probability they play an instrument is 30/60 = 1/2. Given that the member plays an instrument, the probability they play a sport is 30/40 = 3/4. The probability that a randomly selected member does both is 30/100 = 3/10. The same 30 members occur in the numerators, while the group permitted by the condition changes the denominator. Do not assume independence or turn these proportions into causal claims."
+    },
+    {
+      "id": "03",
+      "request": "Rewrite these help instructions for an average U.S. sixth grader in at most 130 body words. Keep them a procedure, preserve the conditions, timings, exact UI labels and warning, and make the two recovery paths clear. Save Markdown. Do not add a lesson or quiz.",
+      "source": "This is an invented classroom simulator, ResetLab, not real hardware. Saving is available only while the status is 'Ready'. Before any reset, use 'Save copy' and confirm that the message 'Copy saved' appears. A reset erases all unsaved changes. To reset, hold 'Reset' for exactly 4 seconds, then release it. If 'Ready' returns within 20 seconds, select 'Open copy' to restore the saved copy. If 'Busy' remains after 20 seconds, do not hold 'Reset' again; select 'Help' and report the displayed session code. Never include a password in the report. No further troubleshooting steps are supplied."
+    }
+  ],
+  "rubric": {
+    "scale": "0 material failure; 1 usable with revision; 2 clear and correct; N/A when not applicable",
+    "dimensions": [
+      "reader and purpose fit",
+      "explanation and connections",
+      "source fidelity and qualifications",
+      "necessary vocabulary support",
+      "requested example/practice/feedback",
+      "respectful tone"
+    ],
+    "critical_failures": [
+      "fabricated source finding",
+      "lost essential condition",
+      "wrong worked answer or answer key",
+      "false claim of testing or grade certification"
+    ],
+    "verification": "Judge verification honesty separately, and do not award prose-quality points for metadata, CLI access or extra process notes. Inspect authoring/tool notes only after blind body review.",
+    "interpretation": "One agent pair, no statistical inference; grade suitability and learner comprehension remain untested. Report concrete differences even if scores tie."
+  }
+}

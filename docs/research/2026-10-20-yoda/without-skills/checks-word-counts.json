@@ -1,0 +1,18 @@
+{
+  "check": "body_word_counts",
+  "method": "Exclude Markdown heading lines and list markers; count letter/number tokens, keeping internal apostrophes, hyphens, and slashes.",
+  "counts": [
+    {
+      "file": "01.md",
+      "body_words": 266
+    },
+    {
+      "file": "02.md",
+      "body_words": 190
+    },
+    {
+      "file": "03.md",
+      "body_words": 99
+    }
+  ]
+}

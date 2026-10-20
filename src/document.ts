@@ -6,6 +6,7 @@ import { DEFAULT_FORM, getForm } from './forms.ts';
 import { parseDialog } from './parse/dialog.ts';
 import { parseFountain } from './parse/fountain.ts';
 import { parseMarkdown } from './parse/markdown.ts';
+import { validateLearningMetadata } from './reader.ts';
 
 export function detectFormat(path: string): Format {
   if (/\.fountain$/i.test(path)) return 'fountain';
@@ -49,6 +50,7 @@ export function parseDocument(path: string, text: string, options: { form?: stri
     if (declared && e instanceof ProseError) throw new ProseError('E_SCHEMA', e.message, { pointer: '/form', ...(e.hint ? { hint: e.hint } : {}) });
     throw e;
   }
+  validateLearningMetadata(meta, format, form.id);
   return {
     path, format, form: form.id,
     ...(typeof meta.register === 'string' ? { register: meta.register } : {}),

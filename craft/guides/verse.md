@@ -694,6 +694,7 @@ and the owner.
 | `verse.rhyme.every-line` | Free verse of six or more lines where every end word rhymes with another line is flagged as a sameness signal. | info | 6 lines | This plugin's choice (derived) | lint |
 | `verse.format.markup` | A verse line that starts like Markdown (a dash, a number and period, or >) is read as a list item, step or quote, not a line. | warn | none | n/a | lint |
 | `verse.line-break.purpose` | Each line ends where it does for a reason: sound, sense, speed or surprise. | info | none | n/a | judgement |
+| `reader.essential-terms` | Declared essential-term presence is reported without certifying definition or meaning. | info | none | n/a | lint |
 <!-- generated:rules end -->
 
 ## Sources

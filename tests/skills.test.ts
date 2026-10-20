@@ -7,8 +7,8 @@ const skillsDir = join(root, 'skills');
 const skills = readdirSync(skillsDir);
 
 describe('skills', () => {
-  it('ships the seventeen skills', () => {
-    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-presentation', 'prose-review', 'prose-review-batch', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-storyboard', 'prose-strike', 'prose-voice', 'prose-webinar']);
+  it('ships the nineteen skills', () => {
+    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-presentation', 'prose-reading-level', 'prose-review', 'prose-review-batch', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-storyboard', 'prose-strike', 'prose-teach', 'prose-voice', 'prose-webinar']);
   });
 
   for (const s of skills) {
@@ -164,7 +164,7 @@ describe('craft guides', () => {
   });
   it('only names guide sections that exist', () => {
     for (const s of skills) {
-      for (const m of flat(s).matchAll(/prose guide ([a-z-]+)/g)) expect(['game-dialogue', 'instruction-docs', 'formal-prose', 'screen-stage', 'youtube', 'speeches', 'verse', 'song'], `${s}: ${m[0]}`).toContain(m[1]);
+      for (const m of flat(s).matchAll(/prose guide ([a-z-]+)/g)) expect(['game-dialogue', 'instruction-docs', 'teaching-prose', 'formal-prose', 'screen-stage', 'youtube', 'speeches', 'verse', 'song'], `${s}: ${m[0]}`).toContain(m[1]);
     }
   });
 });
