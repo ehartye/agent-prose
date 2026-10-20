@@ -2,13 +2,13 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use h-superpowers:subagent-driven-development, h-superpowers:team-driven-development, or h-superpowers:executing-plans to implement this plan (ask user which approach). Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give agent-prose the front half of agent-beeps' owner loop through the CLI alone: the agent writes several variants of a draft along named directions, `prose set check` rejects near-duplicates and verifies that each variant actually moved the way it claims, the agent seals a prediction of the owner's pick, and `prose set pick` records the owner's choice as taste verdicts and reveals whether the prediction hit. Release as 0.2.0 with a ninth skill, `prose-review`.
+**Goal:** Give agent-prose variant review and recorded owner choices through the CLI alone: the agent writes several variants of a draft along named directions, `prose set check` rejects near-duplicates and verifies that each variant actually moved the way it claims, the agent seals a prediction of the owner's pick, and `prose set pick` records the owner's choice as taste verdicts and reveals whether the prediction hit. Release as 0.2.0 with a ninth skill, `prose-review`.
 
 **Architecture:** A set is a directory `.agent-prose/sets/<id>/` holding `set.json` (`prose/set@1`), a copy of the base draft, and one file per variant. Every variant is measured as a 12-number style feature vector (`src/owner/features.ts`); a direction is a weighted sum of feature movement from the base (`src/owner/directions.ts`); near-duplicates are found by n-gram overlap (`src/owner/similarity.ts`). Predictions are sealed with a SHA-256 so a later edit is detectable. Owner picks append `prose/verdict@1` rows (feature vectors frozen at judging time) to a project log and a per-user log under `AGENT_PROSE_HOME`; those rows are the training data for the taste model in M3c. The reading page (M3b) will read and write the same files.
 
 **Tech Stack:** unchanged (Node ≥ 24, TypeScript 7, commander, zod, yaml, vitest). No new dependency.
 
-**Evidence base:** the beeps owner loop mapped on 2026-10-03 (set/session/prediction/taste design), the M0 research findings on sameness (`docs/research/2026-10-02-m0-findings.md`) and the graded baselines (`docs/research/2026-10-02-skill-baselines.md`: 4 of 5 punch-up options on one angle).
+**Evidence base:** the M0 research findings on sameness (`docs/research/2026-10-02-m0-findings.md`) and the graded baselines (`docs/research/2026-10-02-skill-baselines.md`: 4 of 5 punch-up options on one angle).
 
 **Where to work:** a worktree branched from `main`, branch `feat/m3-owner-loop`. Never commit to `main`.
 
@@ -1868,7 +1868,7 @@ Append to `craft/GUIDE.md` a section "Variant sets and picks" explaining: why se
 
 - [ ] **Step 3: Comedy skill pointer and spec notes**
 
-In `skills/prose-comedy/SKILL.md` section 4 ("Deliver"), add: "When the owner will choose between the options, put them in a set (prose-review) so near-duplicates are rejected and the choice is recorded." Keep the file ≤ 150 lines. Append "## M3a implementation notes" to the spec: what shipped (sets, directions, check, sealed predictions with hash, picks as verdicts, `taste stats`, the ninth skill), the deliberate differences from beeps (no server yet; agent-written variants verified rather than generated; implied-pick weight 1/3; `.agent-prose/.gitignore`), and what remains: M3b reading page with duels, refine rounds and read-aloud; M3c Bradley-Terry taste model, ranking and model predictions.
+In `skills/prose-comedy/SKILL.md` section 4 ("Deliver"), add: "When the owner will choose between the options, put them in a set (prose-review) so near-duplicates are rejected and the choice is recorded." Keep the file ≤ 150 lines. Append "## M3a implementation notes" to the spec: what shipped (sets, directions, check, sealed predictions with hash, picks as verdicts, `taste stats`, the ninth skill), the implementation boundaries (no server yet; agent-written variants verified rather than generated; implied-pick weight 1/3; `.agent-prose/.gitignore`), and what remains: M3b reading page with duels, refine rounds and read-aloud; M3c Bradley-Terry taste model, ranking and model predictions.
 
 - [ ] **Step 4: Version bump**
 
@@ -1894,4 +1894,4 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 - Review the whole branch (`@h-superpowers:requesting-code-review`), squash-merge to `main`, push, tag `v0.2.0`, and publish the marketplace entry (version bump PR on `hartye-claude-plugins`, as for 0.1.0).
 - Update the maintainer's notes: M3a shipped, M3b and M3c still to do, and the architecture summary.
-- Write the M3b plan (LAN server, session event log, reading page with lineup, duel, refine, line-anchored notes and read-aloud) and the M3c plan (Bradley-Terry fit, global/project/per-voice layers, `taste show|fit`, model predictions and ranking, active duel selection) from the beeps map recorded in this session.
+- Write the M3b plan (LAN server, session event log, reading page with lineup, duel, refine, line-anchored notes and read-aloud) and the M3c plan (Bradley-Terry fit, global/project/per-voice layers, `taste show|fit`, model predictions and ranking, active duel selection) from the behaviors specified above.

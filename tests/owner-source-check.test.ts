@@ -5,7 +5,7 @@ import { createSet, variantPath } from '../src/owner/sets.ts';
 import { tmpProject, useTmp } from './owner-helpers.ts';
 
 useTmp();
-const draft = (text: string, speaker = 'CAP-0') => `form: quest-dialog\nnodes:\n  - id: cap-status\n    speaker: ${speaker}\n    text: ${JSON.stringify(text)}\n    end: true\n`;
+const draft = (text: string, speaker = 'GUIDE') => `form: quest-dialog\nnodes:\n  - id: cap-status\n    speaker: ${speaker}\n    text: ${JSON.stringify(text)}\n    end: true\n`;
 
 function seeded() {
   const p = tmpProject();
@@ -27,7 +27,7 @@ describe('line-scoped source review checks', () => {
   it('rejects a source-bound candidate that changes a speaker while retaining text-only alternatives', () => {
     const { project, set } = seeded();
     Object.assign(set, { sourceRef: { schema: 'prose/dialog-source@1', manifest: 'C:/example/manifest.json', manifestHash: 'a'.repeat(64), slotId: 'cap-status', slotHash: 'b'.repeat(64) } });
-    writeFileSync(variantPath(project, set, set.variants[0]), draft('The ledger has your report.', 'VECTOR-2'));
+    writeFileSync(variantPath(project, set, set.variants[0]), draft('The ledger has your report.', 'OPERATOR'));
     writeFileSync(variantPath(project, set, set.variants[1]), draft('Filed. Next report.'));
     const r = checkSet(project, set);
     expect(r.variants[0].reasons).toContain('source-structure-changed: only the designated line text may change');

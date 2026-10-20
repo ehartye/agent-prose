@@ -17,7 +17,7 @@ activation rate, false-positive rate or runtime discovery result was measured.
 | Ten slides and speaker notes for high-school biology | `prose-presentation` | Teaching/reader skills; separate tool needed for slide-file production |
 | Journal discussion-section explanation | `prose-formal` | No teaching skill selected |
 | Unchanged Gettysburg Address with freshman questions | `prose-teach` | Reader skill; preserve quoted source |
-| Button label and error toast | None | Referenced `design:ux-copy` is outside this catalog |
+| Button label and error toast | None | Referenced [external UX-writing skill] is outside this catalog |
 | Accessible sentence structure for an adult reader | `prose-reading-level` | Adult tone retained |
 
 The excluded microcopy case exposes an existing external skill pointer in

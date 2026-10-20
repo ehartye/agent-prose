@@ -50,7 +50,7 @@ The readability report uses the named Flesch–Kincaid method on eligible Markdo
 
 ## Actual commands and file operations
 
-All shell commands ran from `C:/Users/ehart/repos/agent-prose-worktrees/teaching-reading-level`. All prose CLI calls used the repository entry point; no managed/global install was used or changed.
+All shell commands ran from the repository root. All prose CLI calls used the repository entry point; no managed/global install was used or changed.
 
 Initial reads:
 

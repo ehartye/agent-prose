@@ -9,6 +9,7 @@ import { FORMS } from '../src/forms.ts';
 import { loadDocument } from '../src/document.ts';
 import { lint } from '../src/lint/lint.ts';
 import { describeSource } from '../scripts/managed-runtime.js';
+import { personalPath } from './portable-content.ts';
 
 const root = join(import.meta.dirname, '..');
 const made: string[] = [];
@@ -76,7 +77,7 @@ describe.each(writtenGuides())('the %s guide', family => {
     expect(body.replace(/https?:\/\/\S+/g, '')).not.toMatch(/\bwiki\b/i);
     expect(body).not.toMatch(/wiki-master|\.wiki-master-vault/);
     expect(body).not.toMatch(/\[\[[A-Za-z][^\][,]*\]\]/);
-    expect(body).not.toMatch(/[A-Za-z]:\\Users\\|\/c\/Users\/|AppData/);
+    expect(body).not.toMatch(personalPath);
     expect(body).not.toMatch(/[$][0-9]|[$]ARG/);
   });
 

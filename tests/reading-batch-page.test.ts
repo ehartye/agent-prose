@@ -13,7 +13,7 @@ runInNewContext(js, { window, URLSearchParams, Date, Math, console });
 const r = window.__reading;
 
 const counts = (o: Partial<Record<string, number>> = {}) => ({ waiting: 0, picked: 0, sent: 0, skipped: 0, blocked: 0, ended: 0, ...o });
-const item = (status: string, over: object = {}) => ({ n: 1, who: 'TALLY-4', where: 'd.yaml, line 4', form: 'dialog', status, picked: null, ...over });
+const item = (status: string, over: object = {}) => ({ n: 1, who: 'CLERK', where: 'd.yaml, line 4', form: 'dialog', status, picked: null, ...over });
 
 describe('the address', () => {
   it('reads a queue id from /q/<id> only', () => {
@@ -54,7 +54,7 @@ describe('status words and labels', () => {
     expect(r.statusWord(item('ended'))).toBe('Closed');
   });
   it('the rail button reads the whole state with its place', () => {
-    expect(r.railLabel(item('picked', { picked: 'B' }), 1, 5)).toBe('TALLY-4, d.yaml, line 4, picked b, not sent, item 1 of 5');
+    expect(r.railLabel(item('picked', { picked: 'B' }), 1, 5)).toBe('CLERK, d.yaml, line 4, picked b, not sent, item 1 of 5');
   });
 });
 
@@ -128,7 +128,7 @@ describe('the staged choice', () => {
     const long = 'x'.repeat(80);
     expect(r.previewText([long]).length).toBe(63);
     expect(r.previewText(['  Short  ', '', 'line'])).toBe('Short line');
-    expect(r.reviewLine(item('picked'), 'B', ['<b>Fine</b>'])).toBe('TALLY-4 (d.yaml, line 4): B - <b>Fine</b>');
+    expect(r.reviewLine(item('picked'), 'B', ['<b>Fine</b>'])).toBe('CLERK (d.yaml, line 4): B - <b>Fine</b>');
     const p = { candidates: [{ index: 2, units: ['INT. BRIDGE', 'whole draft'] }], compare: { rows: [{ base: 0, cur: { text: 'a' } }, { base: 1, cur: { text: 'b' }, cells: { 2: { speaker: 'MARA', text: 'new line', ops: [['+', 'new line']] } } }] } };
     expect(r.changedUnits(p, 2)).toEqual(['MARA: new line']);
     expect(r.changedUnits({ candidates: p.candidates, compare: null }, 2)).toEqual(['INT. BRIDGE', 'whole draft']);

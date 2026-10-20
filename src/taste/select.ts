@@ -1,6 +1,6 @@
 // Active duel selection: ask the pair the model is least sure of. Informative comparisons beat a fixed schedule.
 // score = (1 - |2p - 1|) * (1 + sigma): p is the model's chance that the first beats the second (0.5 is a coin flip), sigma the
-// uncertainty of the utility difference. Pure and deterministic; ports agent-beeps' nextDuel, with a null result when done.
+// uncertainty of the utility difference. Pure and deterministic, with a null result when done.
 import { pWin, utility, type Fit } from './model.ts';
 
 export interface DuelCandidate { index: number; x: number[] }

@@ -82,7 +82,7 @@ describe('the batch with send-backs', () => {
     expect(r.sendWords(2, 0)).toBe('2 picks');
     expect(r.sendWords(1, 1)).toBe('1 pick and 1 send-back');
     expect(r.sendWords(0, 3)).toBe('3 send-backs');
-    expect(r.backLine({ who: 'TALLY-4', where: 'd.yaml, line 4' }, { reasons: ['too-short'], note: 'thin' })).toBe('TALLY-4 (d.yaml, line 4): sent back - Too short, thin');
+    expect(r.backLine({ who: 'CLERK', where: 'd.yaml, line 4' }, { reasons: ['too-short'], note: 'thin' })).toBe('CLERK (d.yaml, line 4): sent back - Too short, thin');
     expect(r.backLine({ who: 'W', where: 'w' }, { reasons: [], note: 'n'.repeat(300) }).length).toBeLessThanOrEqual(123);
   });
   it('re-renders when a staged or a sent send-back changes', () => {

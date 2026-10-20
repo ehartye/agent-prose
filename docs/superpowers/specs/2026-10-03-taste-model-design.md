@@ -1,6 +1,6 @@
 # Taste model (M3c) — design
 
-Status: draft for the 0.4.0 line. Builds on the owner loop (0.2.0: variant sets, sealed predictions, `prose/verdict@2` rows) and the reading page (0.3.0: duels, ties, both-bad, cross-set duels). Pattern source: the sibling plugin agent-beeps' taste model (`src/taste/`); adapted to the twelve style features and to the prose logs.
+Status: draft for the 0.4.0 line. Builds on the owner loop (0.2.0: variant sets, sealed predictions, `prose/verdict@2` rows) and the reading page (0.3.0: duels, ties, both-bad, cross-set duels). The model uses twelve measured style features and recorded prose verdicts.
 
 ## Goal
 
@@ -17,7 +17,7 @@ Learn which style directions the owner picks, from the verdicts already logged, 
 
 ## The model
 
-Bradley-Terry over feature differences: `P(a beats b) = sigmoid(w . (x_a - x_b))`, no intercept. Fit by Newton's method with backtracking line search and an L2 prior (neutral at zero until data arrives); the inverse Hessian at the optimum is the Laplace covariance, so every utility carries an uncertainty. Port of the beeps `model.ts`, with these prose rules for the pairs it is fitted on:
+Bradley-Terry over feature differences: `P(a beats b) = sigmoid(w . (x_a - x_b))`, no intercept. Fit by Newton's method with backtracking line search and an L2 prior (neutral at zero until data arrives); the inverse Hessian at the optimum is the Laplace covariance, so every utility carries an uncertainty. The following rules define which recorded prose pairs enter the model:
 
 | Row kind | Pairs it contributes |
 |---|---|
@@ -28,7 +28,7 @@ Bradley-Terry over feature differences: `P(a beats b) = sigmoid(w . (x_a - x_b))
 
 Cross-set duel rows are fitted like any duel: their two vectors are comparable (shared feature definitions) and centred on the pair, and only the difference is used.
 
-**Layers.** `global` (every project's rows except the current project's, so they are not counted twice), then `project` once the current project has at least 15 fitted pairs (prior = global weights, lambda 3), then `voice` once the draft's single resolved voice has at least 15 fitted pairs among the project's rows that name it (prior = the project layer, lambda 3). A draft with zero or several resolved voices uses no voice layer. Each result reports which layers applied and how many pairs each used. The 15-pair threshold and lambda values are conventions inherited from agent-beeps, not measured here.
+**Layers.** `global` (every project's rows except the current project's, so they are not counted twice), then `project` once the current project has at least 15 fitted pairs (prior = global weights, lambda 3), then `voice` once the draft's single resolved voice has at least 15 fitted pairs among the project's rows that name it (prior = the project layer, lambda 3). A draft with zero or several resolved voices uses no voice layer. Each result reports which layers applied and how many pairs each used. The 15-pair threshold and lambda values are maintainer conventions, not validated on prose here.
 
 ## Commands
 
@@ -62,4 +62,4 @@ Taste for non-style qualities (humour, originality, voice fit beyond the twelve 
 - **Sparse data is the normal state.** Most owners will have tens of verdicts, not hundreds, so the model will abstain or show wide error bars for a long time. The summary and stats say so instead of overstating.
 - **Features are coarse proxies.** A learned preference for "shorter sentences" can hide what the owner actually liked. The words say "tendency", and the owner's pick remains the judge.
 - **The model can be gamed by the agent** if it can see the ranking before it drafts; hence no ranking command and a sealed, separate prediction.
-- **Threshold and prior values are conventions.** They are inherited from agent-beeps and not tuned on prose; the spec records them as such and the stats let the owner see whether the model is any good.
+- **Threshold and prior values are conventions.** They are not tuned on prose; the spec records them as such and the stats let the owner see whether the model is any good.

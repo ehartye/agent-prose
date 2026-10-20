@@ -1,5 +1,10 @@
 # Yoda audit: teaching and reader adaptation
 
+Public archive note: local working-directory paths are normalized to repository-relative
+paths or described as the repository root. External skill handles are anonymized where
+present. Recorded metrics, generated drafts and review outcomes are unchanged; historical
+metadata character counts describe the original, pre-redaction text.
+
 Audited `prose-teach` and `prose-reading-level` at commit `97838bb`, with all
 nineteen skill descriptions checked for overlap and references. One authoring
 instruction gap was corrected. The paired writing review found no prose-quality
@@ -23,11 +28,13 @@ new draft metadata for a word range/hard cap, retain the actual bounds in the
 brief and check the requested body separately. Runtime semantics were not changed.
 
 **Advisory: an existing microcopy route depends on an external skill.**
-`prose-instruct` names `design:ux-copy`, which is absent from this catalog. The
+The audited `prose-instruct` named an external UX-writing skill, absent from this catalog. The
 original project design intentionally delegates microcopy outside agent-prose.
 The selection probe identified the missing local route. This is a portability
 dependency, not proof that the external skill is retired or a reason to make
-the new teaching skill own interface copy. No unrelated routing change was made.
+the new teaching skill own interface copy. The original audit left that route unchanged.
+In the portability patch, the current skill uses a generic UX-writing scope
+exclusion with no dependency on another installed plugin.
 
 **Evidence limit: prose benefit remains unestablished.** Both arms earned ceiling
 scores from the independent reviewer. The examples support competent writing and

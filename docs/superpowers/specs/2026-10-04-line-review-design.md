@@ -8,7 +8,7 @@ Review is line-shaped work (a bark, a quest line, a speech beat), and three thin
 
 ## Testbed
 
-The first real use is the dialog of the space2grow game (a separate repo), so the dialog YAML paths (barks, variants, choices) get the most scrutiny. Milestone ordering is unchanged: the testbed does not move anything earlier.
+Dialogue in a separately stored game motivates the dialog YAML paths (barks, variants, choices), which get the most scrutiny. Public examples use synthetic fixtures. Milestone ordering is unchanged: the testbed does not move anything earlier.
 
 ## Principles
 

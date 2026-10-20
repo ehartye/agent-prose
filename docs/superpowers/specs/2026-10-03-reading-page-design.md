@@ -1,6 +1,6 @@
 # LAN reading page (M3b) — design
 
-Status: draft for the 0.4.0 line (0.3.0 is the verse engine plus the poetry and songwriting skills). Builds on the owner loop shipped in 0.2.0 (variant sets, sealed predictions, `prose/verdict@2`). Pattern source: the sibling plugin agent-beeps' audition server, adapted for text.
+Status: draft for the 0.4.0 line (0.3.0 is the verse engine plus the poetry and songwriting skills). Builds on the owner loop shipped in 0.2.0 (variant sets, sealed predictions, `prose/verdict@2`). A local HTTP server serves text comparisons with durable session events.
 
 ## Goal
 
@@ -55,7 +55,7 @@ Lineup keeps and duds, plays and notes are engagement events only. Duels and the
 - `prose reading open --set <id>` requires a sealed prediction (`E_PREDICTION_REQUIRED` with the existing hint, or `--no-predict`, which is recorded), registers the project, starts the server if needed and prints the session URL.
 - `prose reading wait --id <id>` blocks until the owner asks to refine, ships or abandons, and prints the request (champion, directions, like, notes) plus a `next` hint.
 - `prose reading round --id <id> --set <new-set>` answers a refine request with a new set; it joins the session against the champion.
-- `prose reading status|list|close` as in the sibling. There is no hand-off mode in which the server writes variants itself: in this plugin the agent writes the rewrites and the tool verifies them.
+- `prose reading status|list|close` for session inspection and lifecycle. There is no hand-off mode in which the server writes variants itself: in this plugin the agent writes the rewrites and the tool verifies them.
 
 ## Testing
 
