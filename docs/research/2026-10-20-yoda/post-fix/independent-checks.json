@@ -1,0 +1,76 @@
+{
+  "method": "Strip frontmatter, heading lines and leading list markers; count whitespace tokens containing Unicode letters or digits. Includes practice/answer/source, excludes standalone mathematical symbols.",
+  "checks": "Independent orchestrator parse/measure/lint on four post-fix drafts; not a blind prose score.",
+  "rows": [
+    {
+      "arm": "with-skills",
+      "id": "01",
+      "bodyWords": 294,
+      "form": "textbook",
+      "hasTarget": false,
+      "lengthFindings": 0,
+      "errors": 0,
+      "warnings": 0,
+      "reader": {
+        "language": "en-US",
+        "schoolGrade": 9,
+        "priorKnowledge": "Familiar with fractions; no prior conditional probability knowledge assumed.",
+        "essentialTerms": [
+          "conditional probability",
+          "given",
+          "denominator"
+        ]
+      },
+      "readabilityStatus": "estimated"
+    },
+    {
+      "arm": "with-skills",
+      "id": "03",
+      "bodyWords": 94,
+      "form": "instructions",
+      "hasTarget": false,
+      "lengthFindings": 0,
+      "errors": 0,
+      "warnings": 0,
+      "reader": {
+        "language": "en-US",
+        "schoolGrade": 6,
+        "priorKnowledge": "Typical sixth-grade audience using the fictional classroom simulator.",
+        "essentialTerms": [
+          "Ready",
+          "Save copy",
+          "Copy saved",
+          "Reset",
+          "Open copy",
+          "Busy",
+          "Help"
+        ]
+      },
+      "readabilityStatus": "insufficient-sample"
+    },
+    {
+      "arm": "without-skills",
+      "id": "01",
+      "bodyWords": 289,
+      "form": "professional",
+      "hasTarget": false,
+      "lengthFindings": 0,
+      "errors": 0,
+      "warnings": 0,
+      "reader": null,
+      "readabilityStatus": null
+    },
+    {
+      "arm": "without-skills",
+      "id": "03",
+      "bodyWords": 95,
+      "form": "professional",
+      "hasTarget": false,
+      "lengthFindings": 0,
+      "errors": 0,
+      "warnings": 0,
+      "reader": null,
+      "readabilityStatus": null
+    }
+  ]
+}

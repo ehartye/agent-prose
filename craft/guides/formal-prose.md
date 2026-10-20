@@ -547,6 +547,7 @@ choice" is not a source's figure. Whether a claim is true and a citation real is
 | `voice.bible-valid` | Every voice bible in the project loads: valid YAML and schema, id matching the file name, unique ids, and each speaker claimed by one bible. | error | none | n/a | lint |
 | `voice.banned` | A speaker never uses a word their voice bible bans. | warn | none | n/a | lint |
 | `voice.unvoiced` | In a project with voice bibles, every speaker resolves to one. | info | none | n/a | lint |
+| `reader.essential-terms` | Declared essential-term presence is reported without certifying definition or meaning. | info | none | n/a | lint |
 <!-- generated:rules end -->
 
 ## Sources

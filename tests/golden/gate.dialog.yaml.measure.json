@@ -63,6 +63,7 @@
     ],
     "readingGrade": 1
   },
+  "readability": null,
   "lexicon": {
     "aiTells": [],
     "filler": []

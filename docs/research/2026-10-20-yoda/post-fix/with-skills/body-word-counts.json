@@ -1,0 +1,14 @@
+[
+  {
+    "file": "docs/research/2026-10-20-yoda/post-fix/with-skills/01.md",
+    "method": "Body only: exclude frontmatter, headings, list markers, and emphasis; count whitespace-separated tokens containing a letter or number.",
+    "bodyWords": 294,
+    "includes": "All paragraphs, warnings, steps, practice, and answer text."
+  },
+  {
+    "file": "docs/research/2026-10-20-yoda/post-fix/with-skills/03.md",
+    "method": "Body only: exclude frontmatter, headings, list markers, and emphasis; count whitespace-separated tokens containing a letter or number.",
+    "bodyWords": 94,
+    "includes": "All paragraphs, warnings, steps, practice, and answer text."
+  }
+]

@@ -1,0 +1,47 @@
+{
+  "method": "Independent randomInt(2) assignment within each case; frontmatter removed; prose and headings otherwise unchanged.",
+  "mapping": [
+    {
+      "case": "01",
+      "label": "01-M.md",
+      "source": "with-skills/01.md",
+      "sourceSha256": "d13a6f0705209291d17255d49cfc35fddc7655f842c2df441251f89a0f4340ab",
+      "bodySha256": "138972b3c33bf6a6fba28fb968e21eecd201f314fc8d1da09f7cc6ad80f06ff0"
+    },
+    {
+      "case": "01",
+      "label": "01-Q.md",
+      "source": "without-skills/01.md",
+      "sourceSha256": "163bac6c5f2f1f699d31c0455b97c3e4ac935084bcb940b65dae869022c8d69d",
+      "bodySha256": "163bac6c5f2f1f699d31c0455b97c3e4ac935084bcb940b65dae869022c8d69d"
+    },
+    {
+      "case": "02",
+      "label": "02-M.md",
+      "source": "with-skills/02.md",
+      "sourceSha256": "b5e3e54d247bf384e179475cc9861ddf8cecae1a63583371cf81fe32c1ec98a2",
+      "bodySha256": "510472d897253d09800c1ccaab8d0c7d777806b2d0fac322f0fc1eb7fb112813"
+    },
+    {
+      "case": "02",
+      "label": "02-Q.md",
+      "source": "without-skills/02.md",
+      "sourceSha256": "c700aef0584f6b79fa035a7b39d705165c18d9b87ee818e0b79afad390493f72",
+      "bodySha256": "c700aef0584f6b79fa035a7b39d705165c18d9b87ee818e0b79afad390493f72"
+    },
+    {
+      "case": "03",
+      "label": "03-M.md",
+      "source": "without-skills/03.md",
+      "sourceSha256": "2f0115a3f0bd304465d9083b58cc05f6d5541c43de2d14443c13f64244ac840e",
+      "bodySha256": "2f0115a3f0bd304465d9083b58cc05f6d5541c43de2d14443c13f64244ac840e"
+    },
+    {
+      "case": "03",
+      "label": "03-Q.md",
+      "source": "with-skills/03.md",
+      "sourceSha256": "2bc055711a129738ea73a59f95428afe926af4f745fad7ad017154289ac58dcd",
+      "bodySha256": "e2335a8d657d778c9d7ffa884cfc50ee1ec3890c61fa492876b1bc174a8ee4b6"
+    }
+  ]
+}

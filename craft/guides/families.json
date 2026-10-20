@@ -3,6 +3,7 @@
   "families": [
     { "id": "game-dialogue", "title": "Game dialogue", "description": "Quest dialogue, branching conversations and barks: lines the player reads or hears in a game, in boxes of limited size and often more than once.", "forms": ["quest-dialog", "barks", "conversation"] },
     { "id": "instruction-docs", "title": "Instructions and technical docs", "description": "Procedures, how-to steps, troubleshooting and technical documentation read by someone doing a task.", "forms": ["instructions", "tech-doc"] },
+    { "id": "teaching-prose", "title": "Textbook teaching", "description": "Textbook explanations, lessons and chapters that develop a learner’s understanding and ability to apply it.", "forms": ["textbook"] },
     { "id": "formal-prose", "title": "Academic and professional prose", "description": "Abstracts, papers, reports, proposals, memos and email written to be read and acted on.", "forms": ["academic", "professional"] },
     { "id": "screen-stage", "title": "Screen and stage scripts", "description": "Multi-camera and single-camera sitcoms, TV drama and stage plays in script format, timed by the page.", "forms": ["sitcom-multicam", "sitcom-singlecam", "tv-drama", "stage-play"] },
     { "id": "youtube", "title": "YouTube scripts", "description": "Narrated video scripts with timestamped segments, written for the ear and the edit.", "forms": ["youtube"] },

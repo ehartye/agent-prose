@@ -612,6 +612,7 @@ breaks are not sentence boundaries, and `style.echo` does not run on songs, beca
 | `lyric.sections.line-match` | Like sections (Verse 1, Verse 2) stay within 2 syllables per line of each other. | info | 2 syllables | This plugin's choice (derived) | lint |
 | `verse.line-break.purpose` | Each line ends where it does for a reason: sound, sense, speed or surprise. | info | none | n/a | judgement |
 | `lyric.stress-on-beat` | Stressed syllables meet strong beats when the lyric is set to music. | info | none | n/a | judgement |
+| `reader.essential-terms` | Declared essential-term presence is reported without certifying definition or meaning. | info | none | n/a | lint |
 <!-- generated:rules end -->
 
 ## Sources

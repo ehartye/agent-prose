@@ -1,0 +1,26 @@
+{
+  "scope": "Assigned post-fix with-skills arm only; local CLI; no install or global changes.",
+  "sourceReads": [
+    "docs/research/2026-10-20-yoda/post-fix-prompts.json",
+    "skills/prose-teach/SKILL.md",
+    "skills/prose-reading-level/SKILL.md",
+    "skills/prose-reading-level/references/reading-level.md",
+    "skills/prose-instruct/SKILL.md"
+  ],
+  "guideCommands": [
+    {"command": "node scripts/prose.mjs guide teaching-prose --text --section anatomy", "exitCode": 0},
+    {"command": "node scripts/prose.mjs guide instruction-docs --text --section anatomy", "exitCode": 0}
+  ],
+  "checkRecords": [
+    "01-lint.json",
+    "01-measure.json",
+    "03-lint.json",
+    "03-measure.json",
+    "body-word-counts.json",
+    "length-and-arithmetic.json"
+  ],
+  "failureRecords": [],
+  "review": "Drafting-agent source and requirement review is recorded in notes.md; no independent review, educator review or learner testing.",
+  "revisionsAfterFirstDraft": 0,
+  "selfScore": null
+}

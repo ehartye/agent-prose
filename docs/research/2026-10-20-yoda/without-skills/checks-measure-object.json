@@ -1,0 +1,9 @@
+{
+  "check": "PowerShell Measure-Object word count",
+  "command": "Get-Content -Raw -LiteralPath 'docs/research/2026-10-20-yoda/without-skills/01.md' | Measure-Object -Word",
+  "scope": "Entire file, including headings and Markdown symbols.",
+  "result": {
+    "Words": 281
+  },
+  "raw_output": "Lines Words Characters Property\n----- ----- ---------- --------\n        281"
+}

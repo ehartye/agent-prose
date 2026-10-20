@@ -575,6 +575,7 @@ owner.
 | `voice.banned` | A speaker never uses a word their voice bible bans. | warn | none | n/a | lint |
 | `voice.unvoiced` | In a project with voice bibles, every speaker resolves to one. | info | none | n/a | lint |
 | `voice.distinct` | Swap test: no line could be given to another character without anyone noticing. | warn | none | n/a | judgement |
+| `reader.essential-terms` | Declared essential-term presence is reported without certifying definition or meaning. | info | none | n/a | lint |
 <!-- generated:rules end -->
 
 ## Sources

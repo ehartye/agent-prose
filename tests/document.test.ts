@@ -11,7 +11,7 @@ const code = (fn: () => unknown) => { try { fn(); } catch (e) { return (e as Pro
 
 describe('forms', () => {
   it('registers the fifteen v1 forms and the verse forms', () => {
-    expect(FORMS.map(f => f.id)).toHaveLength(24);
+    expect(FORMS.map(f => f.id)).toHaveLength(25);
     expect(getForm('tv-drama').format).toBe('fountain');
     expect(code(() => getForm('no-such-form'))).toBe('E_USAGE');
   });

@@ -11,7 +11,7 @@ const prose = (...args: string[]) => spawnSync(process.execPath, [cli, ...args],
 describe('prose guide', () => {
   it('lists the families with their forms, descriptions and whether the guide is written', async () => {
     const out = await run('guide');
-    expect(out.families.map((f: any) => f.id)).toEqual(['game-dialogue', 'instruction-docs', 'formal-prose', 'screen-stage', 'youtube', 'speeches', 'verse', 'song']);
+    expect(out.families.map((f: any) => f.id)).toEqual(['game-dialogue', 'instruction-docs', 'teaching-prose', 'formal-prose', 'screen-stage', 'youtube', 'speeches', 'verse', 'song']);
     expect(out.families.flatMap((f: any) => f.forms).sort()).toEqual(FORMS.map(f => f.id).sort());
     const game = out.families.find((f: any) => f.id === 'game-dialogue');
     expect(game.forms).toEqual(['quest-dialog', 'barks', 'conversation']);

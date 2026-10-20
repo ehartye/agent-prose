@@ -24,6 +24,7 @@ import { dirname, resolve } from 'node:path';
 import { findProject } from '../project.ts';
 import { loadVoices, voiceFor, type Voice } from '../voice.ts';
 import { ProseError } from '../errors.ts';
+import { measureReadability, type ReadabilityReport } from './readability.ts';
 
 export interface VoiceError { code: string; message: string; file?: string; pointer?: string }
 
@@ -78,6 +79,8 @@ export interface Measurement {
   form: string;
   register: string | null;
   style: StyleStats;
+  /** Opt-in reader diagnostic; legacy style measurements keep their original inputs and behavior. */
+  readability: ReadabilityReport | null;
   lexicon: { aiTells: LexiconHit[]; filler: LexiconHit[] };
   spoken: SpokenStats | null;
   script: ScriptStats | null;
@@ -127,6 +130,7 @@ export function measure(doc: Doc): Measurement {
     form: form.id,
     register: doc.register ?? null,
     style,
+    readability: measureReadability(doc),
     lexicon: { aiTells: aiTellHits(prose), filler: matchLexicon(FILLER, prose) },
     spoken,
     script,

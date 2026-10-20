@@ -38,6 +38,7 @@
     "echo": [],
     "readingGrade": null
   },
+  "readability": null,
   "lexicon": {
     "aiTells": [],
     "filler": []
