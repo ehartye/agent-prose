@@ -119,7 +119,7 @@ describe('managed runtime', () => {
   describe('the reading page files (runtime/)', () => {
     const made: string[] = [];
     afterAll(() => { for (const d of made) rmSync(d, { recursive: true, force: true }); });
-    const PAGE = ['runtime/reading/index.html', 'runtime/reading/app.js', 'runtime/reading/style.css'];
+    const PAGE = ['runtime/reading/index.html', 'runtime/reading/app.js', 'runtime/reading/style.css', 'runtime/reading/review.js', 'runtime/reading/annotations.js'];
     const FONTS = ['courier-prime-400.ttf', 'courier-prime-700.ttf', 'atkinson-400.ttf', 'atkinson-700.ttf', 'OFL-CourierPrime.txt', 'OFL-Atkinson.txt', 'README.txt'].map(f => `runtime/reading/fonts/${f}`);
     const LF = String.fromCharCode(10);
     const CRLF = String.fromCharCode(13, 10);

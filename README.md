@@ -109,6 +109,10 @@ retarget and undo decisions are saved in the sidecar; rejection requires no repl
 decisions with `annotation feedback <session> --since <cursor>`, and close the workbench with
 `annotation close <session>`. A preview does not approve or publish anything.
 
+Annotations use the same proof-desk page, fonts, theme, controls and queue components as the
+existing single and batch reviews. Their controller handles annotation decisions within that
+shared UI; it does not introduce a separate review application.
+
 Source changes are checked against the annotation's used passage, context, concept and destination.
 Accepted entries become stale when those dependencies change. `annotation check <sidecar> --save
 --expect <revision>` can rebind still-valid entries after unrelated edits. Writes support revision

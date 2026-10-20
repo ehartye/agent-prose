@@ -3,10 +3,12 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { request } from 'node:http';
 import { chromium } from 'playwright';
-import { annotationWorkbenchPage, annotationWorkbenchScript } from '../src/annotation/workbench-page.ts';
+import { reviewPage } from '../src/reading/assets.ts';
 import { startAnnotationPreview, getAnnotationPreviewStatus, getAnnotationFeedback, closeAnnotationPreview, openAnnotationPreview } from '../src/annotation/workbench.ts';
 import { createAnnotationFile, findCandidates, proposeAnnotations, inspectAnnotationFile, compileAnnotations } from '../src/annotation/store.ts';
 import { tmp, useTmp, useTempHome } from './owner-helpers.ts';
+import { ReadingServer } from '../src/reading/server.ts';
+import { seedBatch, makeQueue } from './reading-batch-helpers.ts';
 
 useTmp();
 useTempHome();
@@ -33,15 +35,58 @@ async function api(s: Awaited<ReturnType<typeof seed>>, path: string, body?: unk
 }
 
 describe('annotation workbench', () => {
+  it('uses the original review shell, assets, fonts and controls in both review modes', async () => {
+    const s = await seed();
+    const batch=seedBatch(2), queue=makeQueue(batch);
+    const reading = new ReadingServer({host:'127.0.0.1',port:0,persist:false,token:'a'.repeat(32),projects:[batch.project]});
+    const info = await reading.listen(); servers.push(reading);
+    const original = `http://127.0.0.1:${info.port}`;
+    for(const asset of ['/style.css','/review.js','/app.js','/annotations.js','/fonts/atkinson-400.ttf','/fonts/courier-prime-400.ttf']){
+      const [a,b]=await Promise.all([fetch(original+asset),fetch(s.base+asset)]);
+      expect(a.status,asset).toBe(200);expect(b.status,asset).toBe(200);
+      expect(Buffer.from(await b.arrayBuffer()),asset).toEqual(Buffer.from(await a.arrayBuffer()));
+    }
+    const browser = await chromium.launch({headless:true});
+    try{
+      const page=await browser.newPage({viewport:{width:1280,height:850}});
+      page.setDefaultTimeout(5000);
+      await page.goto(original); await page.locator('#title').filter({hasText:'Reading'}).waitFor();
+      const originalStyle=await page.locator('body').evaluate(el=>({font:el.ownerDocument.defaultView!.getComputedStyle(el).fontFamily,paper:el.ownerDocument.defaultView!.getComputedStyle(el).backgroundColor}));
+      await page.goto(`${original}/q/${queue.id}?t=${'a'.repeat(32)}`);
+      await page.locator('#rail .qitem').nth(1).waitFor();
+      await page.locator('#rail .qitem').nth(1).click();
+      await page.locator('#rail .qitem[data-key="rail-2"][aria-current="true"]').waitFor();
+      await page.getByRole('button',{name:/^Keep draft/}).first().click();
+      await page.getByRole('button',{name:/^Kept draft/}).first().waitFor();
+      await page.goto(`${original}/s/${queue.items[0].sessionId}?t=${'a'.repeat(32)}`);
+      await page.getByRole('button',{name:/^Keep draft/}).first().waitFor();
+      await page.getByRole('button',{name:/^Keep draft/}).first().click();
+      await page.getByRole('button',{name:/^Kept draft/}).first().waitFor();
+      if(process.env.PROSE_UI_PROOF)await page.screenshot({path:join(process.env.PROSE_UI_PROOF,'original-review.png'),fullPage:true});
+      await page.goto(s.server.localUrl);await page.getByRole('button',{name:'Accept',exact:true}).waitFor();
+      expect(await page.locator('body').evaluate(el=>({font:el.ownerDocument.defaultView!.getComputedStyle(el).fontFamily,paper:el.ownerDocument.defaultView!.getComputedStyle(el).backgroundColor}))).toEqual(originalStyle);
+      expect(originalStyle.font).toContain('Atkinson');
+      expect(await page.locator('#desk.batch #rail .qitem').count()).toBe(1);
+      expect(await page.getByRole('button',{name:'Accept',exact:true}).evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).minHeight)).toBe('44px');
+      if(process.env.PROSE_UI_PROOF)await page.screenshot({path:join(process.env.PROSE_UI_PROOF,'annotation-review.png'),fullPage:true});
+      await page.emulateMedia({colorScheme:'dark'});
+      expect(await page.locator('body').evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).backgroundColor)).toBe('rgb(18, 22, 27)');
+      if(process.env.PROSE_UI_PROOF)await page.screenshot({path:join(process.env.PROSE_UI_PROOF,'annotation-dark.png'),fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+      expect(await page.evaluate(()=>{const v=globalThis as unknown as {document:{documentElement:{scrollWidth:number}};innerWidth:number};return v.document.documentElement.scrollWidth<=v.innerWidth;})).toBe(true);
+      expect(await page.locator('#rail').isVisible()).toBe(true);
+      if(process.env.PROSE_UI_PROOF)await page.screenshot({path:join(process.env.PROSE_UI_PROOF,'annotation-mobile.png'),fullPage:true});
+    }finally{await browser.close();}
+  },60_000);
   it('provides accessible source, queue and detail panes with all review actions and local assets', () => {
-    const page = annotationWorkbenchPage();
-    expect(page).toContain('aria-label="Annotation queue"');
-    expect(page).toContain('aria-label="Source reading pane"');
-    expect(page).toContain('aria-label="Annotation details"');
-    expect(page).toContain('script src="/workbench.js"');
-    expect(page).not.toMatch(/https?:\/\//);
-    for (const action of ['accept', 'reject', 'defer', 'edit', 'retarget', 'undo']) expect(page).toContain(`data-action="${action}"`);
-    expect(annotationWorkbenchScript()).not.toContain('eval(');
+    const page = reviewPage('annotations');
+    const controller = readFileSync(join(import.meta.dirname,'..','runtime','reading','annotations.js'),'utf8');
+    expect(page).toContain('data-review-mode="annotations"');
+    expect(page).toContain('script src="/review.js"');
+    expect(page).toContain('script src="/app.js"');
+    for(const name of ['Annotation queue','Source reading pane','Annotation details'])expect(controller).toContain(name);
+    for(const action of ['accept','reject','defer','edit','retarget','undo'])expect(controller).toContain('"data-action":"'+action+'"');
+    expect(controller).not.toContain('eval(');
   });
 
   it('keeps inspection private, refuses cross-origin saves and preserves sidecar authority on reload', async () => {
@@ -155,15 +200,15 @@ describe('annotation workbench', () => {
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('Particles spread through random motion.');
       await page.getByRole('textbox', { name: 'Annotation text' }).fill('A local draft survives conflict.');
       await page.getByRole('button', { name: 'Accept', exact: true }).click();
-      await page.getByRole('status').filter({ hasText: 'Save your text before accepting' }).waitFor();
+      await page.getByRole('alert').filter({ hasText: 'Save your text before accepting' }).waitFor();
       expect(inspectAnnotationFile(s.file).annotations[0].state).toBe('draft');
       const external = findCandidates(s.file, { quote: 'particles' });
       proposeAnnotations(s.file, [{ id: 'particles', kind: 'highlight', candidate: external.candidates[0].id }], { expectedRevision: external.revision });
       await page.getByRole('button', { name: 'Save text' }).click();
-      await page.getByRole('status').filter({ hasText: 'Your text is preserved' }).waitFor();
+      await page.getByRole('alert').filter({ hasText: 'Your text is preserved' }).waitFor();
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('A local draft survives conflict.');
       await page.getByRole('button', { name: 'Reload source', exact: true }).click();
-      await page.getByRole('status').filter({ hasText: 'Your unsaved text is preserved' }).waitFor();
+      await page.getByRole('alert').filter({ hasText: 'Your unsaved text is preserved' }).waitFor();
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('A local draft survives conflict.');
       await page.getByRole('textbox', { name: 'Annotation text' }).fill('<img src=x onerror="window.bad=true">');
       await page.getByRole('button', { name: 'Save text' }).click();
@@ -209,7 +254,7 @@ describe('annotation workbench', () => {
       writeFileSync(s.concepts!, JSON.stringify(registry));
       writeFileSync(s.source, readFileSync(s.source, 'utf8').replace('A second paragraph preserves context.', 'A revised second paragraph changes the context.'));
       await page.getByRole('button', { name: 'Accept', exact: true }).click();
-      await page.getByRole('status').filter({ hasText: 'changed elsewhere' }).waitFor();
+      await page.getByRole('alert').filter({ hasText: 'changed elsewhere' }).waitFor();
       const changed = inspectAnnotationFile(s.file);
       expect(changed.annotations[0].state).toBe('stale');
       expect(changed.sidecar.history).toHaveLength(approved.sidecar.history.length);

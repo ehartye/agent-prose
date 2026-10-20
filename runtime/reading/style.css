@@ -33,6 +33,7 @@ h2 { font-size: 1.2rem; line-height: 1.3; margin: 1rem 0 0.25rem; }
 a { color: var(--blue); }
 
 :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.notice[data-tone="info"] { border-left-color: var(--blue); }
 
 /* ---- the title row ---- */
 .site-head { max-width: 72rem; margin: 0 auto; padding: 1.1rem 1.5rem 0.2rem; display: flex; align-items: baseline; gap: 0.2rem 1rem; flex-wrap: wrap; }
@@ -411,3 +412,27 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1
   .sheet, .gr > *, .colhead, .cell, .foot, .duel-grid { border-color: CanvasText; }
   .badge path { stroke: CanvasText; }
 }
+
+/* Annotation mode uses the same proof desk, rail, cards, controls and fonts. Only passage layout is specific. */
+[data-review-mode="annotations"] .annotation-session { margin-left: auto; }
+[data-review-mode="annotations"] .annotation-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 1fr); gap: 1rem; align-items: start; }
+[data-review-mode="annotations"] .annotation-layout > * { min-width: 0; }
+[data-review-mode="annotations"] .annotation-source, [data-review-mode="annotations"] .annotation-details { margin: 0.6rem 0; }
+[data-review-mode="annotations"] .annotation-filters { display: grid; gap: 0.6rem; margin: 0.8rem 0 1rem; }
+[data-review-mode="annotations"] label { display: grid; gap: 0.3rem; font-size: 0.9rem; }
+[data-review-mode="annotations"] input, [data-review-mode="annotations"] select, [data-review-mode="annotations"] textarea { width: 100%; min-height: 44px; padding: 0.5rem; border: 1.5px solid var(--graphite); border-radius: 4px; background: var(--sheet); color: var(--ink); }
+[data-review-mode="annotations"] textarea { resize: vertical; line-height: 1.5; }
+[data-review-mode="annotations"] .field { margin: 0.8rem 0; }
+[data-review-mode="annotations"] .source-block { margin: 0 0 1rem; white-space: pre-wrap; }
+[data-review-mode="annotations"] .source-block.heading { font-weight: bold; font-size: 1.15em; }
+[data-review-mode="annotations"] .passage-mark { background: var(--mark); color: var(--ink); border-bottom: 2px solid var(--graphite); cursor: pointer; box-decoration-break: clone; }
+[data-review-mode="annotations"] .passage-mark.selected { outline: 2px solid var(--blue); outline-offset: 1px; }
+[data-review-mode="annotations"] blockquote { margin: 0.8rem 0; padding-left: 0.7rem; border-left: 3px solid var(--graphite); font-family: var(--script); white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-review-mode="annotations"] .context { color: var(--graphite); font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-review-mode="annotations"] pre { font: 0.8rem/1.5 var(--script); white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-review-mode="annotations"] .retarget { border-top: 1px solid var(--rule); margin-top: 1rem; }
+[data-review-mode="annotations"] #publication { width: 100%; min-height: 70vh; border: 1px solid var(--rule); background: var(--sheet); }
+[data-review-mode="annotations"] #concept { font-size: 0.9rem; white-space: pre-wrap; }
+[data-review-mode="annotations"] [hidden] { display: none !important; }
+@media(max-width:1150px) { [data-review-mode="annotations"] .annotation-layout { grid-template-columns: minmax(0, 1fr); } }
+@media(max-width:899px) { [data-review-mode="annotations"] .annotation-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

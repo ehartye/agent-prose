@@ -8,7 +8,7 @@ import { ProseError } from '../errors.ts';
 import { proseHome } from '../owner/paths.ts';
 import { writeFileAtomic } from '../owner/fsutil.ts';
 import { compileAnnotations, decideAnnotation, findCandidates, inspectAnnotationFile } from './store.ts';
-import { annotationWorkbenchPage, annotationWorkbenchScript, annotationWorkbenchStyle } from './workbench-page.ts';
+import { reviewPage, reviewAssets } from '../reading/assets.ts';
 
 interface SessionRecord {
   schema: 'prose/annotation-preview-session@1';
@@ -138,8 +138,9 @@ export async function startAnnotationPreview(file: string, options: AnnotationPr
     });
     return closing;
   };
+  const assets = reviewAssets(), page = reviewPage('annotations');
   server = createServer((req, res) => {
-    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self' about:; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self'; frame-src 'self' about:; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');
@@ -152,8 +153,9 @@ export async function startAnnotationPreview(file: string, options: AnnotationPr
       if ((origin !== undefined && !sameOrigin) || req.headers['sec-fetch-site'] === 'cross-site') { send(403, { error: { code: 'E_SERVER', message: 'Cross-origin review request refused' } }); return; }
       const path = new URL(req.url ?? '/', originFor(record.port)).pathname;
       if (req.method === 'GET' && path === '/favicon.ico') { res.writeHead(204); res.end(); return; }
-      const assets: Record<string, [string, () => string]> = { '/': ['text/html', annotationWorkbenchPage], '/workbench.css': ['text/css', annotationWorkbenchStyle], '/workbench.js': ['text/javascript', annotationWorkbenchScript] };
-      if (req.method === 'GET' && assets[path]) { const [type, render] = assets[path]; res.writeHead(200, { 'content-type': type + '; charset=utf-8' }); res.end(render()); return; }
+      if(req.method==='GET'&&path==='/'){res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(page);return;}
+      const asset=assets.get(path);
+      if(req.method==='GET'&&asset){res.writeHead(200,{'content-type':asset.type});res.end(asset.body);return;}
       const token = typeof req.headers['x-prose-token'] === 'string' ? req.headers['x-prose-token'] : '';
       if (!sameToken(token, record.token)) { send(401, { error: { code: 'E_SERVER', message: 'The review link is missing or its session token is incorrect' } }); return; }
       if (req.method === 'GET' && path === '/api/health') { send(200, { session: record.id, pid: process.pid, state: record.state }); return; }

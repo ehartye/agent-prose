@@ -1,25 +1,147 @@
-/** No document content is interpolated into the page or executable script. All authored text uses textContent. */
-export function annotationWorkbenchPage(): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Annotation desk · Prose</title><link rel="stylesheet" href="/workbench.css"></head><body>
-<header><div><span class="eyebrow">Prose / author review</span><h1>Annotation desk</h1></div><div class="session"><span id="session-state">Opening…</span><button id="reload" type="button">Reload source</button><button id="close" type="button">Close review</button></div></header>
-<div id="notice" role="status" aria-live="polite"></div>
-<main><aside class="queue" aria-label="Annotation queue"><h2>Annotations <span id="count"></span></h2><div class="filters"><label>Review state<select id="state-filter"><option value="">All states</option><option>draft</option><option>accepted</option><option>rejected</option><option>deferred</option><option>stale</option></select></label><label>Kind<select id="kind-filter"><option value="">All kinds</option><option>highlight</option><option>vocabulary</option><option>concept</option><option>definition</option><option>explanation</option><option>link</option></select></label><label>Vocabulary list<select id="list-filter"><option value="">All lists</option></select></label></div><nav id="queue" aria-label="Select an annotation"></nav></aside>
-<section class="reading" aria-label="Source reading pane"><div class="reading-head"><h2 id="document-title">Source</h2><div class="modes" role="group" aria-label="Reading view"><button type="button" data-mode="plain" aria-pressed="false">Plain</button><button type="button" data-mode="annotated" aria-pressed="true">Annotated</button><button type="button" data-mode="publication" aria-pressed="false">Publication</button></div></div><p id="source-note" class="quiet">The source remains unchanged. Select an annotation to inspect its passage.</p><article id="source"></article><iframe id="publication" title="Publication preview" sandbox="" hidden></iframe><div id="diagnostics" class="quiet"></div></section>
-<aside class="details" aria-label="Annotation details"><h2 id="detail-title">Review a passage</h2><p id="empty-detail">Choose an annotation from the queue. Unresolved entries stay available for review.</p><div id="detail" hidden><div class="badges"><span id="state-label"></span><span id="resolution-label"></span></div><section id="review-changes" class="review-changes" aria-label="Changes since review" hidden><h3>Changed since approval</h3><ul id="change-list"></ul><div id="definition-comparison" hidden><h4>Previously approved definition</h4><p id="reviewed-concept-definition"></p><h4>Current definition</h4><p id="current-concept-definition"></p></div><details id="reviewed-source"><summary>Previously approved source and passage</summary><h4>Selected passage</h4><blockquote id="reviewed-quote"></blockquote><h4>Reviewed context</h4><div id="reviewed-context" class="context"></div><h4>Previously approved annotation text</h4><p id="reviewed-body"></p></details></section><h3>Exact passage</h3><blockquote id="quote"></blockquote><p id="context" class="context"></p><div id="concept"></div><label class="field">Annotation text<textarea id="body" rows="7"></textarea></label><button type="button" data-action="edit">Save text</button> <button type="button" id="discard">Discard text edits</button><label class="field">Reason <span class="quiet">(optional)</span><input id="reason" type="text"></label><div class="actions"><button type="button" class="primary" data-action="accept">Accept</button><button type="button" data-action="reject">Reject</button><button type="button" data-action="defer">Defer</button><button type="button" data-action="undo">Undo last decision</button></div><section class="retarget"><h3>Change location</h3><label class="field">Find exact passage<input id="target-query" type="text"></label><button type="button" id="locate">Find locations</button><label class="field">Location<select id="candidate"><option value="">Choose a location</option></select></label><button type="button" data-action="retarget">Use location</button></section><h3>Origin and supporting references</h3><pre id="provenance"></pre><details><summary>Binding details</summary><pre id="binding"></pre></details></div></aside></main><script src="/workbench.js" defer></script></body></html>`;
-}
+// Annotation review mode for the shared proof desk. Only this controller knows annotation decisions.
+(function(){
+ 'use strict';
+ const UI=window.ProseReview;
+ UI.registerMode('annotations',()=>{
+ const {h}=UI;
+ document.title='Annotations | Prose review';
+ document.getElementById('title').textContent='Annotation review';
+ document.getElementById('subtitle').textContent='Review exact passages and publish approved notes.';
+ document.getElementById('desk').classList.add('batch');
+ const rail=document.getElementById('rail');rail.hidden=false;rail.setAttribute('aria-label','Annotation queue');
+ rail.replaceChildren(h("h2",{},
+"Annotations ",
+h("span",{"id":"count"})),
+h("div",{"class":"annotation-filters"},
+h("label",{},
+"Review state",
+h("select",{"id":"state-filter"},
+h("option",{"value":""},
+"All states"),
+h("option",{},
+"draft"),
+h("option",{},
+"accepted"),
+h("option",{},
+"rejected"),
+h("option",{},
+"deferred"),
+h("option",{},
+"stale"))),
+h("label",{},
+"Kind",
+h("select",{"id":"kind-filter"},
+h("option",{"value":""},
+"All kinds"),
+h("option",{},
+"highlight"),
+h("option",{},
+"vocabulary"),
+h("option",{},
+"concept"),
+h("option",{},
+"definition"),
+h("option",{},
+"explanation"),
+h("option",{},
+"link"))),
+h("label",{},
+"Vocabulary list",
+h("select",{"id":"list-filter"},
+h("option",{"value":""},
+"All lists")))),
+h("nav",{"id":"queue","aria-label":"Select an annotation"}));
+ const views=document.getElementById('views');views.hidden=false;views.replaceChildren(UI.button("Plain",()=>{},"",{"type":"button","data-mode":"plain","aria-pressed":"false"}),
+UI.button("Annotated",()=>{},"",{"type":"button","data-mode":"annotated","aria-pressed":"true"}),
+UI.button("Publication",()=>{},"",{"type":"button","data-mode":"publication","aria-pressed":"false"}));
+ document.querySelector('.site-head').append(h('div',{class:'row annotation-session'},h('span',{id:'session-state',class:'quiet',text:'Opening...'}),UI.button('Reload source',()=>{},'',{id:'reload'}),UI.button('Close review',()=>{},'',{id:'close'})));
+ document.getElementById('app').replaceChildren(h('div',{class:'annotation-layout'},h("section",{"class":"annotation-source card","aria-label":"Source reading pane"},
+h("div",{"class":"reading-head"},
+h("h2",{"id":"document-title"},
+"Source")),
+h("p",{"id":"source-note","class":"quiet"},
+"The source remains unchanged. Select an annotation to inspect its passage."),
+h("article",{"id":"source","class":"reading"}),
+h("iframe",{"id":"publication","title":"Publication preview","sandbox":"","hidden":true}),
+h("div",{"id":"diagnostics","class":"quiet"})),h("aside",{"class":"annotation-details card","aria-label":"Annotation details"},
+h("h2",{"id":"detail-title"},
+"Review a passage"),
+h("p",{"id":"empty-detail"},
+"Choose an annotation from the queue. Unresolved entries stay available for review."),
+h("div",{"id":"detail","hidden":true},
+h("div",{"class":"row"},
+h("span",{"id":"state-label"}),
+h("span",{"id":"resolution-label"})),
+h("section",{"id":"review-changes","class":"panel","aria-label":"Changes since review","hidden":true},
+h("h3",{},
+"Changed since approval"),
+h("ul",{"id":"change-list"}),
+h("div",{"id":"definition-comparison","hidden":true},
+h("h4",{},
+"Previously approved definition"),
+h("p",{"id":"reviewed-concept-definition"}),
+h("h4",{},
+"Current definition"),
+h("p",{"id":"current-concept-definition"})),
+h("details",{"id":"reviewed-source","class":"brief"},
+h("summary",{},
+"Previously approved source and passage"),
+h("h4",{},
+"Selected passage"),
+h("blockquote",{"id":"reviewed-quote"}),
+h("h4",{},
+"Reviewed context"),
+h("div",{"id":"reviewed-context","class":"context"}),
+h("h4",{},
+"Previously approved annotation text"),
+h("p",{"id":"reviewed-body"}))),
+h("h3",{},
+"Exact passage"),
+h("blockquote",{"id":"quote"}),
+h("p",{"id":"context","class":"context"}),
+h("div",{"id":"concept"}),
+h("label",{"class":"field"},
+"Annotation text",
+h("textarea",{"id":"body","rows":"7"})),
+h("div",{class:"row"},UI.button("Save text",()=>{},"",{"type":"button","data-action":"edit"}),
+UI.button("Discard text edits",()=>{},"",{"type":"button","id":"discard"})),
+h("label",{"class":"field"},
+"Reason ",
+h("span",{"class":"quiet"},
+"(optional)"),
+h("input",{"id":"reason","type":"text"})),
+h("div",{"class":"row"},
+UI.button("Accept",()=>{},"primary",{"type":"button","data-action":"accept"}),
+UI.button("Reject",()=>{},"danger",{"type":"button","data-action":"reject"}),
+UI.button("Defer",()=>{},"",{"type":"button","data-action":"defer"}),
+UI.button("Undo last decision",()=>{},"",{"type":"button","data-action":"undo"})),
+h("section",{"class":"retarget"},
+h("h3",{},
+"Change location"),
+h("label",{"class":"field"},
+"Find exact passage",
+h("input",{"id":"target-query","type":"text"})),
+UI.button("Find locations",()=>{},"",{"type":"button","id":"locate"}),
+h("label",{"class":"field"},
+"Location",
+h("select",{"id":"candidate"},
+h("option",{"value":""},
+"Choose a location"))),
+UI.button("Use location",()=>{},"",{"type":"button","data-action":"retarget"})),
+h("h3",{},
+"Origin and supporting references"),
+h("pre",{"id":"provenance"}),
+h("details",{},
+h("summary",{},
+"Binding details"),
+h("pre",{"id":"binding"}))))));
+ UI.fontsFooter();
 
-export function annotationWorkbenchStyle(): string {
-  return `:root{color-scheme:light;--paper:#f6f9fc;--ink:#17334c;--muted:#536e83;--line:#c8d9e6;--blue:#125b9b;--select:#dcecfb;--mark:#fff0a6;--danger:#9e252f;font-family:Verdana,Geneva,sans-serif;font-size:14px}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.35rem 2rem;background:#17334c;color:white;border-bottom:5px solid #7cbbe8}h1{font-family:Georgia,serif;font-size:2rem;font-weight:normal;margin:.25rem 0 0}.eyebrow{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}.session{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}.session>span{font-size:.8rem}button,input,select,textarea{font:inherit;max-width:100%}button{cursor:pointer;border:1px solid var(--line);background:white;color:var(--ink);border-radius:4px;padding:.65rem .8rem;min-height:42px}button:hover{border-color:var(--blue);background:var(--select)}button:disabled{opacity:.55;cursor:wait}.primary,button[aria-pressed=true]{background:var(--blue);color:white;border-color:var(--blue)}:focus-visible{outline:3px solid #d07614;outline-offset:3px}main{display:grid;grid-template-columns:minmax(190px,23%) minmax(280px,1fr) minmax(260px,29%);min-height:calc(100vh - 115px)}h2{font-size:1rem;margin:0 0 1rem}h3{font-size:.85rem;margin:1.5rem 0 .6rem}aside,section.reading{min-width:0;padding:1.5rem}.queue{border-right:1px solid var(--line);background:#eaf2f8}.details{border-left:1px solid var(--line);background:white}.filters{display:grid;gap:.6rem;margin-bottom:1.2rem}label{display:grid;gap:.35rem;font-size:.8rem}select,input,textarea{width:100%;padding:.65rem;border:1px solid #8fa7ba;border-radius:3px;background:white;color:var(--ink)}textarea{resize:vertical;line-height:1.5}.field{margin:1rem 0 .7rem}.queue-item{display:block;width:100%;text-align:left;margin-bottom:.55rem;padding:.85rem;border-left:4px solid #95b0c4;overflow-wrap:anywhere}.queue-item[aria-current=true]{border-left-color:var(--blue);background:var(--select)}.queue-item strong{display:block;line-height:1.4}.queue-item small{display:block;margin-top:.4rem;color:var(--muted)}.reading-head{display:flex;gap:.8rem;align-items:start;flex-wrap:wrap;margin-bottom:1rem}.reading-head h2{flex:1;overflow-wrap:anywhere}.modes{display:flex;gap:.3rem}.modes button{font-size:.8rem;padding:.5rem}.quiet{font-size:.78rem;line-height:1.6;color:var(--muted)}article{font-family:Georgia,'Times New Roman',serif;font-size:1.2rem;line-height:1.85;overflow-wrap:anywhere;white-space:pre-wrap}article .source-block{margin:1.3rem 0}article .heading{font-weight:bold;font-size:1.3em}article a{color:var(--blue)}.passage-mark{background:var(--mark);box-decoration-break:clone;border-bottom:2px solid #ab8817;cursor:pointer}.passage-mark.selected{background:#cfe5fa;border-bottom-color:var(--blue)}.badges{display:flex;gap:.5rem;flex-wrap:wrap}.badges span{background:#eaf2f8;border:1px solid var(--line);padding:.3rem .5rem;font-size:.75rem}blockquote{font-family:Georgia,serif;font-size:1.1rem;line-height:1.6;border-left:3px solid #d5aa28;padding-left:.85rem;margin:1rem 0;white-space:pre-wrap;overflow-wrap:anywhere}.context{font-size:.82rem;color:var(--muted);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.actions{display:flex;gap:.4rem;flex-wrap:wrap;margin:1rem 0}.retarget{border-top:1px solid var(--line);margin-top:1.5rem}pre{font-family:Consolas,'Courier New',monospace;font-size:.75rem;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}#notice:not(:empty){padding:.85rem 2rem;background:#fff0cf;border-bottom:1px solid #d8ad5b;line-height:1.5}#notice.error{color:var(--danger)}#publication{width:100%;min-height:75vh;border:1px solid var(--line);background:white}.review-changes{margin-top:1rem;padding:.9rem;border:1px solid #d8ad5b;background:#fff8e9;font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}.review-changes h3{margin-top:0}.review-changes h4{font-size:.8rem;margin-bottom:.35rem}.review-changes p{white-space:pre-wrap}.review-changes summary{cursor:pointer;min-height:32px}#concept{font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}#count{font-weight:normal;color:var(--muted)}[hidden]{display:none!important}@media(max-width:1000px){main{grid-template-columns:210px minmax(0,1fr)}.details{grid-column:1/-1;border-top:1px solid var(--line);border-left:0}.details #detail{max-width:70ch}}@media(max-width:600px){header{padding:1rem;align-items:start;flex-direction:column}main{display:flex;flex-direction:column}.queue{border-right:0;border-bottom:1px solid var(--line)}aside,section.reading{padding:1rem}.filters{grid-template-columns:repeat(2,minmax(0,1fr))}#queue{display:flex;gap:.6rem;overflow-x:auto;padding:4px 3px}.queue-item{flex:0 0 225px}.session{gap:.4rem}.modes{flex-wrap:wrap}#notice:not(:empty){padding:1rem}article{font-size:1.1rem}}@media print{header,.queue,.details,.modes,#source-note,#notice{display:none}main{display:block}section.reading{padding:0}}`;
-}
-
-/** Plain JavaScript served as a separate same-origin resource; no eval, executable authored markup or third-party assets. */
-export function annotationWorkbenchScript(): string {
-  return String.raw`'use strict';
 const $=id=>document.getElementById(id);
 const token=new URLSearchParams(location.search).get('t')||'';
 let state=null,selected=null,mode='annotated',dirty=false,pending=null;
 const text=(id,value)=>{$(id).textContent=value==null?'':String(value)};
-const notice=(message,error=false)=>{text('notice',message);$('notice').className=error?'error':''};
+const notice=(message,error=false)=>UI.notice(message,undefined,error?'error':'info');
 async function request(path,body){const r=await fetch(path,{method:body===undefined?'GET':'POST',headers:{'x-prose-token':token,...(body===undefined?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});let value;try{value=await r.json()}catch{throw Error('The review server did not return a readable response.')}if(!r.ok){const error=Error(value.error?.message||'The request failed.');error.code=value.error?.code;throw error}return value}
 function targetQuote(a){return typeof a.target?.quote==='string'?a.target.quote:a.target?.quote?.exact||a.target?.exact||''}
 function current(){return state?.inspection.annotations.find(a=>a.id===selected)}
@@ -28,8 +150,8 @@ function option(value,label){const o=document.createElement('option');o.value=va
 function lists(){const registry=state.inspection.concepts;return registry?.lists||{}}
 function inList(a,name){if(!name)return true;const items=lists()[name];return Array.isArray(items)&&items.includes(typeof a.concept==='string'?a.concept:a.concept?.id)}
 function visible(){return state.inspection.annotations.filter(a=>(!$('state-filter').value||a.state===$('state-filter').value)&&(!$('kind-filter').value||a.kind===$('kind-filter').value)&&inList(a,$('list-filter').value))}
-function queue(){const items=visible();$('queue').replaceChildren();text('count',items.length+'/'+state.inspection.annotations.length);for(const a of items){const b=document.createElement('button');b.type='button';b.className='queue-item';b.setAttribute('aria-current',String(a.id===selected));const title=document.createElement('strong');title.textContent=a.id+' · '+a.kind;const sub=document.createElement('small');sub.textContent=a.state+' / '+a.resolution.status;b.append(title,sub);b.onclick=()=>select(a.id);$('queue').append(b)}if(!items.length){const p=document.createElement('p');p.textContent='No annotations match these filters.';$('queue').append(p)}}
-function safeLink(href){try{const u=new URL(href,'https://invalid.example/');return /^(https?:|mailto:)$/.test(u.protocol)?href:null}catch{return null}}
+function queue(){const items=visible();$('queue').replaceChildren();text('count',items.length+'/'+state.inspection.annotations.length);for(const a of items){$('queue').append(UI.queueItem({who:a.id+' · '+a.kind,where:a.resolution.status,status:a.state,state:({accepted:'sent',rejected:'skipped',stale:'blocked',deferred:'ended'})[a.state]||'',current:a.id===selected,label:a.id+' · '+a.kind+' · '+a.state+' / '+a.resolution.status,onClick:()=>select(a.id)}));}if(!items.length)$('queue').append(h('p',{class:'quiet',text:'No annotations match these filters.'}));}
+function safeLink(href){try{const u=new URL(href,location.origin);return /^(https?:|mailto:)$/.test(u.protocol)?href:null}catch{return null}}
 function source(){const projection=state.inspection.projection;$('source').replaceChildren();if(mode==='publication')return;const all=mode==='plain'?[]:state.inspection.annotations.filter(a=>a.resolution.range);for(const block of projection.blocks){const p=document.createElement('div');p.className='source-block'+(block.kind==='heading'?' heading':'');p.dataset.block=block.id;const cuts=new Set([block.start,block.end]);const runs=block.runs?.length?block.runs:[{start:block.start,end:block.end,text:block.text}];for(const run of runs){cuts.add(Math.max(block.start,run.start));cuts.add(Math.min(block.end,run.end))}for(const a of all){const r=a.resolution.range;if(r.start<block.end&&r.end>block.start){cuts.add(Math.max(r.start,block.start));cuts.add(Math.min(r.end,block.end))}}const boundaries=[...cuts].filter(n=>n>=block.start&&n<=block.end).sort((a,b)=>a-b);for(let i=1;i<boundaries.length;i++){const start=boundaries[i-1],end=boundaries[i];if(start===end)continue;const run=runs.find(r=>r.start<=start&&r.end>=end);const hits=all.filter(a=>a.resolution.range.start<end&&a.resolution.range.end>start);let node=document.createTextNode(cpSlice(projection.text,start,end));if(run?.marks?.includes('em')){const n=document.createElement('em');n.append(node);node=n}if(run?.marks?.includes('strong')){const n=document.createElement('strong');n.append(node);node=n}if(run?.href&&safeLink(run.href)){const n=document.createElement('a');n.href=run.href;n.rel='noopener noreferrer';n.append(node);node=n}if(hits.length){const n=document.createElement('span');n.className='passage-mark'+(hits.some(a=>a.id===selected)?' selected':'');n.dataset.annotations=hits.map(a=>a.id).join(' ');if(!run?.href){n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label','Review '+hits.map(a=>a.id).join(', '));n.onclick=()=>select(hits[(hits.findIndex(a=>a.id===selected)+1)%hits.length].id);n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();n.click()}}}n.append(node);node=n}p.append(node)}$('source').append(p)}text('diagnostics',(projection.diagnostics||[]).map(d=>typeof d==='string'?d:d.message||JSON.stringify(d)).join('\n'))}
 function snapshotContext(value){if(typeof value==='string')return value;if(!Array.isArray(value))return value?JSON.stringify(value,null,2):'No reviewed context was stored.';return value.map(block=>[Array.isArray(block.headingPath)?block.headingPath.join(' › '):'',block.text||''].filter(Boolean).join('\n')).join('\n\n')}
 function reviewChanges(a){const labels={profile:'source adapter or reading view changed',payload:'annotation text or metadata changed',selector:'passage binding changed',quote:'selected text changed',context:'reviewed context changed',concept:'definition or concept changed',destination:'linked destination changed','reviewed-dependencies':'reviewed dependencies changed'};const changes=a.changes||[];const previous=a.review?.snapshot;const now=a.snapshot||{};$('review-changes').hidden=a.state!=='stale'&&!changes.length;$('change-list').replaceChildren();for(const key of changes.length?changes:['reviewed-dependencies']){const item=document.createElement('li');item.textContent=labels[key]||'reviewed information changed';$('change-list').append(item)}$('definition-comparison').hidden=!previous||!changes.includes('concept');text('reviewed-concept-definition',previous?.concept?.definition||'No shared definition was previously approved.');text('current-concept-definition',now.concept?.definition||'No current shared definition is available.');$('reviewed-source').hidden=!previous;text('reviewed-quote',previous?.quote||'No selected passage was stored.');text('reviewed-context',snapshotContext(previous?.context));text('reviewed-body',previous?.payload?.body||previous?.concept?.definition||'No annotation text was stored.')}
@@ -47,5 +169,6 @@ $('discard').onclick=()=>{dirty=false;pending=null;if(!current())selected=state.
 $('reload').onclick=async()=>{try{await reload(true);notice(dirty?'Source reloaded. Your unsaved text is preserved; compare it before saving.':'Source reloaded.')}catch(e){notice(e.message,true)}};
 $('locate').onclick=async()=>{try{const result=await request('/api/locate',{quote:$('target-query').value});if(result.revision!==state.inspection.revision){notice('The source changed. Reload source before choosing a location.',true);return}$('candidate').replaceChildren(option('','Choose a location'),...result.candidates.map(c=>option(c.id,(c.context?.prefix||c.prefix||'')+' ['+(c.quote?.exact||c.quote||c.text||$('target-query').value)+'] '+(c.context?.suffix||c.suffix||''))));notice(result.candidates.length+' matching locations. Choose one, then use location.')}catch(e){notice(e.message,true)}};
 $('close').onclick=async()=>{try{await request('/api/close',{});text('session-state','closed');notice('Review closed. Decisions remain in the annotation file.');for(const b of document.querySelectorAll('button'))b.disabled=true}catch(e){notice(e.message,true)}};
-reload().catch(e=>notice(e.message,true));`;
-}
+reload().catch(e=>notice(e.message,true));
+ });
+}());

@@ -183,7 +183,7 @@ describe('vendored fonts', () => {
 
   it('names a font file that is missing from the runtime as E_SERVER at start', async () => {
     const dir = tmp('prose-rt-');
-    for (const f of ['index.html', 'app.js', 'style.css']) writeFileSync(join(dir, f), 'x');
+    for (const f of ['index.html', 'app.js', 'style.css', 'review.js', 'annotations.js']) writeFileSync(join(dir, f), 'x');
     mkdirSync(join(dir, 'fonts'));
     const server = new ReadingServer({ host: '127.0.0.1', port: 0, persist: false, runtimeDir: dir });
     const err = await server.listen().catch(e => e);
@@ -194,7 +194,7 @@ describe('vendored fonts', () => {
 });
 
 describe('static pages', () => {
-  it('serves the three allow-listed files with fixed types, and the page for /s/<id>', async () => {
+  it('serves the allow-listed review files with fixed types, and the page for /s/<id>', async () => {
     const { info } = await start();
     const real = (f: string) => readFileSync(join(import.meta.dirname, '..', 'runtime', 'reading', f), 'utf8');
     const html = await raw(info, '/');
@@ -209,23 +209,23 @@ describe('static pages', () => {
     expect([css.status, css.headers['content-type'], css.text]).toEqual([200, 'text/css; charset=utf-8', real('style.css')]);
   });
 
-  it('ships a page that is already CSP-clean: no inline script, no inline style, only /app.js and /style.css', () => {
+  it('ships a page that is already CSP-clean: no inline script, no inline style, only shared same-origin assets', () => {
     const html = readFileSync(join(import.meta.dirname, '..', 'runtime', 'reading', 'index.html'), 'utf8');
     expect(html).not.toMatch(/<style/i);
     expect(html).not.toMatch(/\sstyle\s*=/i);
     expect(html).not.toMatch(/\son[a-z]+\s*=/i);
     expect(html).not.toMatch(/javascript:/i);
     const scripts = [...html.matchAll(/<script\b[^>]*>/gi)].map(m => m[0]);
-    expect(scripts).toHaveLength(1);
-    expect(scripts[0]).toMatch(/src="\/app\.js"/);
-    expect(html.match(/(?:src|href)="[^"]*"/g)!.sort()).toEqual(['href="/style.css"', 'src="/app.js"']);
+    expect(scripts).toHaveLength(3);
+    expect(scripts.at(-1)).toMatch(/src="\/app\.js"/);
+    expect(html.match(/(?:src|href)="[^"]*"/g)!.sort()).toEqual(['href="/style.css"', 'src="/annotations.js"', 'src="/app.js"', 'src="/review.js"']);
   });
 
   it('never reads anything outside the allow-list: traversal, encodings, near-misses and the runtime path all fail', async () => {
     const dir = tmp('prose-rt-');
     const run = join(dir, 'reading');
     mkdirSync(run);
-    for (const f of ['index.html', 'app.js', 'style.css']) writeFileSync(join(run, f), `served ${f}`);
+    for (const f of ['index.html', 'app.js', 'style.css', 'review.js', 'annotations.js']) writeFileSync(join(run, f), `served ${f}`);
     mkdirSync(join(run, 'fonts'));
     for (const f of FONT_FILES) writeFileSync(join(run, 'fonts', f), `served ${f}`);
     writeFileSync(join(run, 'fonts', 'secret.txt'), 'CANARY-FONTS');

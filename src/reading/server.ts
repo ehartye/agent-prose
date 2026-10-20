@@ -1,3 +1,4 @@
+import { REVIEW_PAGES as PAGES, REVIEW_FONTS as ASSETS, REVIEW_ROUTES, type PageKey, type AssetPath } from './assets.ts';
 // The owner's side: a LAN reading server. The page is static (runtime/reading, a fixed allow-list read once at start);
 // the JSON API is token-guarded, reads only files the CLI already wrote, and never serves the sealed prediction before
 // the owner ships. Judgement writes (a duel, the ship) shell out to the CLI with the async execFile, so the set locks,
@@ -41,7 +42,7 @@ import { MAX_NOTE, STRIKE_REASONS, foldStrikes, parseStrikeLog, strikeKey, undoa
 
 export const DEFAULT_PORT = 47311;
 /** Bump when routes change: a running server of another API level is replaced, not reused. */
-export const SERVER_API = 5;
+export const SERVER_API = 6;
 const PROBE_MS = 1500;
 /** Connections the HTTP server accepts at once, and how long a client may take to send headers, a whole request, or sit idle. */
 const MAX_CONNECTIONS = 200;
@@ -331,23 +332,6 @@ export function sameToken(a: string, b: string): boolean {
 
 const CSP = "default-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 /** The only files the server ever serves as pages, by request path; the content type is fixed per entry. */
-const PAGES = {
-  index: { file: 'index.html', type: 'text/html; charset=utf-8' },
-  app: { file: 'app.js', type: 'text/javascript; charset=utf-8' },
-  style: { file: 'style.css', type: 'text/css; charset=utf-8' },
-} as const;
-type PageKey = keyof typeof PAGES;
-/** The vendored fonts and their licences, by exact request path (a font fetch cannot carry the token header, so these are served without one).
- *  The files are read once at start from runtime/reading/fonts; nothing in a request is ever joined to a disk path. */
-const ASSETS = {
-  '/fonts/courier-prime-400.ttf': { file: 'fonts/courier-prime-400.ttf', type: 'font/ttf' },
-  '/fonts/courier-prime-700.ttf': { file: 'fonts/courier-prime-700.ttf', type: 'font/ttf' },
-  '/fonts/atkinson-400.ttf': { file: 'fonts/atkinson-400.ttf', type: 'font/ttf' },
-  '/fonts/atkinson-700.ttf': { file: 'fonts/atkinson-700.ttf', type: 'font/ttf' },
-  '/fonts/OFL-CourierPrime.txt': { file: 'fonts/OFL-CourierPrime.txt', type: 'text/plain; charset=utf-8' },
-  '/fonts/OFL-Atkinson.txt': { file: 'fonts/OFL-Atkinson.txt', type: 'text/plain; charset=utf-8' },
-} as const;
-type AssetPath = keyof typeof ASSETS;
 const isAsset = (path: string): path is AssetPath => Object.hasOwn(ASSETS, path);
 
 /** A small deterministic generator (mulberry32) seeded from a string, so a shuffle is the same on every load. */
@@ -1513,7 +1497,7 @@ export class ReadingServer {
       return this.asset(res, path);
     }
     if (!path.startsWith('/api/')) {
-      const key: PageKey | null = path === '/' || /^\/(?:s|q)\/[a-z0-9-]+$/.test(path) ? 'index' : path === '/app.js' ? 'app' : path === '/style.css' ? 'style' : null;
+      const key: PageKey | null = path === '/' || /^\/(?:s|q)\/[a-z0-9-]+$/.test(path) ? 'index' : Object.hasOwn(REVIEW_ROUTES,path) ? REVIEW_ROUTES[path] : null;
       if (!key) throw NOT_FOUND();
       if (method !== 'GET') throw methodNotAllowed();
       return this.page(res, key);
