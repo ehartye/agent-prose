@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { annotationHighlightCSS } from '../annotation/render.ts';
 
 /** One allowlist and runtime bundle for every prose review mode. Never join request paths to disk paths. */
 export const REVIEW_PAGES = {
@@ -24,13 +25,14 @@ export type AssetPath = keyof typeof REVIEW_FONTS;
 
 export const REVIEW_RUNTIME = join(import.meta.dirname, '..', '..', 'runtime', 'reading');
 export const REVIEW_ROUTES: Readonly<Record<string,PageKey>> = Object.freeze({ '/app.js':'app', '/style.css':'style', '/review.js':'review', '/annotations.js':'annotations' });
+export const reviewAssetBody=(key:PageKey,body:Buffer):Buffer=>key==='style'?Buffer.concat([body,Buffer.from(annotationHighlightCSS)]):body;
 export function reviewPage(mode: 'reading'|'annotations' = 'reading'): string {
   const page=readFileSync(join(REVIEW_RUNTIME,'index.html'),'utf8');
   return mode==='reading'?page:page.replace('<body>','<body data-review-mode="annotations">').replace('<title>Reading</title>','<title>Annotations | Prose review</title>');
 }
 export function reviewAssets(): Map<string,{type:string;body:Buffer}> {
   const result=new Map<string,{type:string;body:Buffer}>();
-  for(const [path,key] of Object.entries(REVIEW_ROUTES)) {const spec=REVIEW_PAGES[key];result.set(path,{type:spec.type,body:readFileSync(join(REVIEW_RUNTIME,spec.file))});}
+  for(const [path,key] of Object.entries(REVIEW_ROUTES)) {const spec=REVIEW_PAGES[key];result.set(path,{type:spec.type,body:reviewAssetBody(key,readFileSync(join(REVIEW_RUNTIME,spec.file)))});}
   for(const [path,spec] of Object.entries(REVIEW_FONTS))result.set(path,{type:spec.type,body:readFileSync(join(REVIEW_RUNTIME,spec.file))});
   return result;
 }

@@ -1,4 +1,4 @@
-import { REVIEW_PAGES as PAGES, REVIEW_FONTS as ASSETS, REVIEW_ROUTES, type PageKey, type AssetPath } from './assets.ts';
+import { REVIEW_PAGES as PAGES, REVIEW_FONTS as ASSETS, REVIEW_ROUTES, reviewAssetBody, type PageKey, type AssetPath } from './assets.ts';
 // The owner's side: a LAN reading server. The page is static (runtime/reading, a fixed allow-list read once at start);
 // the JSON API is token-guarded, reads only files the CLI already wrote, and never serves the sealed prediction before
 // the owner ships. Judgement writes (a duel, the ship) shell out to the CLI with the async execFile, so the set locks,
@@ -1543,7 +1543,7 @@ export class ReadingServer {
   private loadPages(): void {
     const dir = this.opts.runtimeDir ?? RUNTIME_DIR;
     for (const [key, { file }] of Object.entries(PAGES) as Array<[PageKey, { file: string }]>) {
-      try { this.pages.set(key, readFileSync(join(dir, file))); }
+      try { this.pages.set(key, reviewAssetBody(key,readFileSync(join(dir, file)))); }
       catch { throw new ProseError('E_SERVER', `The page file ${file} is missing from the runtime`, { hint: 'Run the prose-setup skill again to repair the managed runtime' }); }
     }
     for (const [path, { file }] of Object.entries(ASSETS) as Array<[AssetPath, { file: string }]>) {

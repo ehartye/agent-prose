@@ -1,4 +1,27 @@
-import type { PublicationBundle, PublishedAnnotation, PublishedDocument } from './types.ts';
+import type { AnnotationAppearance, AnnotationKind, Concept, HighlightColor, PublicationBundle, PublishedAnnotation, PublishedDocument } from './types.ts';
+
+export const categoryColors:Record<AnnotationKind,HighlightColor>={highlight:'yellow',vocabulary:'green',concept:'blue',definition:'purple',explanation:'orange',link:'pink'};
+const own=(map:Record<string,HighlightColor>|undefined,key:string|undefined)=>key&&map&&Object.hasOwn(map,key)?map[key]:undefined;
+/** Annotation override, document concept override, then project concept color; hybrid falls back to category. */
+export function resolveHighlightColor(annotation:Pick<PublishedAnnotation,'id'|'kind'|'concept'>,concept:Pick<Concept,'color'>|undefined,appearance:AnnotationAppearance={}):HighlightColor|'none' {
+  const mode=appearance.mode??'hybrid';
+  const member=own(appearance.annotations,annotation.id)??own(appearance.concepts,annotation.concept)??concept?.color;
+  const category=own(appearance.categories,annotation.kind)??categoryColors[annotation.kind];
+  return mode==='category'?category:mode==='member'?member??'none':member??category;
+}
+/** Shared by the proof desk and standalone publication HTML; consumers can replace this palette. */
+export const annotationHighlightCSS=`
+[data-prose-color="yellow"]{--prose-highlight-light:#f3e58a;--prose-highlight-dark:#5b5217}
+[data-prose-color="green"]{--prose-highlight-light:#ccebd4;--prose-highlight-dark:#214b35}
+[data-prose-color="blue"]{--prose-highlight-light:#d5e5ff;--prose-highlight-dark:#263f68}
+[data-prose-color="purple"]{--prose-highlight-light:#e8dcfa;--prose-highlight-dark:#49345f}
+[data-prose-color="pink"]{--prose-highlight-light:#f9dce8;--prose-highlight-dark:#61334c}
+[data-prose-color="orange"]{--prose-highlight-light:#ffdfb5;--prose-highlight-dark:#5b4024}
+.passage-mark[data-prose-color],[data-prose-annotations][data-prose-color],.annotation-swatch[data-prose-color]{background:var(--prose-highlight-bg,var(--prose-highlight-light,transparent));color:inherit;border-bottom:2px solid currentColor;box-decoration-break:clone}
+:root[data-theme="dark"] [data-prose-color]{--prose-highlight-bg:var(--prose-highlight-dark,transparent)}
+@media(prefers-color-scheme:dark){:root:not([data-theme]) [data-prose-color]{--prose-highlight-bg:var(--prose-highlight-dark,transparent)}}
+@media(forced-colors:active){.passage-mark[data-prose-color],[data-prose-annotations][data-prose-color],.annotation-swatch[data-prose-color]{background:Canvas;color:CanvasText;border-color:CanvasText}}
+`;
 
 export interface ConsumerRun { text: string; start: number; end: number; marks: Array<'strong'|'em'>; href?: string; annotations: PublishedAnnotation[] }
 export interface ConsumerBlock { id: string; kind: string; start: number; end: number; level?:number;listDepth?:number;listType?:'ordered'|'unordered';listStart?:number;listItem?:string;runs: ConsumerRun[] }
@@ -54,7 +77,12 @@ export function renderPublication(bundle: PublicationBundle, options: ConsumerOp
         let text=esc(run.text).replaceAll('\n','<br>');
         for(const mark of run.marks)text=mark==='strong'?`<strong>${text}</strong>`:`<em>${text}</em>`;
         if(run.href&&safeHref(run.href)){const href=run.href.startsWith('#')?`#fragment-${document.id}-${run.href.slice(1)}`:run.href;text=`<a href="${esc(href)}" rel="noopener noreferrer">${text}</a>`;}
-        if(run.annotations.length){const ids=run.annotations.map(a=>a.id).join(' ');text=run.annotations.some(a=>a.kind==='highlight')?`<mark data-prose-annotations="${esc(ids)}">${text}</mark>`:`<span data-prose-annotations="${esc(ids)}">${text}</span>`;}
+        if(run.annotations.length){
+          const ids=run.annotations.map(a=>a.id).join(' '),chosen=run.annotations[0];
+          const color=resolveHighlightColor(chosen,bundle.concepts.find(c=>c.id===chosen.concept),document.appearance);
+          const attrs=`data-prose-annotations="${esc(ids)}" data-prose-category="${esc(chosen.kind)}" data-prose-color="${esc(color)}"`;
+          text=run.annotations.some(a=>a.kind==='highlight')?`<mark ${attrs}>${text}</mark>`:`<span ${attrs}>${text}</span>`;
+        }
         return anchorsAt(document,run.start)+text;
       }).join('')+anchorsAt(document,block.end);
       const related=active.filter(a=>a.document===document.id&&a.target.start<block.end&&a.target.end>block.start);
@@ -85,5 +113,5 @@ export function renderPublication(bundle: PublicationBundle, options: ConsumerOp
     const sources=(a.sources??[]).filter(safeHref).map(url=>`<a href="${esc(url)}" rel="noopener noreferrer">Source</a>`).join(' ');
     return `<aside id="note-${esc(a.id)}" role="note" tabindex="-1"><p><strong>${esc(title)}.</strong> ${esc(body)}${href?` <a href="${esc(href)}" rel="noopener noreferrer">Open reference</a>`:''}</p>${sources?`<p>${sources}</p>`:''}</aside>`;
   }).join('\n');
-  return `<!doctype html><html lang="${esc(bundle.documents[0]?.language??'und')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Annotated reading</title><style>body{max-width:76ch;margin:2rem auto;padding:0 1rem;line-height:1.65;font-family:system-ui,sans-serif;color:#172638}mark{background:#fff0a8;color:inherit}.annotation-control{font-size:.8em}aside{border-top:1px solid #b7c3cf;padding-top:1rem;margin-top:1.5rem}a{color:#185c97}:focus{outline:3px solid #c77e1c;outline-offset:3px}@media print{.annotation-controls{font-size:.8em}a{color:inherit}aside{break-inside:avoid}}</style></head><body>${sections}<section aria-label="Annotation notes">${notes}</section></body></html>`;
+  return `<!doctype html><html lang="${esc(bundle.documents[0]?.language??'und')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Annotated reading</title><style>:root{color-scheme:light dark}:root[data-theme="light"]{color-scheme:light}:root[data-theme="dark"]{color-scheme:dark}body{max-width:76ch;margin:2rem auto;padding:0 1rem;line-height:1.65;font-family:system-ui,sans-serif;color:#172638;background:#fafbf8}.annotation-control{font-size:.8em}aside{border-top:1px solid #b7c3cf;padding-top:1rem;margin-top:1.5rem}a{color:#185c97}:focus{outline:3px solid #c77e1c;outline-offset:3px}:root[data-theme="dark"] body{color:#e9ece6;background:#1a2027}:root[data-theme="dark"] a{color:#86a7ff}@media(prefers-color-scheme:dark){:root:not([data-theme]) body{color:#e9ece6;background:#1a2027}:root:not([data-theme]) a{color:#86a7ff}}@media print{.annotation-controls{font-size:.8em}a{color:inherit}aside{break-inside:avoid}}${annotationHighlightCSS}</style></head><body>${sections}<section aria-label="Annotation notes">${notes}</section></body></html>`;
 }

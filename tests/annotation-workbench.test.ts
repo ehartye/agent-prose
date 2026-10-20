@@ -35,6 +35,118 @@ async function api(s: Awaited<ReturnType<typeof seed>>, path: string, body?: unk
 }
 
 describe('annotation workbench', () => {
+  it('edits publishable category and concept colors and previews all three highlight modes', async () => {
+    const s=await seed({concepts:true});const original=readFileSync(s.source,'utf8');
+    const browser=await chromium.launch({headless:true});
+    try {
+      const page=await browser.newPage({viewport:{width:1440,height:850}});page.setDefaultTimeout(5000);
+      await page.goto(s.server.localUrl);await page.getByRole('button',{name:'Accept',exact:true}).waitFor();
+      await page.getByRole('button',{name:'Review settings',exact:true}).click();
+      await page.getByRole('combobox',{name:'Highlighting',exact:true}).selectOption('category');
+      await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.mode).toBe('category');
+      await page.getByRole('combobox',{name:'Category',exact:true}).selectOption('definition');
+      await page.getByRole('combobox',{name:'Category color',exact:true}).selectOption('orange');
+      await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.categories?.definition).toBe('orange');
+      await page.keyboard.press('Escape');
+      expect(await page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
+      await page.getByRole('combobox',{name:/^Concept color:/}).selectOption('blue');
+      await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.concepts?.diffusion).toBe('blue');
+      expect(await page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
+      await page.getByRole('button',{name:'Review settings',exact:true}).click();
+      await page.getByRole('combobox',{name:'Highlighting',exact:true}).selectOption('member');
+      await expect.poll(()=>page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('blue');
+      await page.getByRole('combobox',{name:'Highlighting',exact:true}).selectOption('hybrid');
+      await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.mode).toBe('hybrid');
+      await page.keyboard.press('Escape');
+      await page.getByRole('combobox',{name:/^Concept color:/}).selectOption('');
+      await expect.poll(()=>page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
+      await page.getByRole('button',{name:'Accept',exact:true}).click();
+      await page.getByRole('alert').filter({hasText:'Decision saved'}).waitFor();
+      expect(compileAnnotations(s.file).html).toContain('data-prose-color="orange"');
+      await page.reload();
+      await page.getByRole('button',{name:'Review settings',exact:true}).click();
+      expect(await page.getByRole('combobox',{name:'Highlighting',exact:true}).inputValue()).toBe('hybrid');
+      expect(readFileSync(s.source,'utf8')).toBe(original);
+    }finally{await browser.close();}
+  },30_000);
+  it('scrolls the three annotation columns independently on a desktop', async () => {
+    const s = await seed();
+    writeFileSync(s.source,readFileSync(s.source,'utf8')+'\n'+Array.from({length:70},(_,i)=>`Paragraph ${i+1} explains how particles move through a system.\n`).join('\n'));
+    const found=findCandidates(s.file,{quote:'Diffusion'});
+    proposeAnnotations(s.file,Array.from({length:40},(_,i)=>({id:'note-'+i,kind:'explanation' as const,candidate:found.candidates[0].id,body:'Additional explanation.'})),{expectedRevision:found.revision});
+    const browser=await chromium.launch({headless:true});
+    try {
+      const page=await browser.newPage({viewport:{width:1440,height:850}});page.setDefaultTimeout(5000);
+      await page.goto(s.server.localUrl);await page.getByRole('button',{name:'Accept',exact:true}).waitFor();
+      const columns=[page.getByRole('navigation',{name:'Annotation queue',exact:true}),page.getByRole('region',{name:'Source reading pane',exact:true}),page.getByRole('complementary',{name:'Annotation details',exact:true})];
+      const positions=()=>Promise.all(columns.map(c=>c.evaluate(el=>el.scrollTop)));
+      for(let i=0;i<columns.length;i++){
+        const before=await positions();
+        await columns[i].hover();await page.mouse.wheel(0,600);
+        await expect.poll(async()=> (await positions())[i]).toBeGreaterThan(before[i]);
+        const after=await positions();
+        for(let j=0;j<columns.length;j++)if(j!==i)expect(after[j]).toBe(before[j]);
+        expect(await page.evaluate(()=> (globalThis as unknown as {scrollY:number}).scrollY)).toBe(0);
+      }
+      await page.setViewportSize({width:390,height:844});
+      expect(await page.evaluate(()=>{const w=globalThis as unknown as {document:{documentElement:{scrollWidth:number}};innerWidth:number};return w.document.documentElement.scrollWidth<=w.innerWidth;})).toBe(true);
+    }finally{await browser.close();}
+  },30_000);
+  it('shares persistent appearance settings across review pages and follows the system by default', async () => {
+    const s = await seed();
+    const reading = new ReadingServer({host:'127.0.0.1',port:0,persist:false,token:'a'.repeat(32)});
+    const info = await reading.listen(); servers.push(reading);
+    const original = `http://127.0.0.1:${info.port}`;
+    const browser = await chromium.launch({headless:true});
+    try {
+      let context = await browser.newContext({colorScheme:'dark'});
+      let page = await context.newPage(); page.setDefaultTimeout(5000);
+      const paper = () => page.locator('body').evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).backgroundColor);
+      const settings = () => page.getByRole('button',{name:'Review settings',exact:true});
+      const appearance = () => page.getByRole('combobox',{name:'Appearance',exact:true});
+      await page.goto(s.server.localUrl);
+      expect(await paper()).toBe('rgb(18, 22, 27)');
+      await settings().click();
+      expect(await appearance().inputValue()).toBe('system');
+      await appearance().selectOption('light');
+      expect(await paper()).toBe('rgb(237, 239, 234)');
+      expect(await page.locator('html').evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).colorScheme)).toBe('light');
+      if(process.env.PROSE_UI_PROOF)await page.screenshot({path:join(process.env.PROSE_UI_PROOF,'review-settings-light.png'),fullPage:true});
+      await page.keyboard.press('Escape');
+      expect(await settings().evaluate(el=>el===el.ownerDocument.activeElement)).toBe(true);
+      await page.reload();
+      expect(await paper()).toBe('rgb(237, 239, 234)');
+      await page.getByRole('button',{name:'Publication',exact:true}).click();
+      const previewPaper=()=>page.frameLocator('#publication').locator('body').evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).backgroundColor);
+      await expect.poll(previewPaper).toBe('rgb(250, 251, 248)');
+      await settings().click();await appearance().selectOption('dark');
+      await expect.poll(previewPaper).toBe('rgb(26, 32, 39)');
+      await appearance().selectOption('light');await page.keyboard.press('Escape');
+      await page.goto(original);
+      await settings().click();
+      expect(await appearance().inputValue()).toBe('light');
+      expect(await paper()).toBe('rgb(237, 239, 234)');
+      const saved = await context.storageState();
+      expect(saved.cookies.find(c=>c.name==='prose-review-theme')?.expires).toBeGreaterThan(Date.now()/1000);
+      await context.close();
+      context = await browser.newContext({colorScheme:'dark',storageState:saved});
+      page = await context.newPage(); page.setDefaultTimeout(5000);
+      await page.goto(s.server.localUrl);
+      expect(await paper()).toBe('rgb(237, 239, 234)');
+      await settings().click();
+      await appearance().selectOption('system');
+      expect(await paper()).toBe('rgb(18, 22, 27)');
+      await page.emulateMedia({colorScheme:'light'});
+      expect(await paper()).toBe('rgb(237, 239, 234)');
+      await appearance().selectOption('dark');
+      expect(await paper()).toBe('rgb(18, 22, 27)');
+      expect(await page.locator('html').evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).colorScheme)).toBe('dark');
+      await appearance().selectOption('system');
+      expect((await context.cookies()).find(c=>c.name==='prose-review-theme')).toBeUndefined();
+      await page.reload();
+      expect(await paper()).toBe('rgb(237, 239, 234)');
+    } finally { await browser.close(); }
+  },60_000);
   it('uses the original review shell, assets, fonts and controls in both review modes', async () => {
     const s = await seed();
     const batch=seedBatch(2), queue=makeQueue(batch);
@@ -56,6 +168,14 @@ describe('annotation workbench', () => {
       await page.locator('#rail .qitem').nth(1).waitFor();
       await page.locator('#rail .qitem').nth(1).click();
       await page.locator('#rail .qitem[data-key="rail-2"][aria-current="true"]').waitFor();
+      await page.getByRole('button',{name:'Review settings',exact:true}).click();
+      await page.getByRole('button',{name:'Done',exact:true}).focus();
+      await page.keyboard.press('a');
+      // A shortcut write is asynchronous; allow its response/render to settle before checking absence.
+      await page.waitForTimeout(250);
+      expect(await page.locator('#rail .qitem[aria-current="true"]').textContent()).not.toContain('Picked A');
+      expect(await page.getByRole('dialog',{name:'Review settings',exact:true}).isVisible()).toBe(true);
+      await page.keyboard.press('Escape');
       await page.getByRole('button',{name:/^Keep draft/}).first().click();
       await page.getByRole('button',{name:/^Kept draft/}).first().waitFor();
       await page.goto(`${original}/s/${queue.items[0].sessionId}?t=${'a'.repeat(32)}`);

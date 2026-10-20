@@ -144,6 +144,9 @@ hashes. Adapter/projection versions participate in review dependencies.
 
 ## Consumer boundary and publication
 
+For category/member color hints, the three highlighting modes, shared workbench settings and
+copyable HTML/CSS implementation guidance, read [presentation and consumer styling](styling.md).
+
 Use `annotation export <sidecar> --to json --out publication.json` for the native
 `prose/annotation-bundle@1` bundle with projection `prose/annotation-text@1`. Only accepted current
 annotations publish. Draft, rejected and deferred entries are omitted; stale accepted entries block

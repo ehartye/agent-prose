@@ -7,8 +7,14 @@ import type { AddressInfo } from 'node:net';
 import { ProseError } from '../errors.ts';
 import { proseHome } from '../owner/paths.ts';
 import { writeFileAtomic } from '../owner/fsutil.ts';
-import { compileAnnotations, decideAnnotation, findCandidates, inspectAnnotationFile } from './store.ts';
+import { compileAnnotations, decideAnnotation, findCandidates, inspectAnnotationFile, setAnnotationAppearance } from './store.ts';
 import { reviewPage, reviewAssets } from '../reading/assets.ts';
+import { resolveHighlightColor } from './render.ts';
+import type { AnnotationAppearance, Inspection } from './types.ts';
+
+function withColors(inspection:Inspection) {
+  return {...inspection,annotations:inspection.annotations.map(a=>({...a,presentationColor:resolveHighlightColor(a,inspection.concepts?.concepts.find(c=>c.id===a.concept),inspection.sidecar.appearance)}))};
+}
 
 interface SessionRecord {
   schema: 'prose/annotation-preview-session@1';
@@ -161,7 +167,7 @@ export async function startAnnotationPreview(file: string, options: AnnotationPr
       if (req.method === 'GET' && path === '/api/health') { send(200, { session: record.id, pid: process.pid, state: record.state }); return; }
       if (req.method === 'GET' && path === '/api/state') {
         const { inspection, events } = history(record.file);
-        send(200, { session: { id: record.id, state: record.state }, cursor: events.length, inspection }); return;
+        send(200, { session: { id: record.id, state: record.state }, cursor: events.length, inspection:withColors(inspection) }); return;
       }
       if (req.method === 'GET' && path === '/api/publication') { const compiled = compileAnnotations(record.file); send(200, { html: compiled.html, report: compiled.report }); return; }
       if (req.method !== 'POST') { send(404, { error: { code: 'E_NOT_FOUND', message: 'Unknown review endpoint' } }); return; }
@@ -176,6 +182,12 @@ export async function startAnnotationPreview(file: string, options: AnnotationPr
         send(200, { inspection, cursor: inspection.sidecar.history.length }); return;
       }
       if (path === '/api/locate') { send(200, findCandidates(record.file, body as Parameters<typeof findCandidates>[1])); return; }
+      if (path === '/api/appearance') {
+        const value=body as {appearance:AnnotationAppearance;expectedRevision:string;eventId:string};
+        if(typeof value.expectedRevision!=='string'||typeof value.eventId!=='string')throw new ProseError('E_SCHEMA','Appearance changes require expectedRevision and eventId');
+        const inspection=setAnnotationAppearance(record.file,value.appearance,{expectedRevision:value.expectedRevision,eventId:value.eventId});
+        send(200,{inspection:withColors(inspection),cursor:inspection.sidecar.history.length});return;
+      }
       if (path === '/api/close') { send(200, { session: record.id, state: 'closed' }); setImmediate(() => { void close(); }); return; }
       send(404, { error: { code: 'E_NOT_FOUND', message: 'Unknown review endpoint' } });
     })().catch(e => {

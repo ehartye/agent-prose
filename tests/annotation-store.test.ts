@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
-import { createAnnotationFile, inspectAnnotationFile, findCandidates, proposeAnnotations, decideAnnotation, compileAnnotations } from '../src/annotation/store.ts';
+import { createAnnotationFile, inspectAnnotationFile, findCandidates, proposeAnnotations, decideAnnotation, compileAnnotations, setAnnotationAppearance } from '../src/annotation/store.ts';
+import { resolveHighlightColor } from '../src/annotation/render.ts';
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
@@ -23,6 +24,34 @@ function proposed(file: string) {
 }
 
 describe('annotation authority and publication', () => {
+  it('saves validated presentation hints without invalidating approval and publishes only public member identities', () => {
+    const {file,source,concepts}=fixture();const original=readFileSync(source,'utf8');
+    const registry=parse(readFileSync(concepts,'utf8'));registry.concepts[0].color='green';writeFileSync(concepts,stringify(registry));
+    let current=proposed(file);
+    current=proposeAnnotations(file,[{id:'__proto__',kind:'highlight',target:{quote:'diffusion'}}],{expectedRevision:current.revision});
+    current=decideAnnotation(file,{id:'a-diffusion',action:'accept',expectedRevision:current.revision});
+    const before=current.revision;
+    const appearance={mode:'hybrid' as const,categories:{vocabulary:'blue' as const},concepts:{diffusion:'purple' as const},annotations:Object.fromEntries([['__proto__','pink' as const]])};
+    current=setAnnotationAppearance(file,appearance,{expectedRevision:before,eventId:'colors-1'});
+    expect(current.annotations[0].state).toBe('accepted');
+    expect(Object.hasOwn(current.sidecar.appearance!.annotations!,'__proto__')).toBe(true);
+    expect(current.sidecar.appearance!.annotations!.__proto__).toBe('pink');
+    expect(setAnnotationAppearance(file,appearance,{expectedRevision:before,eventId:'colors-1'}).revision).toBe(current.revision);
+    expect(()=>setAnnotationAppearance(file,{...appearance,mode:'category'},{expectedRevision:before})).toThrow();
+    expect(()=>setAnnotationAppearance(file,{...appearance,categories:{concept:'url(javascript:bad)'}} as never)).toThrow();
+    expect(()=>setAnnotationAppearance(file,{...appearance,concepts:{missing:'blue'}})).toThrow();
+    const {bundle,html,report}=compileAnnotations(file),doc=bundle.documents[0],annotation=bundle.annotations[0],concept=bundle.concepts[0];
+    expect(doc.appearance?.concepts).toEqual({[concept.id]:'purple'});
+    expect(doc.appearance?.annotations).toEqual({});
+    expect(concept.color).toBe('green');
+    expect(resolveHighlightColor(annotation,concept,doc.appearance)).toBe('purple');
+    expect(resolveHighlightColor(annotation,concept,{...doc.appearance,mode:'category'})).toBe('blue');
+    expect(resolveHighlightColor(annotation,undefined,{mode:'member'})).toBe('none');
+    expect(html).toContain('data-prose-color="purple"');
+    expect(report.warnings.some(w=>w.includes('color'))).toBe(true);
+    expect(JSON.stringify(doc.appearance)).not.toContain('diffusion');
+    expect(readFileSync(source,'utf8')).toBe(original);
+  });
   it('persists proposals, explicit acceptance and portable publication without changing the source', () => {
     const { source, file, dir } = fixture(); const original = readFileSync(source, 'utf8');
     const proposal = proposed(file);

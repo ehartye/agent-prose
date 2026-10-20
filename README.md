@@ -113,6 +113,13 @@ Annotations use the same proof-desk page, fonts, theme, controls and queue compo
 existing single and batch reviews. Their controller handles annotation decisions within that
 shared UI; it does not introduce a separate review application.
 
+Every review page has a settings gear with System, Light and Dark appearance. System is the
+default; explicit choices persist in the browser across review sessions and changing local ports.
+The annotation workbench scrolls its three columns independently on desktop. It supports category,
+member and hybrid highlighting, with reusable concept colors and publishable document overrides.
+See the [consumer styling guide](skills/prose-annotate/references/styling.md) for the data contract,
+precedence rules and CSS/HTML/Markdown integration examples.
+
 Source changes are checked against the annotation's used passage, context, concept and destination.
 Accepted entries become stale when those dependencies change. `annotation check <sidecar> --save
 --expect <revision>` can rebind still-valid entries after unrelated edits. Writes support revision

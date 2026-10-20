@@ -1925,7 +1925,7 @@
   }
 
   function onKey(ev) {
-    if (!batch || !data || !ui.rail || ui.none) return; // while the "None of these" panel is open the page behind it takes no shortcuts
+    if (!batch || !data || !ui.rail || ui.none || document.querySelector('dialog[open]')) return; // modal settings and review panels suspend background shortcuts
     const t = ev.target;
     const inField = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable));
     const act = keyAction({ key: ev.key, shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey, inField },

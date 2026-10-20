@@ -2,6 +2,43 @@
 (function () {
   'use strict';
   const modes = new Map();
+  // A host-only cookie also follows review servers when their local port changes.
+  const themeCookie = 'prose-review-theme';
+  function savedTheme() {
+    try {
+      const value = document.cookie.split(';').map(part=>part.trim()).find(part=>part.startsWith(themeCookie+'='))?.slice(themeCookie.length+1);
+      return value === 'light' || value === 'dark' ? value : 'system';
+    } catch { return 'system'; }
+  }
+  function applyTheme(theme) {
+    if(theme==='system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme=theme;
+  }
+  applyTheme(savedTheme());
+  function settings() {
+    const button=document.getElementById('review-settings-button');
+    const dialog=document.getElementById('review-settings');
+    const appearance=document.getElementById('review-appearance');
+    const status=document.getElementById('review-settings-status');
+    button.addEventListener('click',()=>{
+      appearance.value=savedTheme();
+      status.textContent='';
+      dialog.showModal();
+    });
+    document.getElementById('review-settings-close').addEventListener('click',()=>dialog.close());
+    appearance.addEventListener('change',()=>{
+      const theme=appearance.value;
+      if(!['system','light','dark'].includes(theme))return;
+      applyTheme(theme);
+      document.dispatchEvent(new Event('prose-theme-change'));
+      try {
+        document.cookie=themeCookie+'='+(theme==='system'?'':theme)+'; Path=/; Max-Age='+(theme==='system'?'0':'31536000')+'; SameSite=Strict'+(location.protocol==='https:'?'; Secure':'');
+      } catch { /* The current page still uses the chosen appearance. */ }
+      status.textContent=savedTheme()===theme?'Appearance saved.':'Appearance changed for this page; browser settings prevented saving it.';
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',settings,{once:true});
+  else settings();
   function h(tag, props, ...kids) {
     const el = document.createElement(tag);
     for (const [k, v] of Object.entries(props || {})) {

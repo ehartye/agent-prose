@@ -3,8 +3,16 @@ import type { Candidate, TargetSelector, Resolution } from './locate.ts';
 
 export type AnnotationKind = 'highlight' | 'vocabulary' | 'concept' | 'definition' | 'explanation' | 'link';
 export type ReviewState = 'draft' | 'accepted' | 'rejected' | 'deferred';
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'orange';
+export interface AnnotationAppearance {
+  mode?: 'category' | 'member' | 'hybrid';
+  categories?: Partial<Record<AnnotationKind, HighlightColor>>;
+  concepts?: Record<string, HighlightColor>;
+  annotations?: Record<string, HighlightColor>;
+}
 export interface Concept {
   id: string; uid?: string; label: string; aliases?: string[]; definition: string;
+  color?: HighlightColor;
   sources?: string[]; definitionSource?: string; cedRef?: string; related?: string[]; retired?: boolean; replacement?: string;
   [metadata: string]: unknown;
 }
@@ -32,6 +40,7 @@ export interface Sidecar {
   schema: 'prose/annotations@1';
   document: { id: string; handle: string; source: string; profile: SourceProfile; sourceDocument?: string; contentRoot?: string };
   root?: string; concepts?: string; references?: Record<string, string>;
+  appearance?: AnnotationAppearance;
   annotations: Annotation[]; targets: Array<{ id: string; target: TargetSelector }>;
   history: FeedbackEvent[];
 }
@@ -56,6 +65,7 @@ export interface PublishedDocument {
   id: string; handle: string; resource: string; profile: SourceProfile; sourceDigest: string; projectionDigest: string;
   projectionVersion?: string; adapter?: Projection['adapter']; language: string; direction?: 'ltr'|'rtl'|'auto';
   text: string; blocks: Projection['blocks']; fragments: Record<string, { start: number; end: number }>;
+  appearance?: AnnotationAppearance;
   targets: Record<string, { id: string; start: number; end: number; quote: string }>;
 }
 export interface PublicationBundle {

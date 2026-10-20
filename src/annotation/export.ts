@@ -40,7 +40,7 @@ export function publishInspection(initial: Inspection, helpers: PublicationHelpe
         const definitionSource=concept.definitionSource&&!privateReference(concept.definitionSource)&&/^[\w .-]{1,100}$/.test(concept.definitionSource)?concept.definitionSource:undefined;
         const cedRef=concept.cedRef&&!privateReference(concept.cedRef)?concept.cedRef:undefined;
         if(concept.definitionSource&&!definitionSource||concept.cedRef&&!cedRef)warnings.add('Private concept reference metadata was omitted');
-        const snapshot:Concept={id:concept.uid,label:concept.label,definition:concept.definition,aliases:concept.aliases??[],sources:portableSources(concept.sources),...(definitionSource?{definitionSource}:{}),...(cedRef?{cedRef}:{})};
+        const snapshot:Concept={id:concept.uid,label:concept.label,definition:concept.definition,...(concept.color?{color:concept.color}:{}),aliases:concept.aliases??[],sources:portableSources(concept.sources),...(definitionSource?{definitionSource}:{}),...(cedRef?{cedRef}:{})};
         const existing=bundle.concepts.find(c=>c.id===concept.uid);
         if(existing&&stable(existing)!==stable(snapshot))throw new ProseError('E_SCHEMA','Conflicting shared concept identities in publication closure');
         if(!existing){
@@ -71,6 +71,16 @@ export function publishInspection(initial: Inspection, helpers: PublicationHelpe
       }
       bundle.annotations.push(record);
     }
+    if(inspection.sidecar.appearance){
+      const appearance=inspection.sidecar.appearance,accepted=inspection.annotations.filter(a=>a.state==='accepted');
+      published.appearance={...appearance,
+        concepts:Object.fromEntries(Object.entries(appearance.concepts??{}).flatMap(([id,color])=>{
+          const concept=inspection.concepts?.concepts.find(c=>c.id===id);
+          return concept?.uid&&accepted.some(a=>a.concept===id)?[[concept.uid,color]]:[];
+        })),
+        annotations:Object.fromEntries(accepted.filter(a=>Object.hasOwn(appearance.annotations??{},a.id)).map(a=>[a.uid,appearance.annotations![a.id]])),
+      };
+    }
   };
   add(initial);
   if(new Set(bundle.annotations.map(a=>a.id)).size!==bundle.annotations.length)throw new ProseError('E_SCHEMA','Conflicting annotation identities in publication closure');
@@ -87,6 +97,7 @@ export function publishInspection(initial: Inspection, helpers: PublicationHelpe
     }),
   };
   if(bundle.annotations.some(a=>a.concept||a.lists?.length||a.destination))warnings.add('Web Annotation export does not preserve project lists, concept identity or application navigation; use the native bundle for complete semantics');
+  if(bundle.documents.some(d=>d.appearance)||bundle.concepts.some(c=>c.color))warnings.add('Web Annotation export omits category/member color hints and highlight modes; use the native bundle or HTML for styling');
   warnings.add('Representation UUID URNs identify included text snapshots; they are not fetchable URLs');
   const report={warnings:[...warnings],excluded:[...excluded]};
   return {bundle,html:renderPublication(bundle),webAnnotation:{page:webAnnotation,representations,report},report};

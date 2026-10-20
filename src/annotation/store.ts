@@ -6,11 +6,11 @@ import { ProseError } from '../errors.ts';
 import { withDirLock, writeFileAtomic } from '../owner/fsutil.ts';
 import { inspectConceptRegistry } from './concepts.ts';
 import { contained, digest, readData, readText, relativeReference, safeUrl, serialize, stable } from './files.ts';
-import { parseAnnotation, parseProposal, parseSidecar, targetSchema, checked } from './schema.ts';
+import { parseAnnotation, parseProposal, parseSidecar, targetSchema, appearanceSchema, checked } from './schema.ts';
 import { projectSource } from './source.ts';
 import { candidateFromId, locateCandidates, resolveTarget } from './locate.ts';
 import { publishInspection } from './export.ts';
-import type { Annotation, Candidate, Decision, Destination, Inspection, InspectedAnnotation, MutationOptions, Proposal, Sidecar, SourceProfile, TargetSelector } from './types.ts';
+import type { Annotation, AnnotationAppearance, Candidate, Decision, Destination, Inspection, InspectedAnnotation, MutationOptions, Proposal, Sidecar, SourceProfile, TargetSelector } from './types.ts';
 export type { Inspection, Proposal, Decision } from './types.ts';
 
 interface Loaded extends Omit<Inspection,'annotations'> { root: string }
@@ -148,6 +148,16 @@ export function proposeAnnotations(file: string, proposals: Proposal[], options:
       sidecar.annotations.push(annotation);
     }
     sidecar.history.push({id:eventId,at:new Date().toISOString(),annotation:validated.length===1?sidecar.annotations.at(-1)!.id:'*',annotationIds:sidecar.annotations.slice(-validated.length).map(a=>a.id),action:'propose',beforeRevision,request:requestDigest});
+  });
+}
+/** Presentation changes are journaled and revision-checked, but do not change content approval. */
+export function setAnnotationAppearance(file:string, value:AnnotationAppearance, options:MutationOptions={}):Inspection {
+  const appearance=checked<AnnotationAppearance>(appearanceSchema,value,'annotation appearance');
+  return mutation(file,{action:'appearance',appearance},options,(sidecar,current,beforeRevision,id,requestDigest)=>{
+    for(const member of Object.keys(appearance.concepts??{}))if(!current.concepts?.concepts.some(c=>c.id===member))throw new ProseError('E_SCHEMA','Unknown concept color member');
+    for(const member of Object.keys(appearance.annotations??{}))if(!sidecar.annotations.some(a=>a.id===member))throw new ProseError('E_SCHEMA','Unknown annotation color member');
+    sidecar.appearance=appearance;
+    sidecar.history.push({id,at:new Date().toISOString(),annotation:'*',action:'appearance',beforeRevision,request:requestDigest});
   });
 }
 export function decideAnnotation(file: string, decision: Decision): Inspection {

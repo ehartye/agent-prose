@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Annotation, ConceptRegistry, Proposal, Sidecar } from './types.ts';
+import type { Annotation, ConceptRegistry, HighlightColor, Proposal, Sidecar } from './types.ts';
 import { ProseError } from '../errors.ts';
 import { identity, privateReference, publicIdentity } from './files.ts';
 
@@ -7,6 +7,13 @@ const id = z.string().trim().min(1).max(256).refine(v=>!privateReference(v),'Ide
 const publicId=z.string().refine(publicIdentity,'Use a UUID URN or publisher HTTP(S) IRI');
 const strings = z.array(z.string());
 const kinds = z.enum(['highlight', 'vocabulary', 'concept', 'definition', 'explanation', 'link']);
+const color = z.enum(['yellow','green','blue','purple','pink','orange']);
+// Preserve literal member IDs such as __proto__; z.record intentionally removes that key.
+const colorMembers=z.custom<Record<string,HighlightColor>>(value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.entries(value).every(([key,v])=>id.safeParse(key).success&&color.safeParse(v).success),'Use member IDs mapped to supported color names').transform(value=>Object.fromEntries(Object.entries(value)));
+export const appearanceSchema = z.object({
+  mode:z.enum(['category','member','hybrid']).optional(),
+  categories:z.partialRecord(kinds,color).optional(), concepts:colorMembers.optional(), annotations:colorMembers.optional(),
+}).strict();
 const range = z.number().int().nonnegative();
 export const targetSchema = z.object({
   quote: z.string().min(1).optional(), prefix: z.string().optional(), suffix: z.string().optional(),
@@ -21,13 +28,13 @@ const origin = z.object({ type: z.enum(['supplied', 'assistant', 'deterministic'
 const fields = { kind: kinds, concept: id.optional(), lists: strings.optional(), body: z.string().min(1).optional(), destination: destination.optional(), sources: strings.optional(), origin: origin.optional() };
 export const annotationSchema = z.object({ id, uid: publicId.optional(), target: targetSchema, ...fields, review: z.object({ state: z.enum(['draft', 'accepted', 'rejected', 'deferred']), dependency: z.string().optional(), snapshot: z.record(z.string(),z.unknown()).optional() }).strict().default({state:'draft'}) }).strict();
 export const proposalSchema = z.object({ id: id.optional(), candidate: z.string().optional(), target: targetSchema.optional(), ...fields }).strict().refine(v => !!v.candidate !== !!v.target, 'Supply exactly one candidate ID or target');
-const concept = z.object({ id, uid: publicId.optional(), label: z.string().min(1), aliases: strings.optional(), definition: z.string().min(1), sources: strings.optional(), definitionSource: z.string().optional(), cedRef: z.string().optional(), related: strings.optional(), retired: z.boolean().optional(), replacement: id.optional() }).passthrough();
+const concept = z.object({ id, uid: publicId.optional(), label: z.string().min(1), aliases: strings.optional(), definition: z.string().min(1), color:color.optional(), sources: strings.optional(), definitionSource: z.string().optional(), cedRef: z.string().optional(), related: strings.optional(), retired: z.boolean().optional(), replacement: id.optional() }).passthrough();
 const registry = z.object({ schema: z.literal('prose/concepts@1'), project: id, uid: publicId.optional(), language: z.string().optional(), authority: z.object({ mode: z.literal('external'), source: z.string().min(1) }).strict().optional(), concepts: z.array(concept), lists: z.record(z.string(), strings).default({}) }).strict();
 const history = z.object({ id, at: z.string(), annotation: z.string(), action: z.string(), reason: z.string().optional(), before: annotationSchema.optional(), after: z.string().optional(), undoOf: z.string().optional(), annotationIds: strings.optional(), beforeRevision: z.string(), request: z.string() }).strict();
 const sidecar = z.object({
   schema: z.literal('prose/annotations@1'),
   document: z.object({ id:publicId, handle: id, source: z.string().min(1), profile: z.enum(['markdown', 'html', 'structured']), sourceDocument: id.optional(), contentRoot: z.string().optional() }).strict(),
-  root: z.string().optional(), concepts: z.string().optional(), references: z.record(z.string(), z.string()).optional(),
+  root: z.string().optional(), concepts: z.string().optional(), references: z.record(z.string(), z.string()).optional(), appearance:appearanceSchema.optional(),
   annotations: z.array(annotationSchema).default([]), targets: z.array(z.object({ id, target: targetSchema }).strict()).default([]), history: z.array(history).default([]),
 }).strict();
 

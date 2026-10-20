@@ -3,6 +3,7 @@ import { request } from 'node:http';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ReadingServer, readServerInfo, SERVER_API, SERVER_LOG_HINT, writeServerInfo, type ServerInfo } from '../src/reading/server.ts';
+import { annotationHighlightCSS } from '../src/annotation/render.ts';
 import { ProseError } from '../src/errors.ts';
 import { KNOWN_DIRECTIONS } from '../src/owner/directions.ts';
 import { setDir, sessionDir } from '../src/owner/paths.ts';
@@ -206,7 +207,7 @@ describe('static pages', () => {
     const js = await raw(info, '/app.js');
     expect([js.status, js.headers['content-type'], js.text]).toEqual([200, 'text/javascript; charset=utf-8', real('app.js')]);
     const css = await raw(info, '/style.css');
-    expect([css.status, css.headers['content-type'], css.text]).toEqual([200, 'text/css; charset=utf-8', real('style.css')]);
+    expect([css.status, css.headers['content-type'], css.text]).toEqual([200, 'text/css; charset=utf-8', real('style.css')+annotationHighlightCSS]);
   });
 
   it('ships a page that is already CSP-clean: no inline script, no inline style, only shared same-origin assets', () => {
