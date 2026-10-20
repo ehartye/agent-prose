@@ -1,13 +1,13 @@
 // Bradley-Terry over style-feature differences: P(a beats b) = sigmoid(w . (x_a - x_b)), no intercept.
 // Fit by Newton's method with backtracking and an L2 prior (neutral at zero until data arrives); the inverse Hessian at the
-// optimum is the Laplace covariance, so every utility carries an uncertainty. Semantics ported from agent-beeps' taste model.
+// optimum is the Laplace covariance, so every utility carries an uncertainty.
 import { FEATURES } from '../owner/features.ts';
 import type { Verdict } from '../owner/verdicts.ts';
 
 export type { Verdict } from '../owner/verdicts.ts';
 
 export const DIM = FEATURES.length;
-/** Pairs a layer needs before it is fitted. Conventions inherited from agent-beeps, not measured on prose. */
+/** Pairs a layer needs before it is fitted. Maintainer conventions, not validated on prose. */
 export const PROJECT_LAYER_MIN = 15;
 export const VOICE_LAYER_MIN = 15;
 export const GLOBAL_LAMBDA = 1;

@@ -4,8 +4,8 @@ Date: 2026-10-02 · Status: M1–M2 shipped as 0.1.0; M3–M4 planned
 
 ## Purpose
 
-A writing-craft plugin for coding agents, built as a full sibling of agent-beeps, agent-vids,
-agent-sprites and agent-meshes. Agents draft writing in native formats, a CLI measures what is
+A writing-craft plugin for coding agents with native drafts, cited checks,
+rendering and recorded reader choices. Agents draft writing in native formats, a CLI measures what is
 measurable, cited craft rules lint each form, and the owner judges variants on a LAN reading page
 whose verdicts train a taste model.
 
@@ -18,17 +18,17 @@ play, YouTube script, speeches to small and large audiences).
 
 | Decision | Choice | Rejected |
 |---|---|---|
-| Scope of v1 | Full sibling spine: measure, lint, render, owner reading page, taste model | Lint-only CLI first; skills-only library |
+| Scope of v1 | Full workflow: measure, lint, render, owner reading page, taste model | Lint-only CLI first; skills-only library |
 | First deep wave | All four: game dialogue, instructions/professional, speeches, scripts | — |
 | Read-aloud | Browser Web Speech by default; OpenAI TTS opt-in per render (`--tts openai`) | Browser only; OpenAI always; none |
 | Draft storage | Native formats parsed to one IR | One JSON schema; Markdown everywhere |
 
 ## 1. Shape
 
-- **CLI `prose`**, sibling conventions: Node ≥ 24 running TypeScript directly (no build), commander,
+- **CLI `prose`**, runtime conventions: Node ≥ 24 running TypeScript directly (no build), commander,
   zod, pinned dependency versions, JSON on stdout (`--pretty` to indent), errors as
   `{"error":{code,message,pointer?,hint?}}` on stderr with exit 1 (usage errors exit 2).
-- **Managed runtime** copied from the sibling pattern: `scripts/setup.js`, `managed-runtime.js`,
+- **Managed runtime** with versioned installation: `scripts/setup.js`, `managed-runtime.js`,
   `run-managed.js`; releases under `~/.agent-prose/releases/<version>-<fp>-<platform>-<arch>-<abi>`;
   `AGENT_PROSE_HOME` override; version sync across `package.json`, `plugin.json`,
   `package-lock.json`. Chromium is installed for PDF renders (from M4).
@@ -58,7 +58,7 @@ the draft. A new form = a parser binding (often reused) + a form pack.
 **Form packs** (`craft/forms/<form>.json`) declare: parser, applicable measurements, default
 targets (WPM, length, page→minute factor, box size), the rule ids that apply, and render targets.
 **Registers** adjust rule values as overrides with a required `reason`; overrides are reported as
-info, following the agent-vids flavor pattern. Initial forms: `quest-dialog`, `barks`,
+info, using named form identifiers. Initial forms: `quest-dialog`, `barks`,
 `conversation`, `instructions`, `tech-doc`, `academic`, `professional`, `sitcom-multicam`,
 `sitcom-singlecam`, `tv-drama`, `stage-play`, `youtube`, `speech-small`, `speech-large`,
 `speech-recorded`. YouTube channel styles (e.g. explainer, essay, vlog, tutorial) are presets on
@@ -85,7 +85,7 @@ Measurements are deterministic, dependency-light text analysis (no ML models, no
 
 ## 5. Craft rules
 
-- `craft/rules.json` (schema `prose/rules@1`) following the agent-vids shape: `id` (dotted by topic),
+- `craft/rules.json` (schema `prose/rules@1`) with fields: `id` (dotted by topic),
   `topic`, `statement`, `value`, `unit`, `forms[]`, `registers[]`, `check: auto | judgement`,
   `severity: error | warn | info`, `sources[]` (reference ids), `derived` (true when the threshold
   is this plugin's choice), `rationale`.
@@ -122,8 +122,8 @@ Measurements are deterministic, dependency-light text analysis (no ML models, no
   refine (choose directions), line-anchored notes, ship. Read-aloud uses the browser's Web Speech
   API with a timing bar against the form's target length. `prose render --tts openai` produces
   high-fidelity audio on request only (requires `OPENAI_API_KEY`; sends text to OpenAI).
-- **Taste model:** Bradley-Terry over measured text features (no free-text taste notes, which
-  cannot rank or predict — agent-beeps ADR), with global, per-project (≥ 15 verdicts) and
+- **Taste model:** Bradley-Terry over measured text features (free-text taste notes
+  are not model inputs), with global, per-project (≥ 15 verdicts) and
   per-voice layers. `prose taste show` writes a plain-words summary.
 
 ## 7. Render and export
@@ -151,18 +151,17 @@ Written with the yoda method: `description` (capability) + `when_to_use` (trigge
 | `prose-voice` | voice bibles; "doesn't sound like X"; voice consistency |
 | `prose-review` | reading page, duels, predictions, taste |
 
-Short interface microcopy is routed to the existing `design:ux-copy` skill; `prose-instruct`'s
+Short interface microcopy needs separate UX-writing guidance; `prose-instruct`'s
 `when_to_use` says so. Negative evals include a code-comment request that should fire nothing.
 
 ## 9. Research and project notes
 
-M0 fills evidence gaps found in the maintainer's research-notes survey (2026-10-02): screenwriting and teleplay format,
+M0 researches the following evidence gaps: screenwriting and teleplay format,
 stage-play format, comedy construction, speechwriting and audience size, technical documentation
 (Diátaxis, docs style guides), UX writing research, academic prose, prose style and editing, game
 dialogue craft (barks, branching, Ink/Yarn practice), character voice, story structure, creator
-YouTube scripting. Also ingest four already-captured writing-instruction clippings. Project docs
-live in the maintainer's project notes (overview, architecture, roadmap, ADRs for native formats,
-read-aloud split, taste features).
+YouTube scripting. Public craft rules cite their sources in `craft/references.json`;
+form-family guides and research/design records live in `craft/guides/` and `docs/`.
 
 ## 10. Milestones
 
@@ -185,7 +184,7 @@ line), `E_NOT_FOUND`, `E_PROJECT`, `E_RENDER`, `E_BROWSER_MISSING`, `E_RUNTIME_M
 
 Vitest, tests mirroring `src/`. Parser fixtures per format (including Fountain edge cases), golden
 measurement fixtures, one test per auto rule (passing and failing sample), managed-runtime and
-skills tests from the sibling pattern, server route tests, taste model fit tests. Evals in
+skill metadata and reference tests, server route tests, taste model fit tests. Evals in
 `evals/<case>/` run with `claude plugin eval`.
 
 ## Out of scope for v1
@@ -270,7 +269,7 @@ atomically. A pick writes `pick.pending.json` before appending verdicts and `set
 retry after a crash must repeat the same pick and its appends are deduplicated. Variant hashes
 ignore a BOM and line endings.
 
-Deliberate differences from agent-beeps: no server in 0.2.0 (the reading page added one afterwards); the agent writes the variants and the
+Owner-loop behavior: no server in 0.2.0 (the reading page added one afterwards); the agent writes the variants and the
 tool verifies them, rather than generating them; one choice weighs about one duel, so each loser
 in a pick counts 1/(shown-1); `prose init` writes `.agent-prose/.gitignore` so sets and taste data
 stay out of version control.

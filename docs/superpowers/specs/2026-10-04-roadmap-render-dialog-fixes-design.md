@@ -8,9 +8,9 @@ Baseline: `18d16349e69451a91158fa82cdbf17ef1d56aa58` (0.6.0).
 
 The owner requested the remaining render/export, craft-guide fixes, and game-dialogue integration items. CLI-capable skill evals in CI are excluded. Existing unit-test CI remains the verification gate. This work produces three independently reviewable increments, in this order: correctness/reference fixes, render/export, and dialogue round trips. No existing draft, voice bible, set, prediction, or verdict requires migration.
 
-Success means the known craft defects have regression coverage; supported drafts produce usable offline print/reading artifacts; a game line can be extracted, reviewed, and applied to its exact source occurrence without changing gameplay metadata. Conflicts must be reported before source edits. Documentation and the maintainer's project notes describe the resulting behavior, with remaining evidence gaps explicitly labeled.
+Success means the known craft defects have regression coverage; supported drafts produce usable offline print/reading artifacts; a game line can be extracted, reviewed, and applied to its exact source occurrence without changing gameplay metadata. Conflicts must be reported before source edits. Public documentation describes the resulting behavior, with remaining evidence gaps explicitly labeled.
 
-The space2grow testbed supplies fixtures and real source contracts. This scope builds the integration and demonstrates it on copies. It does not invent the owner's unrecorded picks or silently rewrite game dialogue. Any later content pilot uses the working integration and the owner's recorded choices.
+The repository supplies synthetic dialogue fixtures and explicit source-contract variants. This scope builds the integration and demonstrates it on those fixtures. It does not invent the owner's unrecorded picks or silently rewrite game dialogue. Any later content pilot uses the working integration and the owner's recorded choices.
 
 ## Approach and tradeoffs
 
@@ -84,7 +84,7 @@ JSON/YAML locators are structural paths. Static JavaScript data uses AST-identif
 
 ### Commands and review
 
-Add `prose dialog import <source> --out <draft.dialog.yaml> --manifest <path>` for supported JSON/YAML/static-data JavaScript, with the space2grow bridge/ambient shape as the first concrete adapter. Emit an explicit report for unsupported structures rather than omit them silently. Source roots and paths are explicit; all output is offline.
+Add `prose dialog import <source> --out <draft.dialog.yaml> --manifest <path>` for supported JSON/YAML/static-data JavaScript, with static bridge and ambient dialogue shapes as the first concrete adapters. Emit an explicit report for unsupported structures rather than omit them silently. Source roots and paths are explicit; all output is offline.
 
 Add `prose dialog review <draft> --manifest <path> --id <slot-id>` to create a normal line-scoped set carrying an optional `sourceRef`. Existing `set`, reading queue, prediction and pick protocols remain intact. `sourceRef` is sealed along with the reviewed content/context; a candidate can change the designated text only. The sidecar retains the game's protected payload (tiers, quest IDs, once flags, effects, conditioned variants, reply tones, headlines, tags) and associates it with the exact slot. Preserve state-selected variants as separate conditioned slots, never style-rotation variants.
 
@@ -92,7 +92,7 @@ The current reading page already handles per-line sets, side-by-side originals, 
 
 ### Limits and repetition
 
-Source slot limits override generic form-box guidance for that slot. Read limits from the adapter's actual source contract: the live space2grow bridge uses 150 characters; its newer contract uses 160. Bubble, label, reply-label, headline and topic-path limits remain distinct. Validate replacement limits and the affected whole-topic/path budget before apply; conditions are conservatively retained, not simulated by prose.
+Source slot limits override generic form-box guidance for that slot. Read limits from the adapter's actual source contract: the legacy bridge fixture uses 150 characters; the newer contract fixture uses 160. Bubble, label, reply-label, headline and topic-path limits remain distinct. Validate replacement limits and the affected whole-topic/path budget before apply; conditions are conservatively retained, not simulated by prose.
 
 Independent topic/exchange entries and bark-only files need no synthetic graph root. Add optional entry-point metadata for multiple conversations and explicit revisit policy for intentional hubs; graph integrity still checks dangling links and endings within each entry. Do not blanket-suppress graph findings.
 
@@ -106,7 +106,7 @@ Prepare all changed files and a journal before replacing originals. Reuse the ex
 
 ### Verification
 
-Fixtures cover conditioned variants, topic/effect/once metadata, replies, ambient tags, duplicate text in distinct slots, both space2grow limit contracts, and malformed IDs/paths. Test extract -> line-scoped review -> sealed prediction -> recorded pick -> dry run -> apply -> undo on copies of real source. Assert protected metadata and unrelated bytes never change. Test stale source, moved/reordered slots, out-of-root paths, symlinks, oversized text, structural candidate edits, concurrent apply, partial failure, and crash recovery. Run the game's existing contract validator/tests against resulting fixture data; no actual unreviewed game content is replaced.
+Fixtures cover conditioned variants, topic/effect/once metadata, replies, ambient tags, duplicate text in distinct slots, both 150- and 160-character limit contracts, and malformed IDs/paths. Test extract -> line-scoped review -> sealed prediction -> recorded pick -> dry run -> apply -> undo on synthetic source fixtures. Assert protected metadata and unrelated bytes never change. Test stale source, moved/reordered slots, out-of-root paths, symlinks, oversized text, structural candidate edits, concurrent apply, partial failure, and crash recovery. Check the resulting fixture data against its declared contract. Integrators must also run their own game contract validators before changing game content.
 
 ## Files and compatibility
 
@@ -118,7 +118,7 @@ All increments run `npm test`, `npm run typecheck`, and `npm run refs:check`. Ne
 
 - Existing approved M4 intent: `docs/superpowers/specs/2026-10-02-agent-prose-design.md`, section 7, and the owner's decision for local browser speech by default with cloud audio opt-in.
 - Existing targeted findings: the numbered craft-guide defects and dialogue testbed gaps reproduced in sections A and C above.
-- Actual game contracts: space2grow `src/bridge-dialog.mjs`, `src/dialog-contract.mjs`, and `docs/dialog-contract.md`; the two beat limits are intentionally distinct.
+- Public static-source fixtures: `tests/fixtures/dialog-source/bridge-dialog.mjs.txt` and `tests/fixtures/dialog-source/ambient-lines.mjs.txt`. Contract-specific 150- and 160-character limits are tested in `tests/dialog-source.test.ts`.
 - [Playwright Page PDF API](https://playwright.dev/docs/api/class-page#page-pdf) and [browser installation](https://playwright.dev/docs/browsers): print media, CSS page size, tagging, package/browser coupling and headless-shell setup.
 - [OpenAI speech API](https://developers.openai.com/api/reference/typescript/resources/audio/subresources/speech/methods/create) and [TTS guide](https://developers.openai.com/api/docs/guides/text-to-speech): request bounds, PCM format and listener disclosure. Recheck selected model limits during implementation.
 - [Yarn Spinner localization](https://docs.yarnspinner.dev/yarn-spinner-for-unity/assets-and-localization/inbuilt-localisation): line IDs, source metadata and change locks are a precedent for the proposed round-trip manifest, not a requirement to adopt Yarn.

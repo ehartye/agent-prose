@@ -21,7 +21,7 @@ The sixth-grade history version uses shorter explanatory steps and a concrete co
 
 ## Actual commands and checks
 
-All commands ran from `C:/Users/ehart/repos/agent-prose-worktrees/teaching-reading-level`.
+All commands ran from the repository root.
 
 Read these files with `Get-Content -Raw`:
 

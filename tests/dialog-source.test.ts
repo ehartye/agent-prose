@@ -6,7 +6,7 @@ import { readSource, patchSource } from '../src/dialog/source.ts';
 import { tmpProject, useTmp } from './owner-helpers.ts';
 
 useTmp();
-const BRIDGE = `\uFEFF// keep this comment\r\nexport const LINE_MAX=150;\r\nexport const BRIDGE_DIALOG={cap:{headline:'CAP-0',voice:'crew',scene:[{id:'cap.1',speaker:'cap',tier:'story',text:"Same text.",variants:[{id:'cap.1#core',when:{flag:'core'},text:'Conditioned text.'}]}],topics:[{id:'cap.topic',tier:'info',once:true,label:'A topic',text:'Same text.',effects:[{flag:'seen',value:true}]}]}};\r\n`;
+const BRIDGE = `\uFEFF// keep this comment\r\nexport const LINE_MAX=150;\r\nexport const BRIDGE_DIALOG={cap:{headline:'GUIDE',voice:'crew',scene:[{id:'cap.1',speaker:'cap',tier:'story',text:"Same text.",variants:[{id:'cap.1#core',when:{flag:'core'},text:'Conditioned text.'}]}],topics:[{id:'cap.topic',tier:'info',once:true,label:'A topic',text:'Same text.',effects:[{flag:'seen',value:true}]}]}};\r\n`;
 
 describe('dialogue source extraction', () => {
   it('keeps equal strings as distinct slots, state variants and protected context', () => {

@@ -1,5 +1,10 @@
 # Teaching and reader-targeting evaluation
 
+Public archive note: local working-directory paths are normalized to repository-relative
+paths or described as the repository root. External skill handles are anonymized where
+present. Recorded metrics, generated drafts and review outcomes are unchanged; historical
+metadata character counts describe the original, pre-redaction text.
+
 Date: 2026-10-20. This is a small engineering evaluation of authoring instructions,
 not a student study or a grade-calibration dataset.
 

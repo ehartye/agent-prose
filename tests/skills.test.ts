@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { personalPath } from './portable-content.ts';
 
 const root = join(import.meta.dirname, '..');
 const skillsDir = join(root, 'skills');
@@ -126,7 +127,7 @@ describe('the plugin stands alone', () => {
     for (const f of docFiles) {
       const text = readFileSync(f, 'utf8');
       expect(text, f).not.toMatch(/wiki-master|\.wiki-master-vault/);
-      expect(text, f).not.toMatch(/[A-Za-z]:\\Users\\|\/c\/Users\/|AppData/);
+      expect(text, f).not.toMatch(personalPath);
     }
   });
   it('craft and docs never mention the private wiki', () => {

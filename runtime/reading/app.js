@@ -295,7 +295,7 @@
     return out;
   }
 
-  /** Where a fold of rows begins and ends, in words: "Overseer, line 3 - Overseer, line 5". */
+  /** Where a fold of rows begins and ends, in words: "Visitor, line 3 - Visitor, line 5". */
   function foldLabel(rows) {
     const at = r => (r.cur.speaker ? r.cur.speaker + ', ' : '') + 'line ' + (r.base + 1);
     const n = rows.length;

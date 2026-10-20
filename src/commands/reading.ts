@@ -1,6 +1,6 @@
 // `prose serve` and `prose reading ...`: the agent's side of the LAN reading page. The server is a detached process the
-// CLI starts and finds again through ~/.agent-prose/server.json; a session is a folder in the project. Pattern source:
-// agent-beeps' audition commands, adapted for text (no modes, albums or patches: the agent writes the rewrites).
+// CLI starts and finds again through ~/.agent-prose/server.json; a session is a folder in the project.
+// The agent writes the rewrites; the CLI manages the review session.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';

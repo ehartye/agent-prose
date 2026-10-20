@@ -1,6 +1,6 @@
 // Reading sessions: the variants an owner reads on the LAN page, and an append-only event log folded into state.
 // Only explicit judgements (duels, the ship) become taste verdicts, and that happens through the CLI; keeps, duds,
-// plays, notes and peeks are engagement. Pattern source: agent-beeps' audition session, adapted for text.
+// plays, notes and peeks are engagement.
 //
 // Files, under `<project>/.agent-prose/sessions/<id>/`:
 //   session.json  the frozen session (what was shown, the hashes sealed at predict time); written once, atomically

@@ -6,7 +6,6 @@
 // and reveal are written with async fs. What it does still do synchronously is small local reads (session.json, the
 // event log, set files, server.json), kept cheap by stat-keyed caches; they are not locked, and a large or slow disk
 // would show up as latency, not as a stall behind another process.
-// Pattern source: agent-beeps' audition server, adapted for text.
 import { execFile } from 'node:child_process';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, truncateSync, writeFileSync } from 'node:fs';

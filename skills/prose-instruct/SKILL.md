@@ -1,7 +1,7 @@
 ---
 name: prose-instruct
 description: Write and check user instructions with agent-prose - how-to procedures, setup and reset steps, troubleshooting, help articles and technical docs - checked for imperative steps, one action per step, recovery paths, filler words and sentence length against Google, Microsoft and plain-language guidance.
-when_to_use: Use when asked to write user instructions, a how-to, setup or reset steps, a troubleshooting guide, a help or support article, onboarding steps or technical documentation, or when prose lint reports procedure.* findings. Short interface microcopy (button labels, toasts, empty states) is design:ux-copy; academic or business prose is prose-formal.
+when_to_use: Use when asked to write user instructions, a how-to, setup or reset steps, a troubleshooting guide, a help or support article, onboarding steps or technical documentation, or when prose lint reports procedure.* findings. Short interface microcopy (button labels, toasts, empty states) needs UX-writing guidance; academic or business prose is prose-formal.
 ---
 # prose-instruct
 
