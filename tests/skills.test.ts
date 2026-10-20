@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { personalPath } from './portable-content.ts';
 
 const root = join(import.meta.dirname, '..');
@@ -8,8 +8,8 @@ const skillsDir = join(root, 'skills');
 const skills = readdirSync(skillsDir);
 
 describe('skills', () => {
-  it('ships the nineteen skills', () => {
-    expect(skills.sort()).toEqual(['prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-presentation', 'prose-reading-level', 'prose-review', 'prose-review-batch', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-storyboard', 'prose-strike', 'prose-teach', 'prose-voice', 'prose-webinar']);
+  it('ships the twenty-one skills', () => {
+    expect(skills.sort()).toEqual(['prose-annotate', 'prose-annotation-review', 'prose-audit', 'prose-comedy', 'prose-dialog', 'prose-formal', 'prose-instruct', 'prose-poetry', 'prose-presentation', 'prose-reading-level', 'prose-review', 'prose-review-batch', 'prose-script', 'prose-setup', 'prose-songwriting', 'prose-speech', 'prose-storyboard', 'prose-strike', 'prose-teach', 'prose-voice', 'prose-webinar']);
   });
 
   for (const s of skills) {
@@ -25,6 +25,18 @@ describe('skills', () => {
       expect(text).not.toMatch(/[$][0-9]|[$]ARG/);
     });
   }
+});
+
+describe('annotation skill resources', () => {
+  it('resolves the drafting and review entrypoints directly to their format contract', () => {
+    for (const skill of ['prose-annotate', 'prose-annotation-review']) {
+      const entrypoint = join(skillsDir, skill, 'SKILL.md');
+      const links = [...readFileSync(entrypoint, 'utf8').matchAll(/\]\(([^)]+\.md)\)/g)].map(m => resolve(dirname(entrypoint), m[1]));
+      expect(links.length).toBeGreaterThan(0);
+      for (const target of links) expect(existsSync(target), target).toBe(true);
+      expect(links).toContain(resolve(skillsDir, 'prose-annotate', 'references', 'formats.md'));
+    }
+  });
 });
 
 describe('prose-review reading page', () => {

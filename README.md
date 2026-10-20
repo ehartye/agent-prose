@@ -8,6 +8,8 @@ webinars, each with its own register.
 Agents draft in native formats — Fountain for screen and stage, Markdown with frontmatter for speeches,
 instructions, documents and YouTube scripts, and a typed YAML graph for game dialogue — and the `prose`
 CLI parses, measures and lints each draft against cited craft rules for its form.
+Source-bound annotations add reviewed highlights, definitions, concept references and links without
+rewriting the source, with portable publication data and a local author workbench.
 
 Every command prints JSON (except `--help` and `--version`); failures print `{"error":{code,message,...}}` to stderr and exit non-zero. `lint` exits 0 even when it finds errors — check its `"ok"` field.
 
@@ -33,6 +35,8 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-instruct` | User instructions, how-to procedures, troubleshooting, help articles and technical docs |
 | `prose-teach` | Textbook explanations, lessons and chapters with learner goals, examples, practice and source-backed reference excerpts |
 | `prose-reading-level` | Audience and reading-demand adaptation, including an average U.S. high school freshman, with meaning-preservation review |
+| `prose-annotate` | Supplied or assistant-drafted highlights, vocabulary references, definitions, explanations and links for Markdown, static HTML and structured content |
+| `prose-annotation-review` | Local annotation workbench, feedback, acceptance, rejection, body edits, retargeting and approved publication exports |
 | `prose-formal` | Academic and professional prose: abstracts, papers, reports, proposals, memos, email |
 | `prose-script` | Sitcom (multi- and single-cam), TV drama, stage play in Fountain; YouTube scripts in Markdown |
 | `prose-storyboard` | Visual storyboards for scripts, quests and full campaigns: editable scene/panel JSON, choices and character tracks, rendered as a standalone illustrated HTML board |
@@ -69,6 +73,99 @@ An explicit text-level request may add `readingLevel: {scale: us-grade, range: [
 The opt-in `readability` report identifies its paragraph scope, method, sample limits and essential-term observations. Its 100-word/five-sentence floor is a maintainer convention. A grade comparison is informational; it cannot certify comprehension or reject a variant. Existing `style.readingGrade` keeps its older measurement scope. Teaching judgments and factual preservation require review; actual student testing is reported separately.
 
 [Reference excerpts](skills/prose-teach/references/examples.md) include public-domain standards-selected texts across the school bands and an actual passage assessed in a simplification study, with attribution and reuse terms. The [adaptation reference](skills/prose-reading-level/references/reading-level.md) explains the evidence and limits. These features require agent-prose 0.10.0 or later; update the plugin and run `/agent-prose:prose-setup`. The [Yoda audit](docs/research/2026-10-20-yoda/README.md) records paired checks and their limits; educator and intended-reader testing remain separate.
+
+## Annotations
+
+Ask “Annotate this lesson using our core vocabulary list” or “Preview these notes and let me reject
+or refine them.” Use `prose-annotate` to prepare entries and `prose-annotation-review` to act on
+them. The first release focuses on author-approved publication. It does not supply a private reader
+annotation service or claim that annotations improve learning for every audience.
+
+Annotations live in a versioned JSON/YAML sidecar; a persistent concept registry stores labels,
+aliases, definitions and named vocabulary lists. Load the registry each session. Supplied notes
+and assistant-written expansions keep their origin and supporting source URLs. The CLI performs
+location, validation, review persistence and export; it makes no LLM calls.
+
+```text
+prose concepts init --file concepts.yaml --project example --language en-US
+prose annotation init lesson.md --out lesson.annotations.yaml --concepts concepts.yaml
+prose annotation locate lesson.annotations.yaml --quote "the exact visible passage"
+prose annotation propose lesson.annotations.yaml --in proposals.json --expect <revision>
+prose annotation check lesson.annotations.yaml
+prose annotation preview lesson.annotations.yaml --local
+```
+
+Populate `concepts.yaml` before concept-based location and validate it with `concepts check --file`.
+The proposal input is an **array**, for example
+`[{"kind":"explanation","candidate":"<returned-candidate-id>","body":"A plain-text note.","origin":{"type":"assistant"}}]`.
+Choose a returned candidate using its passage context, especially for repeated terms; do not
+calculate offsets in raw markup. `locate` takes exactly one of `--quote`, `--concept` or `--list`.
+The [format reference](skills/prose-annotate/references/formats.md) supplies the registry,
+proposal, internal-link and structured-source contracts. Its example texts are synthetic.
+
+`preview` returns a `session` and `localUrl` without blocking or opening a browser. Open the URL
+to review the source, annotation queue and details. It is local-only. Accept, reject, defer, edit,
+retarget and undo decisions are saved in the sidecar; rejection requires no replacement. Read
+decisions with `annotation feedback <session> --since <cursor>`, and close the workbench with
+`annotation close <session>`. A preview does not approve or publish anything.
+
+Source changes are checked against the annotation's used passage, context, concept and destination.
+Accepted entries become stale when those dependencies change. `annotation check <sidecar> --save
+--expect <revision>` can rebind still-valid entries after unrelated edits. Writes support revision
+checks over source, registry, sidecar and used destination state, plus idempotent event IDs; a
+conflict requires rereading state rather than overwriting it. Inspection shows changed dependency
+groups and the previous review snapshot. Alias changes and concept retirement also invalidate
+used approvals; retired concepts cannot be accepted.
+
+### Sources and consuming applications
+
+The source profiles are deliberately bounded:
+
+| Profile | Supported boundary |
+|---|---|
+| Markdown | CommonMark prose, emphasis and links, plus optional `[text]{#fragment}` spans; code, images and unsupported regions are excluded |
+| HTML | Static prose, supported containers/inline markup and `id` fragments; `--content-root "#reading"` scopes a source; scripts, styles, hidden and unsupported regions are excluded |
+| Structured | Inert `prose/structured-source@1` JSON snapshots containing stable document/block IDs and explicit text/formatting runs |
+
+Targets use Unicode code points in canonical text projection `prose/annotation-text@1`; source
+maps retain raw, UTF-16, byte or structured-field locations. Unsupported mappings fail or remain
+excluded rather than guess. The HTML profile does not execute scripts or determine arbitrary
+computed styles. This is not a general Markdown/HTML round trip.
+
+An application adapter extracts authored content into stable blocks, parses its inline dialect
+into runs, and records its adapter version. Full and abbreviated readings use distinct document
+identities. Existing vocabulary can remain authoritative through a generated external-authority
+concept snapshot. Original framework modules are not executed as annotation input.
+Snapshots retain language/direction and heading/list structure, including ordered-list starts;
+reversed, alphabetic and per-item ordinal reset HTML lists remain unsupported.
+
+Export accepted current annotations to a **new** path:
+
+```text
+prose annotation export lesson.annotations.yaml --to json --out publication.json
+```
+
+- `json`: native `prose/annotation-bundle@1` with documents, ranges, concepts, lists and destinations.
+- `html`: one combined escaped HTML document with passage anchors and accessible note links.
+- `web-annotation`: `{page, representations, report}` package. Only `page` is W3C Web Annotation
+  JSON-LD; canonical-text companions and the report travel with it.
+
+Exports never overwrite existing files. The report identifies excluded entries and conversion
+limits. Draft, rejected and deferred entries are omitted; stale accepted entries block export
+until reviewed.
+Native concept/list IDs use stable publication identities (UUID URNs by default); `listLabels` preserves author labels, and member
+order follows the authoritative list for concepts included in the bundle. Relative/private
+original links without a public or included fragment destination are omitted and reported;
+included fragment links are namespaced in combined HTML. Private source-reference metadata is
+omitted from reader delivery; source identifiers and adapter declarations must be portable.
+
+For a native host, [src/annotation/render.ts](src/annotation/render.ts) exposes pure browser-compatible
+`planAnnotationRuns(bundle, documentId, {context: 'reading' | 'assessment'})` and
+`renderPublication(bundle, options)`. The planner composes overlapping annotations with existing
+emphasis and links; the host supplies its own components and CSS. Assessment context suppresses
+annotation hints. The host owns digest checks, reading/assessment policy, internal navigation,
+opening folded passages and focus management. A compatible data contract does not establish that
+an external application has completed integration or accessibility qualification.
 
 ## Commands
 

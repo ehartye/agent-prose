@@ -19,6 +19,19 @@ export function registerCapabilities(program: Command, io: Io): void {
         commands: program.commands.flatMap(c => c.commands.length ? c.commands.map(s => `${c.name()} ${s.name()}`) : [c.name()]).sort(),
         errorCodes: ERROR_CODES,
         reservedErrorCodes: RESERVED_ERROR_CODES,
+        annotations: {
+          profiles: ['markdown', 'html', 'structured'],
+          schemas: {
+            sidecar: 'prose/annotations@1', concepts: 'prose/concepts@1',
+            projection: 'prose/projection@1', structuredSource: 'prose/structured-source@1', bundle: 'prose/annotation-bundle@1',
+          },
+          textProfile: 'prose/annotation-text@1',
+          kinds: ['highlight', 'vocabulary', 'concept', 'definition', 'explanation', 'link'],
+          exports: ['json', 'html', 'web-annotation'],
+          authoring: 'sidecar',
+          preview: { bind: '127.0.0.1', feedback: 'canonical-sidecar-history' },
+          modelCalls: false,
+        },
       });
     });
 }

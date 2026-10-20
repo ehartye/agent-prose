@@ -1,0 +1,279 @@
+{
+  "taskA": {
+    "cliSucceeded": true,
+    "sidecar": "<tmp>/task-a/lesson.annotations.yaml",
+    "registry": "<tmp>/task-a/concepts.yaml",
+    "states": [
+      {
+        "id": "term-diffusion",
+        "state": "draft",
+        "kind": "vocabulary",
+        "origin": {
+          "type": "supplied"
+        },
+        "target": "diffusion"
+      },
+      {
+        "id": "sentence-focus",
+        "state": "draft",
+        "kind": "highlight",
+        "origin": {
+          "type": "supplied"
+        },
+        "target": "Diffusion can cause net spreading down a concentration gradient."
+      },
+      {
+        "id": "sentence-explanation",
+        "state": "draft",
+        "kind": "explanation",
+        "origin": {
+          "type": "assistant"
+        },
+        "target": "Diffusion can cause net spreading down a concentration gradient.",
+        "body": "Diffusion can cause net spreading from higher to lower concentration."
+      }
+    ],
+    "conceptReload": {
+      "file": "<tmp>\\task-a\\concepts.yaml",
+      "revision": "9a46d062d48254d096bf1eba0fc4176b5a2626b55c91fba07278cf0c29c445f4",
+      "list": {
+        "id": "core",
+        "concepts": [
+          "diffusion"
+        ]
+      },
+      "concepts": [
+        {
+          "id": "diffusion",
+          "label": "diffusion",
+          "definition": "Net spreading from higher to lower concentration",
+          "definitionSource": "author-supplied",
+          "uid": "urn:uuid:e03fdaa0-53e6-8a9d-abce-40dcc618d481"
+        }
+      ]
+    },
+    "preview": {
+      "session": "ba15b6e0-357c-482f-8d21-1460e917008c",
+      "id": "ba15b6e0-357c-482f-8d21-1460e917008c",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "open",
+      "running": true,
+      "cursor": 1,
+      "revision": "36871a21c75a10711e68d215bd7f9d28ec344696b8ed3c315f1608c7a8cbe21d",
+      "counts": {
+        "draft": 3
+      }
+    },
+    "browserOpened": false,
+    "browserError": "Browser is not available: iab",
+    "availableBrowsers": [],
+    "closed": {
+      "session": "ba15b6e0-357c-482f-8d21-1460e917008c",
+      "id": "ba15b6e0-357c-482f-8d21-1460e917008c",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "closed",
+      "running": false,
+      "cursor": 1,
+      "revision": "36871a21c75a10711e68d215bd7f9d28ec344696b8ed3c315f1608c7a8cbe21d",
+      "counts": {
+        "draft": 3
+      }
+    },
+    "closedStatus": {
+      "session": "ba15b6e0-357c-482f-8d21-1460e917008c",
+      "id": "ba15b6e0-357c-482f-8d21-1460e917008c",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "closed",
+      "running": false,
+      "cursor": 1,
+      "revision": "36871a21c75a10711e68d215bd7f9d28ec344696b8ed3c315f1608c7a8cbe21d",
+      "counts": {
+        "draft": 3
+      }
+    },
+    "files": [
+      "concepts.yaml",
+      "lesson.annotations.yaml",
+      "lesson.md",
+      "proposals.json",
+      "source-original.bin"
+    ]
+  },
+  "taskB": {
+    "cliSucceeded": true,
+    "sidecar": "<tmp>/task-b/lesson.annotations.yaml",
+    "sourceFixture": "diffusion\n",
+    "states": [
+      {
+        "id": "supplied-definition",
+        "state": "rejected",
+        "kind": "definition",
+        "origin": {
+          "type": "supplied"
+        },
+        "body": "particles stop moving at equilibrium",
+        "review": {
+          "state": "rejected"
+        }
+      }
+    ],
+    "preview": {
+      "session": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "id": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "open",
+      "running": true,
+      "cursor": 2,
+      "revision": "18fe1ed92afc564d0b8841ded7fd570014f6d0417bc9ebc55d9a1ade603121ef",
+      "counts": {
+        "rejected": 1
+      }
+    },
+    "browserOpened": false,
+    "browserError": "No available browsers (cua inventory empty)",
+    "status": {
+      "session": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "id": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "open",
+      "running": true,
+      "cursor": 2,
+      "revision": "18fe1ed92afc564d0b8841ded7fd570014f6d0417bc9ebc55d9a1ade603121ef",
+      "counts": {
+        "rejected": 1
+      }
+    },
+    "feedback": {
+      "session": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "revision": "18fe1ed92afc564d0b8841ded7fd570014f6d0417bc9ebc55d9a1ade603121ef",
+      "cursor": 2,
+      "events": [
+        {
+          "id": "ca8d6953-817e-4c6d-9d34-f9f9902a12f8",
+          "at": "2026-10-20T20:05:23.145Z",
+          "annotation": "supplied-definition",
+          "action": "propose",
+          "annotationIds": [
+            "supplied-definition"
+          ],
+          "beforeRevision": "ac2c62a906f0d633b2fb8050db06d5600625b4d55fcf2a75604603391f3288d4",
+          "request": "ce65a2f01194f10494090f220d53526838944ff555ab296ca19640249c834bc2",
+          "cursor": 1
+        },
+        {
+          "id": "2d86ec5c-f213-4582-8745-51ca175f37be",
+          "at": "2026-10-20T20:06:12.382Z",
+          "annotation": "supplied-definition",
+          "action": "reject",
+          "reason": "Wrong.",
+          "before": {
+            "id": "supplied-definition",
+            "uid": "urn:uuid:df506652-3c15-4371-b0f3-33ab0e184d7f",
+            "target": {
+              "quote": "diffusion",
+              "prefix": "",
+              "suffix": "",
+              "start": 0,
+              "end": 9,
+              "binding": {
+                "sourceDigest": "ed0eb329f1f47a0a9a8d8c8a65cbeef4168d9202b794fe88b83dff790cf2304d",
+                "projectionDigest": "46a8e4611637253f16d0cdf1dffcd640f972e9675bc7785ea5af7614ef072dd1"
+              }
+            },
+            "kind": "definition",
+            "body": "particles stop moving at equilibrium",
+            "origin": {
+              "type": "supplied"
+            },
+            "review": {
+              "state": "draft"
+            }
+          },
+          "after": "d5f7201d4a5fb7b698b1737b4991caa21eeaa0594fd2c92451246adb5467ab58",
+          "beforeRevision": "6d4940e50e4f5a89fd225a59a0b9305d3d8c665341e35f842b08021a32e988f2",
+          "request": "0e5731a21352d7c62b4b4d9c2c8ee4b5ca93611e5c8e42e6b9ec03887bc5d3cd",
+          "cursor": 2
+        }
+      ]
+    },
+    "closed": {
+      "session": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "id": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "closed",
+      "running": false,
+      "cursor": 2,
+      "revision": "18fe1ed92afc564d0b8841ded7fd570014f6d0417bc9ebc55d9a1ade603121ef",
+      "counts": {
+        "rejected": 1
+      }
+    },
+    "closedStatus": {
+      "session": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "id": "3e162349-26cd-4167-8e06-4bf8d645c53f",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "closed",
+      "running": false,
+      "cursor": 2,
+      "revision": "18fe1ed92afc564d0b8841ded7fd570014f6d0417bc9ebc55d9a1ade603121ef",
+      "counts": {
+        "rejected": 1
+      }
+    },
+    "files": [
+      "lesson.annotations.yaml",
+      "lesson.md",
+      "proposals.json",
+      "source-original.bin"
+    ]
+  },
+  "sourcePreservation": [
+    {
+      "project": "task-a",
+      "byteEqual": true,
+      "bytes": 112,
+      "sha256": "f66a2cbe4ff3fdc03c39d3addef8c157d33681928a0f4ee712634c3db025eac1"
+    },
+    {
+      "project": "task-b",
+      "byteEqual": true,
+      "bytes": 10,
+      "sha256": "ed0eb329f1f47a0a9a8d8c8a65cbeef4168d9202b794fe88b83dff790cf2304d"
+    }
+  ],
+  "publication": {
+    "exportCommandExecuted": false,
+    "acceptCommandExecuted": false,
+    "externalPublication": false,
+    "taskACounts": {
+      "draft": 3
+    },
+    "taskBCounts": {
+      "rejected": 1
+    }
+  },
+  "routing": {
+    "rewrite this lesson for a ninth-grade audience": "Source rewriting: use its writing skill; neither prose-annotate nor prose-annotation-review claims this request.",
+    "choose between two alternate phrasings": "Rewrite selection: use prose-review; neither annotation skill claims this request."
+  },
+  "limitations": [
+    "Browser UI could not open because no browser provider was available. Both loopback preview servers did start and were closed.",
+    "Task B supplies no host lesson, so its temporary host source contains only the supplied term diffusion.",
+    "No factual replacement was generated or researched for Task B; rejection records the requested decision."
+  ],
+  "transcript": "<tmp>/transcript.txt"
+}
