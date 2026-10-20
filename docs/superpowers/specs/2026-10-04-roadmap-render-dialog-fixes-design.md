@@ -8,7 +8,7 @@ Baseline: `18d16349e69451a91158fa82cdbf17ef1d56aa58` (0.6.0).
 
 The owner requested the remaining render/export, craft-guide fixes, and game-dialogue integration items. CLI-capable skill evals in CI are excluded. Existing unit-test CI remains the verification gate. This work produces three independently reviewable increments, in this order: correctness/reference fixes, render/export, and dialogue round trips. No existing draft, voice bible, set, prediction, or verdict requires migration.
 
-Success means the known craft defects have regression coverage; supported drafts produce usable offline print/reading artifacts; a game line can be extracted, reviewed, and applied to its exact source occurrence without changing gameplay metadata. Conflicts must be reported before source edits. Documentation and the maintainer's project notes describe the resulting behavior, with remaining evidence gaps explicitly labeled.
+Success means the known craft defects have regression coverage; supported drafts produce usable offline print/reading artifacts; a game line can be extracted, reviewed, and applied to its exact source occurrence without changing gameplay metadata. Conflicts must be reported before source edits. Public documentation describes the resulting behavior, with remaining evidence gaps explicitly labeled.
 
 The repository supplies synthetic dialogue fixtures and explicit source-contract variants. This scope builds the integration and demonstrates it on those fixtures. It does not invent the owner's unrecorded picks or silently rewrite game dialogue. Any later content pilot uses the working integration and the owner's recorded choices.
 

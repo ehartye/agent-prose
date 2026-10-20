@@ -1,6 +1,6 @@
 # LAN Reading Page (M3b) Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use h-superpowers:subagent-driven-development to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Implementation:** Work through the tracked steps, verify each change and obtain an independent review before integration. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A token-guarded LAN server and a plain-JS page where the owner reads, hears and compares variants, with every write going through the CLI and every judgement landing in the taste log.
 

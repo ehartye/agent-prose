@@ -1,6 +1,6 @@
 # Taste Model (M3c) Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use h-superpowers:subagent-driven-development to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Implementation:** Work through the tracked steps, verify each change and obtain an independent review before integration. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A Bradley-Terry taste model over the twelve style features, a plain-words profile, a sealed model prediction scored beside the agent's, and uncertainty-based duel selection.
 

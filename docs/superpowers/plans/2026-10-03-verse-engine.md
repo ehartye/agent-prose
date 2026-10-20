@@ -1,6 +1,6 @@
 # Verse Engine Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use h-superpowers:subagent-driven-development to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Implementation:** Work through the tracked steps, verify each change and obtain an independent review before integration. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Measure and lint poems and song lyrics (syllables, stress, rhyme, scheme, form conformance) with every pronunciation result tagged by how trustworthy it is.
 

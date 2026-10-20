@@ -1,6 +1,6 @@
 # agent-prose M3a — Variant Sets, Predictions and Recorded Picks
 
-> **For Claude:** REQUIRED SUB-SKILL: Use h-superpowers:subagent-driven-development, h-superpowers:team-driven-development, or h-superpowers:executing-plans to implement this plan (ask user which approach). Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Implementation:** Work through the tracked steps, verify each change and obtain an independent review before integration. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give agent-prose variant review and recorded owner choices through the CLI alone: the agent writes several variants of a draft along named directions, `prose set check` rejects near-duplicates and verifies that each variant actually moved the way it claims, the agent seals a prediction of the owner's pick, and `prose set pick` records the owner's choice as taste verdicts and reveals whether the prediction hit. Release as 0.2.0 with a ninth skill, `prose-review`.
 
@@ -1714,7 +1714,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ### Task 10: The `prose-review` skill and its evals
 
-Author with `@hartye-skills:yoda`. The baseline failure this skill answers is in `docs/research/2026-10-02-skill-baselines.md`: the agent converged on one angle (4 of 5 punch-ups on the breakup joke), and every value-laden choice (dry or warm, which line lands) was the agent's alone.
+Use paired with/without-skill checks and metadata/reference inspection. The baseline failure this skill answers is in `docs/research/2026-10-02-skill-baselines.md`: the agent converged on one angle (4 of 5 punch-ups on the breakup joke), and every value-laden choice (dry or warm, which line lands) was the agent's alone.
 
 **Files:**
 - Create: `skills/prose-review/SKILL.md`, `evals/review-options/prompt.md`, `evals/review-options/graders/prose-review-fired.md`, `evals/review-options/graders/options-differ.md`
@@ -1892,6 +1892,6 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ## After the plan
 
-- Review the whole branch (`@h-superpowers:requesting-code-review`), squash-merge to `main`, push, tag `v0.2.0`, and publish the marketplace entry (version bump PR on `hartye-claude-plugins`, as for 0.1.0).
+- Obtain an independent review of the whole branch, squash-merge to `main`, push, tag `v0.2.0`, and publish the marketplace entry (version bump PR on `hartye-claude-plugins`, as for 0.1.0).
 - Update the maintainer's notes: M3a shipped, M3b and M3c still to do, and the architecture summary.
 - Write the M3b plan (LAN server, session event log, reading page with lineup, duel, refine, line-anchored notes and read-aloud) and the M3c plan (Bradley-Terry fit, global/project/per-voice layers, `taste show|fit`, model predictions and ranking, active duel selection) from the behaviors specified above.
