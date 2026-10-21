@@ -91,7 +91,7 @@ describe('annotation workbench', () => {
       await page.getByRole('combobox',{name:'Category color',exact:true}).selectOption('orange');
       await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.categories?.definition).toBe('orange');
       await page.keyboard.press('Escape');
-      expect(await page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
+      await expect.poll(()=>page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
       await page.locator('#member-appearance > summary').click();
       await page.getByRole('combobox',{name:/^Concept color:/}).selectOption('blue');
       await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.concepts?.diffusion).toBe('blue');
