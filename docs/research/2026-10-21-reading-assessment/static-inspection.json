@@ -1,0 +1,16 @@
+{
+  "listingCharacters": 703,
+  "entrypointLines": 73,
+  "directMarkdownResources": 4,
+  "missingResources": 0,
+  "hiddenControls": 0,
+  "publicTextFilesScanned": 341,
+  "skillSha256": "b1cfba1a7ff859c6b9d295c3b69741ca2bab8ae3db7b55fe4af1a037a5276676",
+  "referenceSha256": "08ba232b292ff0630323f26476f1a92f8179f69f6133522d9e3b4b5cf6e52149",
+  "versions": {
+    "package": "0.12.0",
+    "markdownIt": "15.0.3",
+    "vite": "8.3.5"
+  },
+  "note": "Harness notes normalize excluded-resource names to generic language. Assessment reports and source passages are unchanged."
+}

@@ -1,0 +1,676 @@
+{
+  "source-1.md": {
+    "sha256": "735c7bb9d651f9e21001d7e65bc73a4412b46643fe05f7a3604d795ea5f6bf5c",
+    "measure": {
+      "path": "source-1.md",
+      "format": "markdown",
+      "form": "academic",
+      "register": null,
+      "style": {
+        "words": 149,
+        "sentences": 10,
+        "sentenceLength": {
+          "mean": 14.9,
+          "sd": 15.25,
+          "max": 54
+        },
+        "longest": {
+          "line": 11,
+          "words": 54
+        },
+        "passive": {
+          "count": 2,
+          "rate": 0.2
+        },
+        "nominalizations": {
+          "count": 5,
+          "per100": 3.36
+        },
+        "hedges": {
+          "count": 0,
+          "per1000": 0
+        },
+        "contractions": {
+          "count": 0,
+          "per1000": 0
+        },
+        "thereIs": {
+          "count": 0,
+          "lines": []
+        },
+        "echo": [
+          {
+            "phrase": "of those who",
+            "count": 2,
+            "lines": [
+              11
+            ]
+          },
+          {
+            "phrase": "percent of those",
+            "count": 2,
+            "lines": [
+              11
+            ]
+          },
+          {
+            "phrase": "those who reported",
+            "count": 2,
+            "lines": [
+              11
+            ]
+          }
+        ],
+        "readingGrade": 9.4
+      },
+      "readability": {
+        "reader": {
+          "language": "en-US",
+          "schoolGrade": 9,
+          "priorKnowledge": "Can compare percentages; no research-design instruction.",
+          "essentialTerms": [
+            "association",
+            "self-report"
+          ]
+        },
+        "method": "flesch-kincaid-grade",
+        "methodVersion": "1",
+        "inputPolicy": "markdown-paragraphs-v1",
+        "language": "en-US",
+        "syllableMethod": "english-spelling-heuristic-v1",
+        "status": "estimated",
+        "estimate": 9.4,
+        "counts": {
+          "words": 149,
+          "sentences": 10,
+          "paragraphs": 3
+        },
+        "lines": [
+          11,
+          13,
+          15
+        ],
+        "exclusions": [
+          "Only Markdown paragraph blocks are scored; heading, list-item, step, quote and note blocks are excluded.",
+          "References, Bibliography, Works cited, Answer key and Instructor notes sections are excluded until a heading at the same or a higher level."
+        ],
+        "limitations": [
+          "The estimate does not establish comprehension or audience suitability.",
+          "At least 100 words and 5 sentence units are required; this sample floor is a maintainer convention, not a validated cutoff.",
+          "Code fences and tables are omitted by the Markdown parser; discarded text, images and unseen material are not assessed, and no whole-document coverage percentage is implied.",
+          "Inline code and mathematical content retained in paragraph text can distort the English spelling heuristic; symbol-heavy passages need qualitative review.",
+          "This formula does not measure mathematics, table accessibility, listening difficulty or decodability.",
+          "Source lines identify block starts in the parser view; continuation lines may be flattened.",
+          "Essential-term presence does not establish a definition, correct usage or retained meaning; inflection and renaming need review."
+        ],
+        "target": null,
+        "comparison": "not-requested",
+        "essentialTerms": [
+          {
+            "term": "association",
+            "present": true,
+            "lines": [
+              11
+            ]
+          },
+          {
+            "term": "self-report",
+            "present": true,
+            "lines": [
+              13
+            ]
+          }
+        ]
+      },
+      "lexicon": {
+        "aiTells": [],
+        "filler": []
+      },
+      "spoken": null,
+      "script": null,
+      "dialog": null,
+      "verse": null,
+      "speakers": {},
+      "voices": {
+        "project": null,
+        "matches": {},
+        "bibles": []
+      },
+      "segments": [],
+      "target": null,
+      "placeholders": []
+    },
+    "lint": {
+      "path": "source-1.md",
+      "format": "markdown",
+      "form": "academic",
+      "register": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        {
+          "rule": "style.sentence.max",
+          "severity": "warn",
+          "message": "Sentence of 54 words (limit 25)",
+          "at": {
+            "line": 11
+          },
+          "measured": 54,
+          "fix": "Split at a clause boundary, or turn a series into a list."
+        },
+        {
+          "rule": "style.sentence.max",
+          "severity": "warn",
+          "message": "Sentence of 26 words (limit 25)",
+          "at": {
+            "line": 13
+          },
+          "measured": 26,
+          "fix": "Split at a clause boundary, or turn a series into a list."
+        }
+      ],
+      "info": [
+        {
+          "rule": "readability.grade.report",
+          "severity": "info",
+          "message": "Reading diagnostic: approximately grade 9.4 (Flesch–Kincaid, eligible Markdown paragraphs); no formula target requested; does not establish comprehension or audience suitability",
+          "at": {
+            "line": null
+          },
+          "measured": {
+            "reader": {
+              "language": "en-US",
+              "schoolGrade": 9,
+              "priorKnowledge": "Can compare percentages; no research-design instruction.",
+              "essentialTerms": [
+                "association",
+                "self-report"
+              ]
+            },
+            "method": "flesch-kincaid-grade",
+            "methodVersion": "1",
+            "inputPolicy": "markdown-paragraphs-v1",
+            "language": "en-US",
+            "syllableMethod": "english-spelling-heuristic-v1",
+            "status": "estimated",
+            "estimate": 9.4,
+            "counts": {
+              "words": 149,
+              "sentences": 10,
+              "paragraphs": 3
+            },
+            "lines": [
+              11,
+              13,
+              15
+            ],
+            "exclusions": [
+              "Only Markdown paragraph blocks are scored; heading, list-item, step, quote and note blocks are excluded.",
+              "References, Bibliography, Works cited, Answer key and Instructor notes sections are excluded until a heading at the same or a higher level."
+            ],
+            "limitations": [
+              "The estimate does not establish comprehension or audience suitability.",
+              "At least 100 words and 5 sentence units are required; this sample floor is a maintainer convention, not a validated cutoff.",
+              "Code fences and tables are omitted by the Markdown parser; discarded text, images and unseen material are not assessed, and no whole-document coverage percentage is implied.",
+              "Inline code and mathematical content retained in paragraph text can distort the English spelling heuristic; symbol-heavy passages need qualitative review.",
+              "This formula does not measure mathematics, table accessibility, listening difficulty or decodability.",
+              "Source lines identify block starts in the parser view; continuation lines may be flattened.",
+              "Essential-term presence does not establish a definition, correct usage or retained meaning; inflection and renaming need review."
+            ],
+            "target": null,
+            "comparison": "not-requested",
+            "essentialTerms": [
+              {
+                "term": "association",
+                "present": true,
+                "lines": [
+                  11
+                ]
+              },
+              {
+                "term": "self-report",
+                "present": true,
+                "lines": [
+                  13
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "rule": "style.passive.report",
+          "severity": "info",
+          "message": "2 passive sentence(s), rate 0.2 (reported only)",
+          "at": {
+            "line": null
+          },
+          "measured": {
+            "count": 2,
+            "rate": 0.2
+          }
+        },
+        {
+          "rule": "reader.essential-terms",
+          "severity": "info",
+          "message": "Essential term “association”: present in learner-facing text (presence only; definition, usage and retained meaning need review)",
+          "at": {
+            "line": 11
+          },
+          "measured": {
+            "term": "association",
+            "present": true,
+            "lines": [
+              11
+            ]
+          }
+        },
+        {
+          "rule": "reader.essential-terms",
+          "severity": "info",
+          "message": "Essential term “self-report”: present in learner-facing text (presence only; definition, usage and retained meaning need review)",
+          "at": {
+            "line": 13
+          },
+          "measured": {
+            "term": "self-report",
+            "present": true,
+            "lines": [
+              13
+            ]
+          }
+        }
+      ],
+      "judgement": [
+        {
+          "rule": "formal.bluf",
+          "severity": "warn",
+          "statement": "The main result or request comes in the first or second sentence.",
+          "sources": [
+            "ar-25-50"
+          ]
+        },
+        {
+          "rule": "formal.supported-claims",
+          "severity": "warn",
+          "statement": "Every claim is supported by the data given; missing values are [placeholders], never invented.",
+          "sources": [
+            "wikipedia-signs-ai"
+          ]
+        }
+      ]
+    }
+  },
+  "source-2.md": {
+    "sha256": "ae7e0f9ba9a900e7337b4c2f2e704b9021dbfc95a87b6fd5b22c94cd9ac300a2",
+    "measure": {
+      "path": "source-2.md",
+      "format": "markdown",
+      "form": "academic",
+      "register": null,
+      "style": {
+        "words": 118,
+        "sentences": 10,
+        "sentenceLength": {
+          "mean": 11.8,
+          "sd": 8.02,
+          "max": 27
+        },
+        "longest": {
+          "line": 10,
+          "words": 27
+        },
+        "passive": {
+          "count": 2,
+          "rate": 0.2
+        },
+        "nominalizations": {
+          "count": 0,
+          "per100": 0
+        },
+        "hedges": {
+          "count": 1,
+          "per1000": 8.47
+        },
+        "contractions": {
+          "count": 0,
+          "per1000": 0
+        },
+        "thereIs": {
+          "count": 0,
+          "lines": []
+        },
+        "echo": [],
+        "readingGrade": 3.6
+      },
+      "readability": {
+        "reader": {
+          "language": "en-US",
+          "schoolGrade": 7,
+          "priorKnowledge": "Teacher-led literature lesson; infer narrator knowledge from evidence."
+        },
+        "method": "flesch-kincaid-grade",
+        "methodVersion": "1",
+        "inputPolicy": "markdown-paragraphs-v1",
+        "language": "en-US",
+        "syllableMethod": "english-spelling-heuristic-v1",
+        "status": "estimated",
+        "estimate": 3.6,
+        "counts": {
+          "words": 118,
+          "sentences": 10,
+          "paragraphs": 2
+        },
+        "lines": [
+          10,
+          12
+        ],
+        "exclusions": [
+          "Only Markdown paragraph blocks are scored; heading, list-item, step, quote and note blocks are excluded.",
+          "References, Bibliography, Works cited, Answer key and Instructor notes sections are excluded until a heading at the same or a higher level."
+        ],
+        "limitations": [
+          "The estimate does not establish comprehension or audience suitability.",
+          "At least 100 words and 5 sentence units are required; this sample floor is a maintainer convention, not a validated cutoff.",
+          "Code fences and tables are omitted by the Markdown parser; discarded text, images and unseen material are not assessed, and no whole-document coverage percentage is implied.",
+          "Inline code and mathematical content retained in paragraph text can distort the English spelling heuristic; symbol-heavy passages need qualitative review.",
+          "This formula does not measure mathematics, table accessibility, listening difficulty or decodability.",
+          "Source lines identify block starts in the parser view; continuation lines may be flattened.",
+          "Essential-term presence does not establish a definition, correct usage or retained meaning; inflection and renaming need review."
+        ],
+        "target": null,
+        "comparison": "not-requested",
+        "essentialTerms": []
+      },
+      "lexicon": {
+        "aiTells": [],
+        "filler": []
+      },
+      "spoken": null,
+      "script": null,
+      "dialog": null,
+      "verse": null,
+      "speakers": {},
+      "voices": {
+        "project": null,
+        "matches": {},
+        "bibles": []
+      },
+      "segments": [],
+      "target": null,
+      "placeholders": []
+    },
+    "lint": {
+      "path": "source-2.md",
+      "format": "markdown",
+      "form": "academic",
+      "register": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        {
+          "rule": "style.sentence.max",
+          "severity": "warn",
+          "message": "Sentence of 27 words (limit 25)",
+          "at": {
+            "line": 10
+          },
+          "measured": 27,
+          "fix": "Split at a clause boundary, or turn a series into a list."
+        }
+      ],
+      "info": [
+        {
+          "rule": "readability.grade.report",
+          "severity": "info",
+          "message": "Reading diagnostic: approximately grade 3.6 (Flesch–Kincaid, eligible Markdown paragraphs); no formula target requested; does not establish comprehension or audience suitability",
+          "at": {
+            "line": null
+          },
+          "measured": {
+            "reader": {
+              "language": "en-US",
+              "schoolGrade": 7,
+              "priorKnowledge": "Teacher-led literature lesson; infer narrator knowledge from evidence."
+            },
+            "method": "flesch-kincaid-grade",
+            "methodVersion": "1",
+            "inputPolicy": "markdown-paragraphs-v1",
+            "language": "en-US",
+            "syllableMethod": "english-spelling-heuristic-v1",
+            "status": "estimated",
+            "estimate": 3.6,
+            "counts": {
+              "words": 118,
+              "sentences": 10,
+              "paragraphs": 2
+            },
+            "lines": [
+              10,
+              12
+            ],
+            "exclusions": [
+              "Only Markdown paragraph blocks are scored; heading, list-item, step, quote and note blocks are excluded.",
+              "References, Bibliography, Works cited, Answer key and Instructor notes sections are excluded until a heading at the same or a higher level."
+            ],
+            "limitations": [
+              "The estimate does not establish comprehension or audience suitability.",
+              "At least 100 words and 5 sentence units are required; this sample floor is a maintainer convention, not a validated cutoff.",
+              "Code fences and tables are omitted by the Markdown parser; discarded text, images and unseen material are not assessed, and no whole-document coverage percentage is implied.",
+              "Inline code and mathematical content retained in paragraph text can distort the English spelling heuristic; symbol-heavy passages need qualitative review.",
+              "This formula does not measure mathematics, table accessibility, listening difficulty or decodability.",
+              "Source lines identify block starts in the parser view; continuation lines may be flattened.",
+              "Essential-term presence does not establish a definition, correct usage or retained meaning; inflection and renaming need review."
+            ],
+            "target": null,
+            "comparison": "not-requested",
+            "essentialTerms": []
+          }
+        },
+        {
+          "rule": "style.passive.report",
+          "severity": "info",
+          "message": "2 passive sentence(s), rate 0.2 (reported only)",
+          "at": {
+            "line": null
+          },
+          "measured": {
+            "count": 2,
+            "rate": 0.2
+          }
+        }
+      ],
+      "judgement": [
+        {
+          "rule": "formal.bluf",
+          "severity": "warn",
+          "statement": "The main result or request comes in the first or second sentence.",
+          "sources": [
+            "ar-25-50"
+          ]
+        },
+        {
+          "rule": "formal.supported-claims",
+          "severity": "warn",
+          "statement": "Every claim is supported by the data given; missing values are [placeholders], never invented.",
+          "sources": [
+            "wikipedia-signs-ai"
+          ]
+        }
+      ]
+    }
+  },
+  "source-3.md": {
+    "sha256": "28061a7006e1b48078b9579c3148e3cdd0f298d2f398d6c6cce2b745beb21663",
+    "measure": {
+      "path": "source-3.md",
+      "format": "markdown",
+      "form": "academic",
+      "register": null,
+      "style": {
+        "words": 34,
+        "sentences": 4,
+        "sentenceLength": {
+          "mean": 8.5,
+          "sd": 5.32,
+          "max": 16
+        },
+        "longest": {
+          "line": 10,
+          "words": 16
+        },
+        "passive": {
+          "count": 0,
+          "rate": 0
+        },
+        "nominalizations": {
+          "count": 2,
+          "per100": 5.88
+        },
+        "hedges": {
+          "count": 0,
+          "per1000": 0
+        },
+        "contractions": {
+          "count": 0,
+          "per1000": 0
+        },
+        "thereIs": {
+          "count": 0,
+          "lines": []
+        },
+        "echo": [],
+        "readingGrade": 10.3
+      },
+      "readability": {
+        "reader": {
+          "language": "en-US",
+          "schoolGrade": 6,
+          "priorKnowledge": "Floating and sinking; no particle-model instruction."
+        },
+        "method": "flesch-kincaid-grade",
+        "methodVersion": "1",
+        "inputPolicy": "markdown-paragraphs-v1",
+        "language": "en-US",
+        "syllableMethod": "english-spelling-heuristic-v1",
+        "status": "insufficient-sample",
+        "estimate": null,
+        "counts": {
+          "words": 34,
+          "sentences": 4,
+          "paragraphs": 1
+        },
+        "lines": [
+          10
+        ],
+        "exclusions": [
+          "Only Markdown paragraph blocks are scored; heading, list-item, step, quote and note blocks are excluded.",
+          "References, Bibliography, Works cited, Answer key and Instructor notes sections are excluded until a heading at the same or a higher level."
+        ],
+        "limitations": [
+          "The estimate does not establish comprehension or audience suitability.",
+          "At least 100 words and 5 sentence units are required; this sample floor is a maintainer convention, not a validated cutoff.",
+          "Code fences and tables are omitted by the Markdown parser; discarded text, images and unseen material are not assessed, and no whole-document coverage percentage is implied.",
+          "Inline code and mathematical content retained in paragraph text can distort the English spelling heuristic; symbol-heavy passages need qualitative review.",
+          "This formula does not measure mathematics, table accessibility, listening difficulty or decodability.",
+          "Source lines identify block starts in the parser view; continuation lines may be flattened.",
+          "Essential-term presence does not establish a definition, correct usage or retained meaning; inflection and renaming need review."
+        ],
+        "target": null,
+        "comparison": "unavailable",
+        "essentialTerms": []
+      },
+      "lexicon": {
+        "aiTells": [],
+        "filler": []
+      },
+      "spoken": null,
+      "script": null,
+      "dialog": null,
+      "verse": null,
+      "speakers": {},
+      "voices": {
+        "project": null,
+        "matches": {},
+        "bibles": []
+      },
+      "segments": [],
+      "target": null,
+      "placeholders": []
+    },
+    "lint": {
+      "path": "source-3.md",
+      "format": "markdown",
+      "form": "academic",
+      "register": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "info": [
+        {
+          "rule": "readability.grade.report",
+          "severity": "info",
+          "message": "Reading diagnostic unavailable: insufficient sample (34 words, 4 sentence units; convention requires 100 words and 5 sentence units)",
+          "at": {
+            "line": null
+          },
+          "measured": {
+            "reader": {
+              "language": "en-US",
+              "schoolGrade": 6,
+              "priorKnowledge": "Floating and sinking; no particle-model instruction."
+            },
+            "method": "flesch-kincaid-grade",
+            "methodVersion": "1",
+            "inputPolicy": "markdown-paragraphs-v1",
+            "language": "en-US",
+            "syllableMethod": "english-spelling-heuristic-v1",
+            "status": "insufficient-sample",
+            "estimate": null,
+            "counts": {
+              "words": 34,
+              "sentences": 4,
+              "paragraphs": 1
+            },
+            "lines": [
+              10
+            ],
+            "exclusions": [
+              "Only Markdown paragraph blocks are scored; heading, list-item, step, quote and note blocks are excluded.",
+              "References, Bibliography, Works cited, Answer key and Instructor notes sections are excluded until a heading at the same or a higher level."
+            ],
+            "limitations": [
+              "The estimate does not establish comprehension or audience suitability.",
+              "At least 100 words and 5 sentence units are required; this sample floor is a maintainer convention, not a validated cutoff.",
+              "Code fences and tables are omitted by the Markdown parser; discarded text, images and unseen material are not assessed, and no whole-document coverage percentage is implied.",
+              "Inline code and mathematical content retained in paragraph text can distort the English spelling heuristic; symbol-heavy passages need qualitative review.",
+              "This formula does not measure mathematics, table accessibility, listening difficulty or decodability.",
+              "Source lines identify block starts in the parser view; continuation lines may be flattened.",
+              "Essential-term presence does not establish a definition, correct usage or retained meaning; inflection and renaming need review."
+            ],
+            "target": null,
+            "comparison": "unavailable",
+            "essentialTerms": []
+          }
+        }
+      ],
+      "judgement": [
+        {
+          "rule": "formal.bluf",
+          "severity": "warn",
+          "statement": "The main result or request comes in the first or second sentence.",
+          "sources": [
+            "ar-25-50"
+          ]
+        },
+        {
+          "rule": "formal.supported-claims",
+          "severity": "warn",
+          "statement": "Every claim is supported by the data given; missing values are [placeholders], never invented.",
+          "sources": [
+            "wikipedia-signs-ai"
+          ]
+        }
+      ]
+    }
+  }
+}

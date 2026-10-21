@@ -34,7 +34,7 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-dialog` | Game dialogue: quest conversations, branching choices, barks and ambient lines as a checked YAML graph |
 | `prose-instruct` | User instructions, how-to procedures, troubleshooting, help articles and technical docs |
 | `prose-teach` | Textbook explanations, lessons and chapters with learner goals, examples, practice and source-backed reference excerpts |
-| `prose-reading-level` | Audience and reading-demand adaptation, including an average U.S. high school freshman, with meaning-preservation review |
+| `prose-reading-level` | Passage suitability assessment with evidence-linked rubric ratings and proposed changes; audience adaptation and source/variation comparison |
 | `prose-annotate` | Supplied or assistant-drafted highlights, vocabulary references, definitions, explanations and links for Markdown, static HTML and structured content |
 | `prose-annotation-review` | Local annotation workbench, feedback, acceptance, rejection, body edits, retargeting and approved publication exports |
 | `prose-formal` | Academic and professional prose: abstracts, papers, reports, proposals, memos, email |
@@ -55,6 +55,13 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 ## Teaching and reader targeting
 
 Ask naturally: “Write this for an average U.S. high school freshman.” The reading-level skill treats that as a ninth-grade audience profile, with topic assumptions stated; it does not infer an exact formula score. Use prose-teach for a textbook lesson and prose-reading-level for audience adaptation within the original genre.
+
+Also ask: “Is this passage suitable for an average U.S. high school freshman reading independently?
+Rate it against a rubric and propose changes without rewriting it.” The same skill reports six
+criteria with anchored support needs, passage evidence, a conditional recommendation and prioritized
+edits or teaching supports. It leaves the source unchanged. Ratings are editorial judgments, with
+no aggregate grade score or claim of student comprehension. See the [assessment workflow and original
+worked example](skills/prose-reading-level/references/assessment.md). This mode is included in 0.12.0.
 
 Saved Markdown can carry a reader profile. The textbook form also requires teaching goals:
 

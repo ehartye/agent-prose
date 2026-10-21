@@ -73,9 +73,11 @@ text view; do not compare the two fields as evidence that a revision improved. E
 is a separate phrase-presence observation over learner-facing text, including headings and lists.
 A match does not prove definition, correct usage or preserved meaning.
 
-## Final review note
+## Final review note for drafting and adaptation
 
-Use an ordinary short note, not a formula pass/fail verdict:
+For a drafting or adaptation request, use an ordinary short note, not a formula pass/fail verdict.
+For a requested passage assessment or rubric report, use the assessment workflow linked directly
+from the skill entrypoint. Neither format converts a formula into a suitability verdict.
 
 > Audience: typical U.S. ninth grader; introductory topic knowledge assumed. Required conditions and
 > uncertainty retained in drafting review. The diagnostic was run on eligible paragraphs only.
