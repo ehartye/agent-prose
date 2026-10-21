@@ -60,4 +60,3 @@ The reports appropriately limit what these diagnostics establish. The source-3 r
 The receipts verify diagnostic results, not the report authors' claimed execution history, and they do not independently establish any reader testing. No report claims a successful comprehension test or validated grade placement. Stated self-compliance and review-status assurances were not treated as evidence of assessment quality.
 
 No material defect requiring correction was found. This is an editorial comparison of the supplied fictional passages and reports, not learner or educator calibration.
-
