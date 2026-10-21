@@ -1,7 +1,7 @@
 ---
 name: prose-reading-level
-description: Draft or adapt prose for U.S. grades 4–12 or a specified reader profile, including an average U.S. high school freshman or ninth grader. Compare step-down and step-up versions beside their source while preserving meaning.
-when_to_use: Use when asked to write for a school grade, average U.S. high school freshman, reading level or specified reader proficiency, adapt language for those readers, or compare a source with step-down/step-up versions. Teaching also uses prose-teach; an abstract or procedure keeps its genre skill. Grade-one decodability and CEFR or Lexile certification need distinct support.
+description: Assess passage suitability, give evidence-linked rubric ratings and propose changes for U.S. grades 4–12 or a specified reader profile. Also draft, adapt and compare reading-level versions, including writing for an average U.S. high school freshman or ninth grader.
+when_to_use: Use when asked whether a passage suits a school grade, to evaluate reading-level suitability, rate reading suitability against a rubric, suggest changes for specified reader proficiency, write or adapt for a school grade or reading profile, or compare step-down/step-up versions. Teaching also uses prose-teach; an abstract or procedure keeps its genre skill. Grade-one decodability and CEFR or Lexile certification need distinct support.
 ---
 # prose-reading-level
 
@@ -15,6 +15,12 @@ the updated runtime; never report them as run when the installed CLI lacks this 
 Use that as the starting profile, state any important topic-prerequisite assumption and write.
 Do not translate it automatically into an exact Flesch-Kincaid score of 9. Preserve a teenage tone
 and the intellectual goal. Age, school placement, reading demand and prior knowledge are distinct.
+
+For evaluating a passage's reading suitability or giving reader-specific rubric ratings and changes, read
+[the assessment reference](references/assessment.md). Assess before rewriting; an assessment request
+leaves the source unchanged. Report six evidence-linked criteria, anchored support needs, a conditional
+recommendation and prioritized proposals. These are editorial judgments, not a validated grade score.
+Do not total or average them into grade placement. Save a report only when requested.
 
 Read [the adaptation reference](references/reading-level.md) before drafting or revising.
 [Source-backed examples](../prose-teach/references/examples.md) show actual assessed material and

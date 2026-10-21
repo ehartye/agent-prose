@@ -11,29 +11,29 @@
 - [x] Inspect existing guidance and readability scope; run focused baseline tests.
 - [x] Complete five discovery lenses; select and capture relevant official tools, scholarly critique and worked commentary.
 - [x] Run the same three realistic assessment tasks with the current skill and without skills, dispatched together, before editing instructions. Preserve exact reports and disclose fixture correction separately from skill behavior.
-- [ ] Finish the named-source ingest and verify provenance, catalog, scoped commit and synchronization.
+- [x] Finish the named-source ingest and verify provenance, catalog, scoped commit and synchronization.
 
 ## 2. Implement guidance
 
-- [ ] Update `skills/prose-reading-level/SKILL.md` capability and triggers for assessment, suitability ratings and proposed changes. Route assessments directly to `references/assessment.md`; retain adaptation and comparison entrypoints.
-- [ ] Create `skills/prose-reading-level/references/assessment.md` with intake, six dimensions, five support labels, four overall recommendations, evidence-linked actions, no aggregate grade score, source preservation, optional diagnostic procedure and original worked example.
-- [ ] Scope `references/reading-level.md`'s short-note default to drafting/adaptation so it does not contradict requested rubric reports.
-- [ ] Update the README skill row and teaching/reader section with the natural assessment request, output and validation limits.
+- [x] Update `skills/prose-reading-level/SKILL.md` capability and triggers for assessment, suitability ratings and proposed changes. Route assessments directly to `references/assessment.md`; retain adaptation and comparison entrypoints.
+- [x] Create `skills/prose-reading-level/references/assessment.md` with intake, six dimensions, five support labels, four overall recommendations, evidence-linked actions, no aggregate grade score, source preservation, optional diagnostic procedure and original worked example.
+- [x] Scope `references/reading-level.md`'s short-note default to drafting/adaptation so it does not contradict requested rubric reports.
+- [x] Update the README skill row and teaching/reader section with the natural assessment request, output and validation limits.
 
 ## 3. Evaluate behavior
 
-- [ ] Repeat the three task packet with amended skill versus no skill, dispatched together. Source bytes must stay unchanged; record actual tools and diagnostic statuses.
-- [ ] Give anonymous report pairs and the original task/source packet to a separate reviewer. Evaluate six concrete concerns: audience/task, evidence, consistent anchors, useful retained challenge, proposal fidelity, and truthful diagnostic/review limits. Report local findings, not calibrated student outcomes or causal improvement claims.
-- [ ] Inspect metadata routing on assessment, adaptation, comparison, lesson, annotation, setup, poetry and unsupported-certification prompts. Record overlap and limits.
-- [ ] Preserve sanitized prompts, exact reports, reviewer output and mapping under `docs/research/2026-10-21-reading-assessment/`; include reproduction notes and a neutral result summary.
+- [x] Repeat the three task packet with amended skill versus no skill, dispatched together. Source bytes must stay unchanged; record actual tools and diagnostic statuses.
+- [x] Give anonymous report pairs and the original task/source packet to a separate reviewer. Evaluate six concrete concerns: audience/task, evidence, consistent anchors, useful retained challenge, proposal fidelity, and truthful diagnostic/review limits. Report local findings, not calibrated student outcomes or causal improvement claims.
+- [x] Inspect metadata routing on assessment, adaptation, comparison, lesson, annotation, setup, poetry and unsupported-certification prompts. Record overlap and limits.
+- [x] Preserve sanitized prompts, exact reports, reviewer output and mapping under `docs/research/2026-10-21-reading-assessment/`; include reproduction notes and a neutral result summary.
 
 ## 4. Verify packaging
 
-- [ ] Apply compatible patch releases for `markdown-it` and transitive `vite`; run `npm audit --json` and inspect lockfile scope.
-- [ ] Set 0.12.0 consistently in package and plugin manifests and lockfile root entries. Describe the assessment capability in plugin discovery text.
-- [ ] Run `npx vitest run tests/skills.test.ts tests/readability.test.ts tests/teaching.test.ts --reporter=dot --maxWorkers=3`, `npm run typecheck`, `npm run refs:check`, and `npm test -- --reporter=dot --maxWorkers=3`. Inspect the actual summaries.
-- [ ] Check all new resource links and recursively scan public text and nested evaluation archives for local paths, private project names and development-only dependencies. Inspect invisible Unicode controls in changed skill text.
-- [ ] Obtain independent review against this spec; fix material findings and rerun affected checks.
+- [x] Apply compatible patch releases for `markdown-it` and transitive `vite`; run `npm audit --json` and inspect lockfile scope.
+- [x] Set 0.12.0 consistently in package and plugin manifests and lockfile root entries. Describe the assessment capability in plugin discovery text.
+- [x] Run `npx vitest run tests/skills.test.ts tests/readability.test.ts tests/teaching.test.ts --reporter=dot --maxWorkers=3`, `npm run typecheck`, `npm run refs:check`, and `npm test -- --reporter=dot --maxWorkers=3`. Inspect the actual summaries.
+- [x] Check all new resource links and recursively scan public text and nested evaluation archives for local paths, private project names and development-only dependencies. Inspect invisible Unicode controls in changed skill text.
+- [x] Obtain independent review against this spec; fix material findings and rerun affected checks.
 
 ## 5. Ship and release
 
