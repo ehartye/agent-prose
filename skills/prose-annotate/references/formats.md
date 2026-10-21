@@ -93,6 +93,9 @@ become stale if the used destination changes. Do not substitute a generated comp
 - **Markdown:** CommonMark prose blocks, emphasis, links, and optional `[text]{#fragment}` spans.
   The span is a supported extension, not standard CommonMark. Code, images, tables and unsupported
   regions are not targets; inspect diagnostics. Matching uses displayed text without delimiters.
+  A leading `---` frontmatter region is excluded from targets and publication, with raw source
+  offsets preserved; the closing delimiter starts at column zero, so indented YAML block-scalar
+  markers remain metadata. An unclosed region is rejected. Metadata does not declare publication language.
 - **HTML:** Static prose in the body, supported containers and inline markup, with `id` fragments.
   Scripts, styles, hidden and unsupported regions are excluded; no JavaScript or CSS is executed.
   It cannot infer arbitrary browser-computed visibility or annotate a live DOM. Declare an exact

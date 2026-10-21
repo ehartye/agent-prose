@@ -7,7 +7,7 @@ export interface ParsedMarkdown { meta: Record<string, unknown>; blocks: Block[]
 
 function frontmatter(lines: string[]): { meta: Record<string, unknown>; bodyStart: number } {
   if (lines[0]?.trim() !== '---') return { meta: {}, bodyStart: 0 };
-  const end = lines.findIndex((l, k) => k > 0 && l.trim() === '---');
+  const end = lines.findIndex((l, k) => k > 0 && /^---[\t ]*$/.test(l));
   if (end === -1) throw new ProseError('E_PARSE', 'Frontmatter opened on line 1 is never closed with ---', { details: { line: 1 } });
   let data: unknown;
   try { data = parseYaml(lines.slice(1, end).join('\n')); }

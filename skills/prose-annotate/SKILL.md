@@ -16,7 +16,8 @@ refines bodies. It makes no model calls and does not certify learning or reading
 
 Find the existing sidecar and concept registry before creating another. Read
 [formats and proposals](references/formats.md) for the actual registry/proposal schema, passage
-links, or a structured-content adapter. For a new source:
+links, or a structured-content adapter. For category/member highlighting or application CSS,
+read [presentation and consumer styling](references/styling.md). For a new source:
 
 ```text
 prose concepts init --file concepts.yaml --project example --language en-US

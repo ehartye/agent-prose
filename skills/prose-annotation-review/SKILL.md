@@ -1,7 +1,7 @@
 ---
 name: prose-annotation-review
-description: Review existing source annotations with agent-prose when asked to preview notes, act on annotation feedback, accept, reject, edit, retarget or defer entries, and export approved annotations for publication.
-when_to_use: Use when asked to open the annotation workbench, review proposed highlights or definitions, reject a note, fix a misplaced annotation, read annotation feedback, or publish approved annotations. Creating and locating new annotations uses prose-annotate; choosing between prose rewrites uses prose-review.
+description: Review and style existing source annotations with agent-prose when asked to preview notes, change category/member highlighting, act on annotation feedback, edit entries, or export approved annotations for publication.
+when_to_use: Use when asked to open the annotation workbench, review proposed highlights or definitions, reject a note, fix a misplaced annotation, change highlight colors, read annotation feedback, or publish approved annotations. Creating annotations uses prose-annotate; stylistic rewrite choices use prose-review; grade-level comparisons use prose-reading-level.
 ---
 # prose-annotation-review
 
@@ -25,6 +25,10 @@ prose annotation feedback <session> --since <cursor>
 Open that URL with the available browser when a preview is requested, and give the user the link.
 It binds to loopback only. The workbench shows source, annotation queue and details with review
 actions and publication preview. Reading a preview does not accept anything.
+
+For category/member/hybrid highlighting, shared theme settings or consumer HTML/CSS, read
+[presentation and consumer styling](../prose-annotate/references/styling.md). Colors are publishable
+hints; appearance changes leave annotation approval and source wording intact.
 
 Read feedback after the user acts; pass the returned cursor on the next feedback request. Use
 their actual decisions and notes. The CLI does no model-based expansion; refine a requested body

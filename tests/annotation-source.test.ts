@@ -5,6 +5,23 @@ const structured = (blocks: unknown[], documents?: unknown[]) => JSON.stringify(
 const block = (id: string, text: string) => ({ id, kind: 'paragraph', runs: [{ text }] });
 
 describe('annotation source projection', () => {
+  it.each(['\n', '\r\n', '\r'])('excludes leading frontmatter while retaining original Unicode source offsets (%j)', (eol) => {
+    const prefix = ['\uFEFF---', 'private: "editor-only 😀"', 'notes: |', '  ---', '  editor-only-marker', 'reader:', '  schoolGrade: 9', '---', ''].join(eol);
+    const body = `# Motion${eol}${eol}Particles 😀 move.`;
+    const raw = prefix + body;
+    const p = projectSource(raw, { profile: 'markdown', documentId: 'lesson' });
+    expect(p.text).toBe('Motion\nParticles 😀 move.');
+    expect(p.blocks.map(b => b.kind)).toEqual(['heading', 'paragraph']);
+    expect(p.blocks[1].headingPath).toEqual(['Motion']);
+    const at = [...p.text].indexOf('😀');
+    const sourceStart = raw.indexOf('😀', prefix.length);
+    expect(p.sourceMap?.find(m => m.start === at)).toMatchObject({
+      sourceStart, sourceEnd: sourceStart + 2, byteStart: Buffer.byteLength(raw.slice(0, sourceStart)),
+    });
+  });
+  it('rejects an unterminated frontmatter region instead of exposing its contents', () => {
+    expect(() => projectSource('---\nprivate: editor-only\n', { profile: 'markdown', documentId: 'lesson' })).toThrow(/frontmatter.*closed/i);
+  });
   it('preserves selected structured document language and direction in projection bindings', () => {
     const raw = structured([], [{ id: 'other', language: 'en-US', blocks: [block('other', 'Other')] }, { id: 'lesson', language: 'ar', dir: 'rtl', blocks: [block('intro', 'نص')] }]);
     const p = projectSource(raw, { profile: 'structured', documentId: 'lesson' });

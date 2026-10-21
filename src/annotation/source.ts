@@ -236,9 +236,17 @@ function mappedMarkdownParser(): InstanceType<typeof MarkdownIt> {
   return md;
 }
 function projectMarkdown(builder: Builder): void {
-  const md = mappedMarkdownParser(); const env = {}; const tokens = md.parse(builder.raw, env);
   const lines: Array<{ text: string; offset: number }> = []; let offset = 0;
   for (const match of builder.raw.matchAll(/[^\r\n]*(?:\r\n|\r|\n|$)/g)) { if (!match[0] && offset === builder.raw.length) break; lines.push({ text: match[0].replace(/[\r\n]+$/, ''), offset }); offset += match[0].length; }
+  let markdown = builder.raw;
+  if (lines[0]?.text.replace(/^\uFEFF/, '').trim() === '---') {
+    const closing = lines.findIndex((line, index) => index > 0 && /^---[\t ]*$/.test(line.text));
+    if (closing < 0) fail('Frontmatter opened on line 1 is never closed with ---');
+    const end = lines[closing + 1]?.offset ?? builder.raw.length;
+    // Hide authoring metadata before parsing, retaining every raw offset and line boundary.
+    markdown = builder.raw.slice(0, end).replace(/[^\r\n]/g, ' ') + builder.raw.slice(end);
+  }
+  const md = mappedMarkdownParser(); const env = {}; const tokens = md.parse(markdown, env);
   const stack: string[] = []; const lists: ListContext[] = []; const items: string[] = []; let headingLevel = 1; let ordinal = 0; let itemOrdinal = 0;
   for (const token of tokens) {
     if (token.nesting === 1) { stack.push(token.type); if (token.type === 'heading_open') headingLevel = Number(token.tag[1]); if (token.type === 'ordered_list_open') lists.push({ listType: 'ordered', listStart: Number(token.attrGet('start') ?? 1) }); else if (token.type === 'bullet_list_open') lists.push({ listType: 'unordered' }); if (token.type === 'list_item_open') items.push(`markdown-item-${++itemOrdinal}`); continue; }

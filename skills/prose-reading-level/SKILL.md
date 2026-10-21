@@ -1,7 +1,7 @@
 ---
 name: prose-reading-level
 description: Draft or adapt prose for U.S. grades 4–12 or a specified reader profile, including an average U.S. high school freshman or ninth grader. Compare step-down and step-up versions beside their source while preserving meaning.
-when_to_use: Use when asked to write for a school grade, average U.S. high school freshman, reading level or specified reader proficiency, or adapt language for those readers. Teaching a lesson also uses prose-teach. An academic abstract or procedure keeps its existing genre skill; grade-one decodability and CEFR or Lexile certification need distinct support.
+when_to_use: Use when asked to write for a school grade, average U.S. high school freshman, reading level or specified reader proficiency, adapt language for those readers, or compare a source with step-down/step-up versions. Teaching also uses prose-teach; an abstract or procedure keeps its genre skill. Grade-one decodability and CEFR or Lexile certification need distinct support.
 ---
 # prose-reading-level
 

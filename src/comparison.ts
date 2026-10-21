@@ -73,7 +73,7 @@ function bodyParts(raw: string): { prefix: string; body: string; eol: string } {
   const text = raw.slice(bom.length);
   const lines = [...text.matchAll(/[^\r\n]*(?:\r\n|\r|\n|$)/g)];
   if (lines[0]?.[0].trim() !== '---') return { prefix: bom, body: text, eol };
-  const closing = lines.find((line, index) => index > 0 && line[0].trim() === '---');
+  const closing = lines.find((line, index) => index > 0 && /^---[\t ]*(?:\r\n|\r|\n)?$/.test(line[0]));
   if (!closing) throw new ProseError('E_PARSE', 'Frontmatter opened on line 1 is never closed with ---');
   const end = closing.index + closing[0].length;
   return { prefix: bom + text.slice(0, end), body: text.slice(end), eol };

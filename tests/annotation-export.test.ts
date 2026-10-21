@@ -7,6 +7,20 @@ import { createAnnotationFile, inspectAnnotationFile, findCandidates, proposeAnn
 import { planAnnotationRuns, renderPublication } from '../src/annotation/render.ts';
 const dirs:string[]=[];
 afterEach(()=>{for(const dir of dirs.splice(0))rmSync(dir,{recursive:true,force:true});});
+it('publishes only the Markdown body, keeping frontmatter out of native, HTML and Web Annotation exports',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'prose-frontmatter-publication-'));dirs.push(dir);
+ const source=join(dir,'lesson.md'),file=join(dir,'lesson.annotations.yaml');
+ const raw='---\nprivate: |\n  ---\n  editor-only-marker\nreader:\n  schoolGrade: 9\n---\n# Motion\n\nParticles move.\n';
+ writeFileSync(source,raw);createAnnotationFile(source,file);
+ const located=findCandidates(file,{quote:'Particles move.'});
+ let current=proposeAnnotations(file,[{id:'focus',kind:'highlight',candidate:located.candidates[0].id}],{expectedRevision:located.revision});
+ current=decideAnnotation(file,{id:'focus',action:'accept',expectedRevision:current.revision});
+ const compiled=compileAnnotations(file);
+ expect(compiled.bundle.documents[0].text).toBe('Motion\nParticles move.');
+ expect(JSON.stringify(compiled)).not.toContain('editor-only-marker');
+ expect(compiled.html).not.toContain('schoolGrade');
+ expect(readFileSync(source,'utf8')).toBe(raw);
+});
 it('composes overlapping annotations with emphasis and an existing link, and supports an uncued context',()=>{
  const dir=mkdtempSync(join(tmpdir(),'prose-publication-'));dirs.push(dir);
  const source=join(dir,'lesson.md'), file=join(dir,'lesson.annotations.yaml');

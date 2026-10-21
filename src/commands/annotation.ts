@@ -147,6 +147,6 @@ export function registerAnnotationCommands(program: Command, io: Io): void {
       const compiled = compileAnnotations(file);
       const contents = format === 'html' ? compiled.html : `${JSON.stringify(format === 'json' ? compiled.bundle : compiled.webAnnotation, null, 2)}\n`;
       exportFile(opts.out, contents);
-      io.emit({ file: resolve(opts.out), format, report: compiled.report });
+      io.emit({ file: resolve(opts.out), format, report: format === 'web-annotation' ? compiled.webAnnotation.report : compiled.report });
     });
 }

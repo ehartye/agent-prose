@@ -54,6 +54,15 @@ describe('project-local reading comparisons', () => {
     expect(saved.variants[0].body).toBe('\r\nNew body.\r\n');
     expect(saved.revision).not.toBe(state.revision);
   });
+  it('keeps indented YAML delimiters inside frontmatter through body display and editing', async () => {
+    const s = seed(); const prefix = '---\nprivate: |\n  ---\n  editor-only-marker\nreader: {language: en-US, schoolGrade: 6}\n---\n';
+    writeFileSync(join(s.project, 'adaptation.md'), prefix + 'Visible body.\n');
+    const state = readComparison(s.project, s.state.id);
+    expect(state.variants[0].body).toBe('Visible body.\n');
+    expect(state.variants[0].blocks.map(b => b.text).join('\n')).not.toContain('editor-only-marker');
+    await editComparison(s.project, state.id, '1', 'Revised body.\n', state.revision);
+    expect(readFileSync(join(s.project, 'adaptation.md'), 'utf8')).toBe(prefix + 'Revised body.\n');
+  });
   it('checks every dependency and manifest choice with one compound revision', async () => {
     const s = seed(); const two = createComparison(s.project, 'source.md', ['adaptation.md', 'other.md']);
     writeFileSync(join(s.project, 'other.md'), 'Changed elsewhere.');

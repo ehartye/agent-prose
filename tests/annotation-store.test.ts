@@ -40,7 +40,7 @@ describe('annotation authority and publication', () => {
     expect(()=>setAnnotationAppearance(file,{...appearance,mode:'category'},{expectedRevision:before})).toThrow();
     expect(()=>setAnnotationAppearance(file,{...appearance,categories:{concept:'url(javascript:bad)'}} as never)).toThrow();
     expect(()=>setAnnotationAppearance(file,{...appearance,concepts:{missing:'blue'}})).toThrow();
-    const {bundle,html,report}=compileAnnotations(file),doc=bundle.documents[0],annotation=bundle.annotations[0],concept=bundle.concepts[0];
+    const {bundle,html,report,webAnnotation}=compileAnnotations(file),doc=bundle.documents[0],annotation=bundle.annotations[0],concept=bundle.concepts[0];
     expect(doc.appearance?.concepts).toEqual({[concept.id]:'purple'});
     expect(doc.appearance?.annotations).toEqual({});
     expect(concept.color).toBe('green');
@@ -48,7 +48,8 @@ describe('annotation authority and publication', () => {
     expect(resolveHighlightColor(annotation,concept,{...doc.appearance,mode:'category'})).toBe('blue');
     expect(resolveHighlightColor(annotation,undefined,{mode:'member'})).toBe('none');
     expect(html).toContain('data-prose-color="purple"');
-    expect(report.warnings.some(w=>w.includes('color'))).toBe(true);
+    expect(report.warnings.some(w=>w.includes('color'))).toBe(false);
+    expect(webAnnotation.report.warnings.some(w=>w.includes('color'))).toBe(true);
     expect(JSON.stringify(doc.appearance)).not.toContain('diffusion');
     expect(readFileSync(source,'utf8')).toBe(original);
   });

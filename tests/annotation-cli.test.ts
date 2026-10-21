@@ -106,7 +106,13 @@ describe('annotation CLI discovery and persisted workflow', () => {
     const accepted = await run('annotation', 'review', file, 'a-federalism', '--action', 'accept', '--expect', proposed.revision, '--event', 'accept-1');
     expect(accepted.annotations[0].state).toBe('accepted');
     const output = join(dir, 'accepted.json');
-    await run('annotation', 'export', file, '--to', 'json', '--out', output);
+    const native = await run('annotation', 'export', file, '--to', 'json', '--out', output);
+    expect(native.report.warnings).not.toContain('Representation UUID URNs identify included text snapshots; they are not fetchable URLs');
+    const html = await run('annotation', 'export', file, '--to', 'html', '--out', join(dir, 'accepted.html'));
+    expect(html.report).toEqual(native.report);
+    const web = await run('annotation', 'export', file, '--to', 'web-annotation', '--out', join(dir, 'accepted.web.json'));
+    expect(web.report.warnings).toContain('Representation UUID URNs identify included text snapshots; they are not fetchable URLs');
+    expect(JSON.parse(readFileSync(join(dir, 'accepted.web.json'), 'utf8')).report).toEqual(web.report);
     expect(JSON.parse(readFileSync(output, 'utf8')).annotations.map((a: { handle: string }) => a.handle)).toEqual(['a-federalism']);
     const rejected = await run('annotation', 'review', file, 'a-federalism', '--action', 'reject', '--reason', 'Too broad', '--expect', accepted.revision);
     expect(rejected.annotations[0].state).toBe('rejected');

@@ -7,7 +7,8 @@ interface PublicationHelpers {
   load(file: string): Inspection;
   destination(inspection: Inspection, destination: Destination): {loaded?:{file:string;sidecar:Inspection['sidecar']};range?:{start:number;end:number};targetId?:string;problems:string[]};
 }
-export function publishInspection(initial: Inspection, helpers: PublicationHelpers): {bundle:PublicationBundle;html:string;webAnnotation:unknown;report:{warnings:string[];excluded:string[]}} {
+interface PublicationReport { warnings:string[]; excluded:string[] }
+export function publishInspection(initial: Inspection, helpers: PublicationHelpers): {bundle:PublicationBundle;html:string;webAnnotation:{page:unknown;representations:unknown[];report:PublicationReport};report:PublicationReport} {
   const bundle:PublicationBundle={schema:'prose/annotation-bundle@1',projection:'prose/annotation-text@1',documents:[],annotations:[],concepts:[],lists:{}};
   const warnings=new Set<string>(),excluded=new Set<string>(),visited=new Map<string,string>();
   const lists=new Map<string,{label:string;members:string[]}>();
@@ -96,9 +97,11 @@ export function publishInspection(initial: Inspection, helpers: PublicationHelpe
       return {id:a.id,type:'Annotation',motivation:mapped,...(body?{body:{type:'TextualBody',value:body,format:'text/plain'}}:linkedBody?{body:linkedBody}:{}),target:{type:'SpecificResource',source:representation.id,selector:[{type:'TextQuoteSelector',exact:a.target.quote,prefix:Array.from(document.text).slice(Math.max(0,a.target.start-32),a.target.start).join(''),suffix:Array.from(document.text).slice(a.target.end,a.target.end+32).join('')},{type:'TextPositionSelector',start:a.target.start,end:a.target.end}]}};
     }),
   };
-  if(bundle.annotations.some(a=>a.concept||a.lists?.length||a.destination))warnings.add('Web Annotation export does not preserve project lists, concept identity or application navigation; use the native bundle for complete semantics');
-  if(bundle.documents.some(d=>d.appearance)||bundle.concepts.some(c=>c.color))warnings.add('Web Annotation export omits category/member color hints and highlight modes; use the native bundle or HTML for styling');
-  warnings.add('Representation UUID URNs identify included text snapshots; they are not fetchable URLs');
   const report={warnings:[...warnings],excluded:[...excluded]};
-  return {bundle,html:renderPublication(bundle),webAnnotation:{page:webAnnotation,representations,report},report};
+  const webWarnings=new Set(warnings);
+  if(bundle.annotations.some(a=>a.concept||a.lists?.length||a.destination))webWarnings.add('Web Annotation export does not preserve project lists, concept identity or application navigation; use the native bundle for complete semantics');
+  if(bundle.documents.some(d=>d.appearance)||bundle.concepts.some(c=>c.color))webWarnings.add('Web Annotation export omits category/member color hints and highlight modes; use the native bundle or HTML for styling');
+  webWarnings.add('Representation UUID URNs identify included text snapshots; they are not fetchable URLs');
+  const webReport={warnings:[...webWarnings],excluded:report.excluded};
+  return {bundle,html:renderPublication(bundle),webAnnotation:{page:webAnnotation,representations,report:webReport},report};
 }
