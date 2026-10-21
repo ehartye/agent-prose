@@ -140,6 +140,8 @@ review links on changing ports remember the choice. Different hostnames/devices 
 preferences. Clearing browser site data removes the override; System removes it explicitly.
 The cross-port behavior is described in [RFC 6265, section 8.5](https://www.rfc-editor.org/rfc/rfc6265#section-8.5);
 the cookie contains only the appearance preference, never review tokens or decisions.
+The annotation title, view tabs and gear share a compact desktop row. Reload/close actions and
+font license links live in settings; no font credit footer takes space from the reading panes.
 
 On desktop widths above 1150 CSS pixels, the queue, source and details each have their own scroll
 container. The layout constrains the desk to the viewport, lets flex/grid children shrink with

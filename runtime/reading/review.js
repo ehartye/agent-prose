@@ -70,11 +70,7 @@
   function disclosure(label,props,...children) {
     return h('details',{...(props||{}),class:'review-disclosure'+(props?.class?' '+props.class:'')},h('summary',{text:label}),h('div',{class:'disclosure-body'},...children));
   }
-  function fontsFooter() {
-    if(document.querySelector('.site-foot'))return;
-    document.body.appendChild(h('footer',{class:'site-foot'},'Fonts: SIL OFL 1.1 - ',h('a',{href:'/fonts/OFL-CourierPrime.txt',text:'Courier Prime'}),' - ',h('a',{href:'/fonts/OFL-Atkinson.txt',text:'Atkinson Hyperlegible'})));
-  }
-  window.ProseReview=Object.freeze({h,button:btn,notice,queueItem,disclosure,fontsFooter,
+  window.ProseReview=Object.freeze({h,button:btn,notice,queueItem,disclosure,
     registerMode(name,start){if(modes.has(name))throw Error('Duplicate review mode');modes.set(name,start);},
     startMode(name){const start=modes.get(name);if(!start)throw Error('Unknown review mode');start();}
   });

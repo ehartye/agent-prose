@@ -33,7 +33,9 @@
      field('Vocabulary list',h('select',{id:'list-filter'},h('option',{value:'',text:'All lists'}))))),
    h('nav',{id:'queue','aria-label':'Select an annotation'}));
  const views=document.getElementById('views');views.hidden=false;views.replaceChildren(
-   h('div',{class:'review-tabs'},...['Plain','Annotated','Publication'].map(label=>UI.button(label,()=>{},'view-tab',{'data-mode':label.toLowerCase(),'aria-pressed':String(label==='Annotated')}))),
+   h('div',{class:'review-tabs'},...['Plain','Annotated','Publication'].map(label=>UI.button(label,()=>{},'view-tab',{'data-mode':label.toLowerCase(),'aria-pressed':String(label==='Annotated')}))));
+ document.getElementById('review-settings-button').before(views);
+ document.getElementById('review-mode-settings').append(
    h('div',{class:'annotation-session review-tools'},h('span',{id:'session-state',class:'quiet',text:'Opening...'}),UI.button('Reload source',()=>{},'toolbar-button',{id:'reload'}),UI.button('Close review',()=>{},'toolbar-button',{id:'close'})));
  document.getElementById('app').replaceChildren(h('div',{class:'annotation-layout'},
    h('section',{id:'reading-pane',class:'annotation-source card','aria-label':'Source reading pane',tabindex:'0'},
@@ -67,7 +69,6 @@
        h('div',{id:'edit-actions',class:'row edit-actions',hidden:true},UI.button('Save text',()=>{},'primary',{'data-action':'edit'}),UI.button('Discard text edits',()=>{},'link',{id:'discard'})),
        h('div',{class:'decision-buttons'},UI.button('Accept',()=>{},'primary',{'data-action':'accept'}),UI.button('Reject',()=>{},'danger',{'data-action':'reject'}),UI.button('Defer',()=>{},'',{'data-action':'defer'})),
        UI.button('Undo last decision',()=>{},'link undo-decision',{'data-action':'undo'})))));
- UI.fontsFooter();
 
 const $=id=>document.getElementById(id);
 const token=new URLSearchParams(location.search).get('t')||'';
@@ -180,7 +181,7 @@ for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>changeMode
 for(const b of document.querySelectorAll('[data-action]'))b.onclick=()=>decide(b.dataset.action);
 $('body').oninput=()=>{dirty=true;text('edit-state','Unsaved text changes');$('edit-actions').hidden=false;$('review-actions').dataset.editing='true'};
 $('discard').onclick=()=>{dirty=false;pending=null;if(!current())selected=state.inspection.annotations[0]?.id||null;for(const b of document.querySelectorAll('[data-action]'))b.disabled=false;queue();source();details();notice('Unsaved text edits discarded. The stored annotation is unchanged.')};
-$('reload').onclick=async()=>{try{await reload(true);notice(dirty?'Source reloaded. Your unsaved text is preserved; compare it before saving.':'Source reloaded.')}catch(e){notice(e.message,true)}};
+$('reload').onclick=async()=>{try{await reload(true);$('review-settings').close();notice(dirty?'Source reloaded. Your unsaved text is preserved; compare it before saving.':'Source reloaded.')}catch(e){notice(e.message,true)}};
 $('locate').onclick=async()=>{try{const result=await request('/api/locate',{quote:$('target-query').value});if(result.revision!==state.inspection.revision){notice('The source changed. Reload source before choosing a location.',true);return}$('candidate').replaceChildren(option('','Choose a location'),...result.candidates.map(c=>option(c.id,(c.context?.prefix||c.prefix||'')+' ['+(c.quote?.exact||c.quote||c.text||$('target-query').value)+'] '+(c.context?.suffix||c.suffix||''))));notice(result.candidates.length+' matching locations. Choose one, then use location.')}catch(e){notice(e.message,true)}};
 $('close').onclick=async()=>{try{await request('/api/close',{});text('session-state','closed');notice('Review closed. Decisions remain in the annotation file.');for(const b of document.querySelectorAll('[data-action], [data-highlight-control], #reload, #close, #locate, #discard'))b.disabled=true}catch(e){notice(e.message,true)}};
 reload().catch(e=>notice(e.message,true));

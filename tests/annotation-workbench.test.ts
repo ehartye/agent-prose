@@ -371,6 +371,7 @@ describe('annotation workbench', () => {
       await page.getByRole('button', { name: 'Save text' }).click();
       await page.getByRole('alert').filter({ hasText: 'Your text is preserved' }).waitFor();
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('A local draft survives conflict.');
+      await page.getByRole('button', { name: 'Review settings', exact: true }).click();
       await page.getByRole('button', { name: 'Reload source', exact: true }).click();
       await page.getByRole('alert').filter({ hasText: 'Your unsaved text is preserved' }).waitFor();
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('A local draft survives conflict.');
@@ -423,6 +424,7 @@ describe('annotation workbench', () => {
       const changed = inspectAnnotationFile(s.file);
       expect(changed.annotations[0].state).toBe('stale');
       expect(changed.sidecar.history).toHaveLength(approved.sidecar.history.length);
+      await page.getByRole('button', { name: 'Review settings', exact: true }).click();
       await page.getByRole('button', { name: 'Reload source', exact: true }).click();
       await page.locator('#state-label').filter({ hasText: /^stale$/ }).waitFor();
       expect(await page.getByRole('region', { name: 'Changes since review' }).count()).toBe(1);

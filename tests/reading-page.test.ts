@@ -53,7 +53,7 @@ describe('the reading page: static safety', () => {
 describe('index.html', () => {
   it('references only files that exist, and nothing external', () => {
     const refs = [...html.matchAll(/\b(?:src|href)="([^"]*)"/g)].map(m => m[1]);
-    expect([...refs].sort()).toEqual(['/annotations.js', '/app.js', '/review.js', '/style.css']);
+    expect([...refs].sort()).toEqual(['/annotations.js', '/app.js', '/fonts/OFL-Atkinson.txt', '/fonts/OFL-CourierPrime.txt', '/review.js', '/style.css']);
     for (const r of refs) expect(existsSync(join(DIR, r.slice(1))), r).toBe(true);
     expect(html).not.toMatch(/https?:\/\//);
   });

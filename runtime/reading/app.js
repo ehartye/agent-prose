@@ -594,7 +594,7 @@
 
   // ---- DOM helper: text goes in as text, never as markup; no style attributes (the CSP forbids them) ----
 
-  const {h, button:btn, notice:showNotice, fontsFooter} = window.ProseReview;
+  const {h, button:btn, notice:showNotice} = window.ProseReview;
 
   // ---- transport ----
 
@@ -2141,7 +2141,6 @@
   function boot() {
     document.body.appendChild(h('div', { id: 'dialog-root' }));
     document.addEventListener('keydown', onDialogKey, true);
-    fontsFooter();
     if (!sessionId && !batch) { showMessage('Reading', 'Open the link your writer gave you to start reading.'); return; }
     if (!auth.token) { showMessage('This link is missing its key', 'Ask your writer for a fresh link.'); return; }
     // The token moves into session storage and out of the visible address; if storage is unavailable it stays in the URL.
