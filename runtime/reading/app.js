@@ -1,7 +1,8 @@
 // The reading page. Plain JS, no dependencies, no build. Draft text and note text are untrusted: they only ever
-// reach the page through textContent or createTextNode (see the h() helper), never as markup.
+// reach the page through textContent or createTextNode (see review.js), never as markup.
 (function () {
   'use strict';
+  if (!window.__READING_TEST__ && ['annotations', 'comparison'].includes(document.body.dataset.reviewMode)) { window.ProseReview.startMode(document.body.dataset.reviewMode); return; }
 
   // ---- pure helpers (exposed to tests through window.__reading when window.__READING_TEST__ is set) ----
 
@@ -593,24 +594,7 @@
 
   // ---- DOM helper: text goes in as text, never as markup; no style attributes (the CSP forbids them) ----
 
-  function h(tag, props, ...kids) {
-    const el = document.createElement(tag);
-    for (const [k, v] of Object.entries(props || {})) {
-      if (v === undefined || v === null || v === false) continue;
-      if (k === 'class') el.className = v;
-      else if (k === 'text') el.textContent = v;
-      else if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
-      else if (k === 'style') throw new Error('no style attributes');
-      else if (k === 'value' || k === 'disabled' || k === 'hidden' || k === 'checked') el[k] = v;
-      else el.setAttribute(k, v === true ? '' : String(v));
-    }
-    for (const kid of kids.flat()) {
-      if (kid === null || kid === undefined || kid === false) continue;
-      el.appendChild(typeof kid === 'string' ? document.createTextNode(kid) : kid);
-    }
-    return el;
-  }
-  const btn = (text, onClick, cls, extra, ...kids) => h('button', { type: 'button', class: cls || '', text, on: { click: onClick }, ...(extra || {}) }, ...kids);
+  const {h, button:btn, notice:showNotice} = window.ProseReview;
 
   // ---- transport ----
 
@@ -641,13 +625,6 @@
     el.textContent = on ? 'Reconnecting... the page will pick up where you left off.' : '';
   }
 
-  function showNotice(message, hint) {
-    const el = $('notice');
-    el.textContent = '';
-    el.appendChild(h('div', { class: 'msg' }, message, hint ? h('span', { class: 'hint', text: hint }) : null));
-    el.appendChild(btn('Dismiss', () => { el.hidden = true; }, 'link'));
-    el.hidden = false;
-  }
   const hideNotice = () => { $('notice').hidden = true; };
 
   function showProblem(res) {
@@ -1577,12 +1554,7 @@
     ui.railPage = w.page;
     const rows = w.ns.map(n => {
       const it = r.items[n - 1];
-      return h('li', null, h('button', {
-        type: 'button', class: 'qitem', 'aria-current': n === ui.cur ? 'true' : undefined, 'data-key': 'rail-' + n,
-        'aria-label': railLabel(it, r.order.indexOf(n) + 1, r.items.length), on: { click: () => go(n) },
-      },
-      h('span', { class: 'state ' + stateClass(it), 'data-l': it.picked || '', 'aria-hidden': 'true' }),
-      h('span', { class: 'qtext' }, h('span', { class: 'who', text: it.who }), h('span', { class: 'where', text: it.where }), h('span', { class: 'qstatus', text: statusWord(it) }))));
+      return h('li',null,window.ProseReview.queueItem({who:it.who,where:it.where,status:statusWord(it),state:stateClass(it),letter:it.picked||'',current:n===ui.cur,label:railLabel(it,r.order.indexOf(n)+1,r.items.length),onClick:()=>go(n),attrs:{'data-key':'rail-'+n}}));
     });
     const pager = w.pages > 1 ? h('div', { class: 'pager', role: 'group', 'aria-label': 'Pages of the queue' },
       btn('Earlier', () => { ui.railPage = w.page - 1; renderRail(); }, 'small', { disabled: w.page === 0, 'data-key': 'rail-earlier' }),
@@ -1953,7 +1925,7 @@
   }
 
   function onKey(ev) {
-    if (!batch || !data || !ui.rail || ui.none) return; // while the "None of these" panel is open the page behind it takes no shortcuts
+    if (!batch || !data || !ui.rail || ui.none || document.querySelector('dialog[open]')) return; // modal settings and review panels suspend background shortcuts
     const t = ev.target;
     const inField = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable));
     const act = keyAction({ key: ev.key, shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey, inField },
@@ -2166,16 +2138,9 @@
 
   // ---- start ----
 
-  /** The font licences, linked from the page itself (index.html stays free of /fonts references; the files are served by the same server). */
-  function fontsFooter() {
-    const link = (href, text) => h('a', { href, text });
-    document.body.appendChild(h('footer', { class: 'site-foot' }, 'Fonts: SIL OFL 1.1 - ', link('/fonts/OFL-CourierPrime.txt', 'Courier Prime'), ' - ', link('/fonts/OFL-Atkinson.txt', 'Atkinson Hyperlegible')));
-  }
-
   function boot() {
     document.body.appendChild(h('div', { id: 'dialog-root' }));
     document.addEventListener('keydown', onDialogKey, true);
-    fontsFooter();
     if (!sessionId && !batch) { showMessage('Reading', 'Open the link your writer gave you to start reading.'); return; }
     if (!auth.token) { showMessage('This link is missing its key', 'Ask your writer for a fresh link.'); return; }
     // The token moves into session storage and out of the visible address; if storage is unavailable it stays in the URL.

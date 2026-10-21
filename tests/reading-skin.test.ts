@@ -46,9 +46,10 @@ describe('proof desk tokens', () => {
     expect(light['--ui']).toBe("'Atkinson Hyperlegible', system-ui, 'Segoe UI', sans-serif");
   });
 
-  it('follows the colour scheme only (no manual theme switch) and drops the old role names', () => {
-    expect(css).not.toContain('data-theme');
-    expect(css).toContain('color-scheme: light dark');
+  it('follows the system without an override, supports explicit themes and drops the old role names', () => {
+    expect(css).toContain(':root:not([data-theme])');
+    expect(css).toContain(':root[data-theme="dark"]');
+    expect(css).toContain('color-scheme: light');
     for (const old of ['--bg', '--surface', '--accent', '--accent-text', '--soft', '--text', '--muted', '--line', '--good', '--warn', '--highlight', '--focus', '--serif', '--sans'])
       expect(css, old).not.toMatch(new RegExp(`${old}(?![a-z-])`));
   });

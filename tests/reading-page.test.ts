@@ -11,8 +11,8 @@ const html = read('index.html');
 const js = read('app.js');
 
 describe('the reading page: static safety', () => {
-  it('has the three page files and the fonts folder, and nothing else', () => {
-    expect([...files].sort()).toEqual(['app.js', 'index.html', 'style.css']);
+  it('packages only the shared review assets and vendored fonts', () => {
+    expect([...files].sort()).toEqual(['annotations.js', 'app.js', 'comparisons.js', 'index.html', 'review.js', 'style.css']);
     expect(entries.filter(e => e.isDirectory()).map(e => e.name)).toEqual(['fonts']);
     expect(readdirSync(join(DIR, 'fonts')).sort()).toEqual([
       'OFL-Atkinson.txt', 'OFL-CourierPrime.txt', 'README.txt', 'atkinson-400.ttf', 'atkinson-700.ttf', 'courier-prime-400.ttf', 'courier-prime-700.ttf',
@@ -43,8 +43,9 @@ describe('the reading page: static safety', () => {
   });
 
   it('puts draft and note text in only through text nodes', () => {
-    expect(js).toContain('textContent');
-    expect(js).toContain('createTextNode');
+    const dom = read('review.js');
+    expect(dom).toContain('textContent');
+    expect(dom).toContain('createTextNode');
     expect(js).not.toMatch(/\.innerText\s*=/);
   });
 });
@@ -52,7 +53,7 @@ describe('the reading page: static safety', () => {
 describe('index.html', () => {
   it('references only files that exist, and nothing external', () => {
     const refs = [...html.matchAll(/\b(?:src|href)="([^"]*)"/g)].map(m => m[1]);
-    expect([...refs].sort()).toEqual(['/app.js', '/style.css']);
+    expect([...refs].sort()).toEqual(['/annotations.js', '/app.js', '/comparisons.js', '/fonts/OFL-Atkinson.txt', '/fonts/OFL-CourierPrime.txt', '/review.js', '/style.css']);
     for (const r of refs) expect(existsSync(join(DIR, r.slice(1))), r).toBe(true);
     expect(html).not.toMatch(/https?:\/\//);
   });

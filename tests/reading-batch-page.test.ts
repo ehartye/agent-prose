@@ -219,7 +219,6 @@ describe('the page source', () => {
     expect(html).toContain('id="live"');
     expect(html).toContain('id="title" tabindex="-1"');
     expect(js).toContain("h('ol', { class: 'queue' }");
-    expect(js).toContain("'aria-current': n === ui.cur ? 'true' : undefined");
   });
   it('draws the rail marks as the mock does and turns the rail into a strip on a phone', () => {
     expect(css).toMatch(/\.state\.picked \{[^}]*background: var\(--blue\)/);

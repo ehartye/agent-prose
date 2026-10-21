@@ -5,6 +5,11 @@ import { ProseError } from '../src/errors.ts';
 import { fixture } from './helpers.ts';
 
 describe('parseMarkdown', () => {
+  it('keeps indented document markers inside YAML block scalars out of body prose', () => {
+    const {meta, blocks} = parseMarkdown('---\nprivate: |\n  ---\n  editor-only-marker\n---\nVisible body.');
+    expect(meta.private).toBe('---\neditor-only-marker\n');
+    expect(blocks).toEqual([{kind:'paragraph', text:'Visible body.', line:6}]);
+  });
   it('reads frontmatter and blocks with source line numbers', () => {
     const { meta, blocks } = parseMarkdown(readFileSync(fixture('keynote.md'), 'utf8'));
     expect(meta).toEqual({ form: 'speech-large', register: 'professional' });

@@ -6,6 +6,9 @@
 <meta name="color-scheme" content="light dark">
 <title>Reading</title>
 <link rel="stylesheet" href="/style.css">
+<script src="/review.js"></script>
+<script src="/annotations.js" defer></script>
+<script src="/comparisons.js" defer></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
@@ -13,8 +16,11 @@
 <nav id="rail" class="rail" aria-label="Review queue" hidden></nav>
 <div class="work">
 <header class="site-head">
+<div class="site-heading">
 <h1 id="title" tabindex="-1">Reading</h1>
 <p id="subtitle" class="sub"></p>
+</div>
+<button id="review-settings-button" class="review-settings-button" type="button" aria-label="Review settings" aria-haspopup="dialog" aria-controls="review-settings" title="Review settings"><span aria-hidden="true">&#9881;</span></button>
 </header>
 <nav id="views" class="views" aria-label="What to look at" hidden></nav>
 <div id="banner" class="banner" role="status" hidden></div>
@@ -25,6 +31,23 @@
 </main>
 </div>
 </div>
+<dialog id="review-settings" class="review-settings" aria-labelledby="review-settings-heading">
+<h2 id="review-settings-heading">Review settings</h2>
+<label for="review-appearance">Appearance</label>
+<select id="review-appearance" aria-describedby="review-appearance-hint" autofocus>
+<option value="system">System</option>
+<option value="light">Light</option>
+<option value="dark">Dark</option>
+</select>
+<p id="review-appearance-hint" class="quiet">System follows your device's appearance. Your choice is remembered in this browser.</p>
+<p id="review-settings-status" class="quiet" role="status"></p>
+<div id="review-mode-settings"></div>
+<details class="review-disclosure font-licenses">
+<summary>Font licenses</summary>
+<div class="disclosure-body quiet">SIL OFL 1.1: <a href="/fonts/OFL-CourierPrime.txt">Courier Prime</a> · <a href="/fonts/OFL-Atkinson.txt">Atkinson Hyperlegible</a></div>
+</details>
+<div class="row"><button id="review-settings-close" type="button">Done</button></div>
+</dialog>
 <div id="live" class="sr-only" role="status" aria-live="polite"></div>
 <noscript><p class="quiet">This page needs JavaScript to show your drafts.</p></noscript>
 </body>

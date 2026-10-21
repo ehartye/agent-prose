@@ -1,0 +1,193 @@
+{
+  "root": "<tmp>",
+  "elapsedSeconds": 7.945,
+  "taskA": {
+    "sourceBytes": 112,
+    "beforeSha256": "f66a2cbe4ff3fdc03c39d3addef8c157d33681928a0f4ee712634c3db025eac1",
+    "afterSha256": "f66a2cbe4ff3fdc03c39d3addef8c157d33681928a0f4ee712634c3db025eac1",
+    "byteIdentical": true,
+    "termCandidates": [
+      {
+        "quote": "diffusion",
+        "start": 29,
+        "end": 38,
+        "prefix": "Movement\nParticles spread by ",
+        "suffix": ". Diffusion can cause net spreading down",
+        "id": "pc1.29.38.df9be952a0c2e4e0c55000243359702e1e2ad3abba40270e38fb29b2dbe31792"
+      },
+      {
+        "quote": "Diffusion",
+        "start": 40,
+        "end": 49,
+        "prefix": "Movement\nParticles spread by diffusion. ",
+        "suffix": " can cause net spreading down a concentr",
+        "id": "pc1.40.49.841e30a8c7b9fa9f15486a648ffcbf2a20cd60a8ac4cf99f1b10b17bc9cad611"
+      }
+    ],
+    "sentenceCandidate": {
+      "quote": "Diffusion can cause net spreading down a concentration gradient.",
+      "start": 40,
+      "end": 104,
+      "id": "pc1.40.104.5790d9efbfa5b350fb2d2d11333ed3a381840f83d2eadd310749a12ae7f1795b"
+    },
+    "states": [
+      {
+        "id": "first-diffusion-concept",
+        "state": "draft",
+        "resolution": "exact"
+      },
+      {
+        "id": "second-sentence-highlight",
+        "state": "draft",
+        "resolution": "exact"
+      },
+      {
+        "id": "second-sentence-explanation",
+        "state": "draft",
+        "resolution": "exact"
+      }
+    ],
+    "reload": {
+      "file": "<tmp>\\task-a\\concepts.json",
+      "revision": "47d6daed57ba16dbe6a406c54a46135f6f0e06665546abe0f8ca4351baf01ee0",
+      "list": {
+        "id": "core",
+        "concepts": [
+          "diffusion"
+        ]
+      },
+      "concepts": [
+        {
+          "id": "diffusion",
+          "label": "diffusion",
+          "definition": "Net spreading from higher to lower concentration",
+          "definitionSource": "User-supplied definition",
+          "uid": "urn:uuid:6dd1306e-8304-8589-a244-5a7568f9fcff"
+        }
+      ]
+    },
+    "preview": {
+      "session": "ec0499ce-ca7d-43d8-98a3-9e67c5d7acb4",
+      "id": "ec0499ce-ca7d-43d8-98a3-9e67c5d7acb4",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "open",
+      "running": true,
+      "cursor": 3,
+      "revision": "c06ca0acf6bb733b8d859d23779bd9c592cf2d33d9b0ef6c9e1cb3d0c3c11891",
+      "counts": {
+        "draft": 3
+      }
+    }
+  },
+  "taskB": {
+    "sourceBytes": 37,
+    "beforeSha256": "105a274348fba631a884c01a0546ad52e1657dc952bf6298b1618b7249fe1c57",
+    "afterSha256": "105a274348fba631a884c01a0546ad52e1657dc952bf6298b1618b7249fe1c57",
+    "byteIdentical": true,
+    "state": [
+      {
+        "id": "wrong-supplied-definition",
+        "state": "rejected",
+        "body": "particles stop moving at equilibrium",
+        "resolution": "exact"
+      }
+    ],
+    "preview": {
+      "session": "88db49d6-4199-458f-b6c6-c285ea36be60",
+      "id": "88db49d6-4199-458f-b6c6-c285ea36be60",
+      "localUrl": "<preview-url>",
+      "pid":0,
+      "port":0,
+      "state": "open",
+      "running": true,
+      "cursor": 2,
+      "revision": "8225b47566fb5c0ef823a01e3bcc758e9d61b320bafdf4c1e9f2ef1ca4cacbe4",
+      "counts": {
+        "rejected": 1
+      }
+    }
+  },
+  "exportCommandsRun": 0,
+  "previewHttpChecks": [
+    {
+      "task": "A",
+      "htmlStatus": 200,
+      "title": "Annotation desk · Prose",
+      "stateStatus": 200,
+      "sessionState": "open",
+      "annotationStates": [
+        {
+          "id": "first-diffusion-concept",
+          "state": "draft",
+          "range": {
+            "start": 29,
+            "end": 38
+          }
+        },
+        {
+          "id": "second-sentence-highlight",
+          "state": "draft",
+          "range": {
+            "start": 40,
+            "end": 104
+          }
+        },
+        {
+          "id": "second-sentence-explanation",
+          "state": "draft",
+          "body": "Diffusion is net spreading from higher to lower concentration.",
+          "range": {
+            "start": 40,
+            "end": 104
+          }
+        }
+      ],
+      "problems": []
+    },
+    {
+      "task": "B",
+      "htmlStatus": 200,
+      "title": "Annotation desk · Prose",
+      "stateStatus": 200,
+      "sessionState": "open",
+      "annotationStates": [
+        {
+          "id": "wrong-supplied-definition",
+          "state": "rejected",
+          "body": "particles stop moving at equilibrium",
+          "range": {
+            "start": 0,
+            "end": 36
+          }
+        }
+      ],
+      "problems": []
+    }
+  ],
+  "previewsClosed": true,
+  "discovery": {
+    "callsBeforeExecution": 4,
+    "approach": [
+      "README and --help",
+      "annotation/concepts --help and capabilities",
+      "nested command help",
+      "schema, concepts, store and workbench source"
+    ],
+    "errors": [],
+    "timing": "Execution harness took 7.945 seconds. Discovery wall-clock duration was not timed."
+  },
+  "finalSourceChecks": {
+    "taskA": {
+      "bytes": 112,
+      "hash": "f66a2cbe4ff3fdc03c39d3addef8c157d33681928a0f4ee712634c3db025eac1",
+      "unchanged": true
+    },
+    "taskB": {
+      "bytes": 37,
+      "hash": "105a274348fba631a884c01a0546ad52e1657dc952bf6298b1618b7249fe1c57",
+      "unchanged": true
+    }
+  }
+}

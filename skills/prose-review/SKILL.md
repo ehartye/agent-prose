@@ -1,7 +1,7 @@
 ---
 name: prose-review
-description: Let the owner choose between rewrites with agent-prose - variant sets along named directions, sealed predictions of their pick, a reading page for the owner's phone or laptop, and picks recorded to learn their taste.
-when_to_use: Use when the owner should choose between versions - asked for several options, alternatives, "give me a few takes", a punch-up pass with options, or a pick between tones - or when the owner wants to read, hear or compare options on their phone or laptop, or asks for a link to review drafts, or when someone asks what the owner usually prefers or how often the agent guessed their pick. Writing a single draft is prose-script, prose-speech, prose-dialog, prose-instruct or prose-formal; joke quality inside an option is prose-comedy; checking one draft is prose lint.
+description: Let the owner choose between stylistic rewrites with agent-prose - variant sets along named directions, sealed predictions of their pick, a reading page for the owner's phone or laptop, and picks recorded to learn their taste. Grade-level comparisons use prose-reading-level.
+when_to_use: Use when the owner should choose between stylistic versions - asked for several options, alternatives, "give me a few takes", a punch-up pass with options, or a pick between tones - or wants to read, hear or compare those options on their phone or laptop, asks for a link to review drafts, or asks what the owner usually prefers or how often the agent guessed their pick. Grade-level comparisons use prose-reading-level; annotation review uses prose-annotation-review. Writing a single draft uses its genre skill; joke quality inside an option is prose-comedy; checking one draft is prose lint.
 ---
 # prose-review
 
@@ -9,8 +9,8 @@ when_to_use: Use when the owner should choose between versions - asked for sever
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 Every command except `set new` finds the project from the current directory: run inside the project or pass `--dir <project>`. `taste stats` needs a project unless `--all-projects`.
 
-Left alone, you converge: options come back as variations on one idea, and every judgement of
-taste is yours. This skill puts the choice with the owner and makes the options measurably differ.
+Left alone, you converge: options come back as variations on one idea, and every judgement of taste is yours. This skill puts the choice with the owner and makes the options measurably differ.
+For grade-level step-down/step-up adaptations, use `prose-reading-level` and its [comparison workflow](../prose-reading-level/references/comparison.md) to read, edit and choose supplied versions without predictions or taste scoring. Use the set loop below for stylistic directions.
 
 ## The loop
 
