@@ -74,6 +74,13 @@ The opt-in `readability` report identifies its paragraph scope, method, sample l
 
 [Reference excerpts](skills/prose-teach/references/examples.md) include public-domain standards-selected texts across the school bands and an actual passage assessed in a simplification study, with attribution and reuse terms. The [adaptation reference](skills/prose-reading-level/references/reading-level.md) explains the evidence and limits. These features require agent-prose 0.10.0 or later; update the plugin and run `/agent-prose:prose-setup`. The [Yoda audit](docs/research/2026-10-20-yoda/README.md) records paired checks and their limits; educator and intended-reader testing remain separate.
 
+To review a source beside one to three reading-level adaptations, prepare separate Markdown files and
+use `prose compare create source.md grade-6.md grade-9.md grade-12.md --dir <project>`, then
+`prose compare open <id> --dir <project>`. The shared review UI provides independent reading columns,
+body editing and a saved version choice. The source stays read-only. Intended audience, requested
+reading demand and formula diagnostic remain separate. See the [comparison workflow](skills/prose-reading-level/references/comparison.md)
+for revision checks, stale choices and display limits. This workbench is included in 0.11.0.
+
 ## Annotations
 
 Ask “Annotate this lesson using our core vocabulary list” or “Preview these notes and let me reject

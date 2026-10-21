@@ -3,9 +3,10 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { request } from 'node:http';
 import { chromium } from 'playwright';
+import { parse, stringify } from 'yaml';
 import { reviewPage } from '../src/reading/assets.ts';
 import { startAnnotationPreview, getAnnotationPreviewStatus, getAnnotationFeedback, closeAnnotationPreview, openAnnotationPreview } from '../src/annotation/workbench.ts';
-import { createAnnotationFile, findCandidates, proposeAnnotations, inspectAnnotationFile, compileAnnotations } from '../src/annotation/store.ts';
+import { createAnnotationFile, findCandidates, proposeAnnotations, inspectAnnotationFile, compileAnnotations, decideAnnotation } from '../src/annotation/store.ts';
 import { tmp, useTmp, useTempHome } from './owner-helpers.ts';
 import { ReadingServer } from '../src/reading/server.ts';
 import { seedBatch, makeQueue } from './reading-batch-helpers.ts';
@@ -35,6 +36,47 @@ async function api(s: Awaited<ReturnType<typeof seed>>, path: string, body?: unk
 }
 
 describe('annotation workbench', () => {
+  it('keeps publication note and destination links inside the sandbox after appearance changes', async () => {
+    const s=await seed();
+    const paragraphs=Array.from({length:40},(_,i)=>`Observation ${i+1} records particle motion.\n`).join('\n');
+    writeFileSync(s.source,readFileSync(s.source,'utf8')+'\n'+paragraphs+'\nThe destination passage describes an observation.\n\n'+paragraphs);
+    const sidecar=parse(readFileSync(s.file,'utf8'));
+    sidecar.targets=[{id:'observation',target:{quote:'The destination passage describes an observation.'}}];
+    writeFileSync(s.file,stringify(sidecar));
+    let inspection=proposeAnnotations(s.file,[{id:'reference',kind:'link',target:{quote:'Diffusion can be observed.'},body:'Read the observation.',destination:{document:sidecar.document.handle,target:'observation'}}]);
+    for(const annotation of inspection.annotations)inspection=decideAnnotation(s.file,{id:annotation.id,action:'accept',expectedRevision:inspection.revision});
+    const compiled=compileAnnotations(s.file),source=readFileSync(s.source,'utf8'),annotations=readFileSync(s.file,'utf8');
+    const noteId='note-'+compiled.bundle.annotations.find(a=>a.handle==='reference')!.id;
+    const destinationId='passage-'+compiled.bundle.documents[0].targets.observation.id;
+    const browser=await chromium.launch({headless:true});
+    try {
+      const page=await browser.newPage({viewport:{width:1280,height:850}});page.setDefaultTimeout(5000);
+      await page.goto(s.server.localUrl);await page.getByRole('button',{name:'Publication',exact:true}).click();
+      const preview=page.frameLocator('#publication');
+      const frameURL=()=>page.frames().find(frame=>frame!==page.mainFrame())?.url();
+      const targetIsInView=async(id:string)=>preview.locator(`[id="${id}"]`).evaluate(el=>{const rect=el.getBoundingClientRect();return rect.top>=0&&rect.top<el.ownerDocument.defaultView!.innerHeight;});
+      for(const theme of ['light','dark']) {
+        await page.getByRole('button',{name:'Review settings',exact:true}).click();
+        await page.getByRole('combobox',{name:'Appearance',exact:true}).selectOption(theme);
+        await page.keyboard.press('Escape');
+        await expect.poll(()=>preview.locator('html').getAttribute('data-theme')).toBe(theme);
+        await preview.getByRole('link',{name:'link: Diffusion can be observed.',exact:true}).click();
+        await expect.poll(frameURL).toBe('about:srcdoc#'+noteId);
+        expect(await targetIsInView(noteId)).toBe(true);
+        await preview.getByRole('link',{name:'Open reference',exact:true}).click();
+        await expect.poll(frameURL).toBe('about:srcdoc#'+destinationId);
+        expect(await targetIsInView(destinationId)).toBe(true);
+        expect(page.url()).toBe(s.server.localUrl);
+        expect(await page.locator('#publication').getAttribute('sandbox')).toBe('');
+      }
+      expect(compiled.html).toContain(`href="#${noteId}"`);
+      expect(compiled.html).toContain(`href="#${destinationId}"`);
+      expect(compiled.html).not.toContain('href="about:srcdoc#');
+      expect(compileAnnotations(s.file).html).toBe(compiled.html);
+      expect(readFileSync(s.source,'utf8')).toBe(source);
+      expect(readFileSync(s.file,'utf8')).toBe(annotations);
+    }finally{await browser.close();}
+  },30_000);
   it('takes a phone reader straight to the selected editor and back to the source', async () => {
     const s=await seed({concepts:true}),browser=await chromium.launch({headless:true});
     try {
@@ -383,7 +425,7 @@ describe('annotation workbench', () => {
       await page.getByRole('button', { name: 'Publication', exact: true }).click();
       await page.frameLocator('#publication').getByRole('note').waitFor();
       expect(await page.locator('#publication').getAttribute('sandbox')).toBe('');
-      expect(await page.locator('#publication').getAttribute('srcdoc')).toBe(compileAnnotations(s.file).html);
+      expect(await page.locator('#publication').getAttribute('srcdoc')).toBe(compileAnnotations(s.file).html.replaceAll('href="#','href="about:srcdoc#'));
       expect(await page.frameLocator('#publication').locator('img').count()).toBe(0);
       await page.reload();
       await page.getByRole('button', { name: /diffusion.*definition/i }).click();

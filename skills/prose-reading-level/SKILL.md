@@ -1,6 +1,6 @@
 ---
 name: prose-reading-level
-description: Draft or adapt prose for U.S. grades 4–12 or a specified reader profile, including an average U.S. high school freshman or ninth grader. Use for grade-level writing and reading-level rewrites while preserving meaning.
+description: Draft or adapt prose for U.S. grades 4–12 or a specified reader profile, including an average U.S. high school freshman or ninth grader. Compare step-down and step-up versions beside their source while preserving meaning.
 when_to_use: Use when asked to write for a school grade, average U.S. high school freshman, reading level or specified reader proficiency, or adapt language for those readers. Teaching a lesson also uses prose-teach. An academic abstract or procedure keeps its existing genre skill; grade-one decodability and CEFR or Lexile certification need distinct support.
 ---
 # prose-reading-level
@@ -19,6 +19,10 @@ and the intellectual goal. Age, school placement, reading demand and prior knowl
 Read [the adaptation reference](references/reading-level.md) before drafting or revising.
 [Source-backed examples](../prose-teach/references/examples.md) show actual assessed material and
 standards-selected text; use their stated purpose rather than copying a score or tone blindly.
+
+When asked to compare grade-level versions, use the [source-and-adaptations workbench](references/comparison.md).
+Prepare one to three separate adaptations, then let the owner read, edit and choose in the shared review UI.
+The comparison records a choice without overwriting the source or adding a taste-model verdict.
 
 ## Preserve, adapt, review
 

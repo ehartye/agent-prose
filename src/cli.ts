@@ -17,6 +17,7 @@ import { registerVerseCommands } from './commands/verse.ts';
 import { registerRenderCommands } from './commands/render.ts';
 import { registerDialogCommands } from './commands/dialog.ts';
 import { registerAnnotationCommands } from './commands/annotation.ts';
+import { registerCompareCommands } from './commands/compare.ts';
 
 export function buildProgram(io: Io): Command {
   const program = new Command('prose')
@@ -39,6 +40,7 @@ export function buildProgram(io: Io): Command {
   registerRenderCommands(program, io);
   registerDialogCommands(program, io);
   registerAnnotationCommands(program, io);
+  registerCompareCommands(program, io);
   return program;
 }
 

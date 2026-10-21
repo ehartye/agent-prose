@@ -9,8 +9,8 @@ when_to_use: Use when the owner should choose between versions - asked for sever
 directories above this file. If a command prints `E_RUNTIME_MISSING`, run the prose-setup skill first.
 Every command except `set new` finds the project from the current directory: run inside the project or pass `--dir <project>`. `taste stats` needs a project unless `--all-projects`.
 
-Left alone, you converge: options come back as variations on one idea, and every judgement of
-taste is yours. This skill puts the choice with the owner and makes the options measurably differ.
+Left alone, you converge: options come back as variations on one idea, and every judgement of taste is yours. This skill puts the choice with the owner and makes the options measurably differ.
+For grade-level step-down/step-up adaptations, use `prose-reading-level` and its [comparison workflow](../prose-reading-level/references/comparison.md) to read, edit and choose supplied versions without predictions or taste scoring. Use the set loop below for stylistic directions.
 
 ## The loop
 
