@@ -62,16 +62,19 @@
     el.replaceChildren(h('div',{class:'msg'},message,hint?h('span',{class:'hint',text:hint}):null),btn('Dismiss',()=>{el.hidden=true;},'link'));
     el.dataset.tone=tone;el.hidden=false;
   }
-  function queueItem({who,where,status,state='',letter='',current=false,label,onClick,attrs={}}) {
-    return btn('',onClick,'qitem',{'aria-current':current?'true':undefined,...(label?{'aria-label':label}:{}),...attrs},
+  function queueItem({who,where,status,tag,state='',letter='',current=false,label,onClick,attrs={}}) {
+    return btn('',onClick,'qitem'+(tag?' qitem-passage':''),{'aria-current':current?'true':undefined,...(label?{'aria-label':label}:{}),...attrs},
       h('span',{class:'state '+state,'data-l':letter,'aria-hidden':'true'}),
-      h('span',{class:'qtext'},h('span',{class:'who',text:who}),h('span',{class:'where',text:where}),h('span',{class:'qstatus',text:status})));
+      h('span',{class:'qtext'},h('span',{class:'who',text:who}),h('span',{class:'where',text:where}),tag?h('span',{class:'qstatus'},h('span',{class:'queue-tag',text:tag}),h('span',{'data-state':status,text:status})):h('span',{class:'qstatus',text:status})));
+  }
+  function disclosure(label,props,...children) {
+    return h('details',{...(props||{}),class:'review-disclosure'+(props?.class?' '+props.class:'')},h('summary',{text:label}),h('div',{class:'disclosure-body'},...children));
   }
   function fontsFooter() {
     if(document.querySelector('.site-foot'))return;
     document.body.appendChild(h('footer',{class:'site-foot'},'Fonts: SIL OFL 1.1 - ',h('a',{href:'/fonts/OFL-CourierPrime.txt',text:'Courier Prime'}),' - ',h('a',{href:'/fonts/OFL-Atkinson.txt',text:'Atkinson Hyperlegible'})));
   }
-  window.ProseReview=Object.freeze({h,button:btn,notice,queueItem,fontsFooter,
+  window.ProseReview=Object.freeze({h,button:btn,notice,queueItem,disclosure,fontsFooter,
     registerMode(name,start){if(modes.has(name))throw Error('Duplicate review mode');modes.set(name,start);},
     startMode(name){const start=modes.get(name);if(!start)throw Error('Unknown review mode');start();}
   });

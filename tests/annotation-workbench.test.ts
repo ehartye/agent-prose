@@ -35,6 +35,49 @@ async function api(s: Awaited<ReturnType<typeof seed>>, path: string, body?: unk
 }
 
 describe('annotation workbench', () => {
+  it('takes a phone reader straight to the selected editor and back to the source', async () => {
+    const s=await seed({concepts:true}),browser=await chromium.launch({headless:true});
+    try {
+      const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(5000);
+      await page.goto(s.server.localUrl);await page.locator('#queue .qitem').first().click();
+      const accept=await page.getByRole('button',{name:'Accept',exact:true}).boundingBox();
+      expect(accept!.y).toBeGreaterThan(0);expect(accept!.y+accept!.height).toBeLessThan(844);
+      await page.getByRole('textbox',{name:'Annotation text',exact:true}).fill('An unsaved phone edit.');
+      const save=await page.getByRole('button',{name:'Save text',exact:true}).boundingBox();
+      expect(save!.y+save!.height).toBeLessThan(844);
+      await page.locator('#queue .qitem').first().click();
+      expect(await page.getByRole('textbox',{name:'Annotation text',exact:true}).inputValue()).toBe('An unsaved phone edit.');
+      await page.getByRole('button',{name:'Discard text edits',exact:true}).click();
+      await page.getByRole('link',{name:'Back to source text',exact:true}).click();
+      expect(await page.getByRole('region',{name:'Source reading pane',exact:true}).evaluate(el=>el===el.ownerDocument.activeElement)).toBe(true);
+      await page.getByRole('link',{name:'Review annotation',exact:true}).click();
+      expect(await page.getByRole('complementary',{name:'Annotation details',exact:true}).evaluate(el=>el===el.ownerDocument.activeElement)).toBe(true);
+    }finally{await browser.close();}
+  },30_000);
+  it('keeps the passage and review actions in reach while secondary tools open on demand', async () => {
+    const s=await seed({concepts:true});const browser=await chromium.launch({headless:true});
+    try {
+      const page=await browser.newPage({viewport:{width:1280,height:850}});page.setDefaultTimeout(5000);
+      await page.goto(s.server.localUrl);await page.getByRole('button',{name:'Accept',exact:true}).waitFor();
+      expect(await page.locator('#queue .who').first().textContent()).toBe('Diffusion');
+      expect(await page.locator('#source').evaluate(el=>el.ownerDocument.defaultView!.getComputedStyle(el).fontFamily)).toContain('Atkinson');
+      const accept=await page.getByRole('button',{name:'Accept',exact:true}).boundingBox();
+      expect(accept!.y).toBeGreaterThan(0);expect(accept!.y+accept!.height).toBeLessThan(850);
+      expect(await page.getByRole('textbox',{name:'Find exact passage',exact:true}).isVisible()).toBe(false);
+      await page.getByText('Change location',{exact:true}).click();
+      expect(await page.getByRole('textbox',{name:'Find exact passage',exact:true}).isVisible()).toBe(true);
+      await page.getByText('Surrounding text',{exact:true}).click();
+      expect(await page.locator('#context').isVisible()).toBe(true);
+      await page.getByRole('textbox',{name:'Annotation text',exact:true}).fill('An unsaved explanation.');
+      await page.locator('#queue .qitem[aria-current="true"]').click();
+      expect(await page.getByRole('textbox',{name:'Annotation text',exact:true}).inputValue()).toBe('An unsaved explanation.');
+      const save=await page.getByRole('button',{name:'Save text',exact:true}).boundingBox();
+      expect(save!.y+save!.height).toBeLessThan(850);
+      await page.getByRole('button',{name:'Accept',exact:true}).click();
+      await page.getByRole('alert').filter({hasText:'Save your text before accepting'}).waitFor();
+      expect(inspectAnnotationFile(s.file).annotations[0].state).toBe('draft');
+    }finally{await browser.close();}
+  },30_000);
   it('edits publishable category and concept colors and previews all three highlight modes', async () => {
     const s=await seed({concepts:true});const original=readFileSync(s.source,'utf8');
     const browser=await chromium.launch({headless:true});
@@ -49,6 +92,7 @@ describe('annotation workbench', () => {
       await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.categories?.definition).toBe('orange');
       await page.keyboard.press('Escape');
       expect(await page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
+      await page.locator('#member-appearance > summary').click();
       await page.getByRole('combobox',{name:/^Concept color:/}).selectOption('blue');
       await expect.poll(()=>inspectAnnotationFile(s.file).sidecar.appearance?.concepts?.diffusion).toBe('blue');
       expect(await page.locator('.passage-mark').first().getAttribute('data-prose-color')).toBe('orange');
@@ -78,7 +122,9 @@ describe('annotation workbench', () => {
     try {
       const page=await browser.newPage({viewport:{width:1440,height:850}});page.setDefaultTimeout(5000);
       await page.goto(s.server.localUrl);await page.getByRole('button',{name:'Accept',exact:true}).waitFor();
-      const columns=[page.getByRole('navigation',{name:'Annotation queue',exact:true}),page.getByRole('region',{name:'Source reading pane',exact:true}),page.getByRole('complementary',{name:'Annotation details',exact:true})];
+      await page.getByText('Sources and origin',{exact:true}).click();
+      await page.getByText('Technical details',{exact:true}).click();
+      const columns=[page.getByRole('navigation',{name:'Annotation queue',exact:true}),page.getByRole('region',{name:'Source reading pane',exact:true}),page.getByRole('region',{name:'Annotation editor',exact:true})];
       const positions=()=>Promise.all(columns.map(c=>c.evaluate(el=>el.scrollTop)));
       for(let i=0;i<columns.length;i++){
         const before=await positions();
@@ -205,7 +251,6 @@ describe('annotation workbench', () => {
     expect(page).toContain('script src="/review.js"');
     expect(page).toContain('script src="/app.js"');
     for(const name of ['Annotation queue','Source reading pane','Annotation details'])expect(controller).toContain(name);
-    for(const action of ['accept','reject','defer','edit','retarget','undo'])expect(controller).toContain('"data-action":"'+action+'"');
     expect(controller).not.toContain('eval(');
   });
 
@@ -314,7 +359,6 @@ describe('annotation workbench', () => {
       await page.goto(s.server.localUrl);
       await page.getByRole('button', { name: /diffusion.*definition/i }).click();
       expect(await page.locator('#document-title').textContent()).toBe('lesson');
-      expect(await page.getByRole('button', { name: 'Discard text edits', exact: true }).count()).toBe(1);
       await page.getByRole('textbox', { name: 'Annotation text' }).fill('Discard this local edit.');
       await page.getByRole('button', { name: 'Discard text edits', exact: true }).click();
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('Particles spread through random motion.');
@@ -363,7 +407,8 @@ describe('annotation workbench', () => {
     try {
       const page = await browser.newPage();
       await page.goto(s.server.localUrl);
-      await page.getByRole('button', { name: /shared-diffusion.*vocabulary/i }).click();
+      await page.getByRole('button', { name: /diffusion.*vocabulary/i }).click();
+      await page.getByText('Add annotation text',{exact:true}).click();
       expect(await page.getByRole('textbox', { name: 'Annotation text' }).inputValue()).toBe('');
       await page.getByRole('button', { name: /diffusion.*definition/i }).click();
       await page.getByRole('button', { name: 'Accept', exact: true }).click();

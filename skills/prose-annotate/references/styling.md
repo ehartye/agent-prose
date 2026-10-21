@@ -144,5 +144,9 @@ the cookie contains only the appearance preference, never review tokens or decis
 On desktop widths above 1150 CSS pixels, the queue, source and details each have their own scroll
 container. The layout constrains the desk to the viewport, lets flex/grid children shrink with
 `min-height: 0`, and applies `overflow: auto` plus `overscroll-behavior: contain` to the columns.
-Narrow screens stack the panes and use normal document scrolling. Focusable, labeled containers
-support keyboard scrolling; no JavaScript wheel interception is needed.
+The inspector scrolls its editor independently and keeps decisions in a fixed footer. Optional
+context, appearance, review notes and location tools use native disclosures. Narrow screens stack
+the panes, provide direct source/editor links and bring the editor into view when a passage is
+selected. The narrow inspector fits within the viewport so decisions and unsaved-text controls
+stay reachable. Focusable, labeled containers support keyboard scrolling; no JavaScript wheel
+interception is needed. Passage queue and disclosure primitives belong to the shared review layer.
