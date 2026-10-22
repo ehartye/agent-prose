@@ -17,6 +17,67 @@ async function seed() {
   return { ...p, file, input, state, url: `http://127.0.0.1:${info.port}/a/${state.id}?t=${info.token}` };
 }
 describe('passage assessment workbench', () => {
+  it('saves suggestion dispositions and notes across navigation and a new browser session without changing snapshots', async () => {
+    const s = await seed(), snapshot = readFileSync(s.file), browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1600, height: 900 } }); page.setDefaultTimeout(5000);
+      await page.goto(s.url);
+      const proposal = page.locator('.assessment-proposal').first();
+      await proposal.getByRole('button', { name: 'Accept', exact: true }).waitFor();
+      await proposal.getByText('Add a review note', { exact: true }).click();
+      await proposal.getByLabel('Review note', { exact: true }).fill('Keep the uncertainty.');
+      await proposal.getByRole('button', { name: 'Accept', exact: true }).click();
+      await proposal.getByText('Accepted', { exact: true }).waitFor();
+      expect(await proposal.getByRole('button', { name: 'Accept', exact: true }).evaluate(el => el === el.ownerDocument.activeElement)).toBe(true);
+      expect(await proposal.getByRole('button', { name: 'Save note', exact: true }).isDisabled()).toBe(true);
+      await page.getByRole('navigation', { name: 'Passages' }).getByRole('button', { name: /Passage 7,/ }).click();
+      await proposal.getByRole('button', { name: 'Reject', exact: true }).click();
+      await proposal.getByText('Rejected', { exact: true }).waitFor();
+      await page.close();
+      const fresh = await browser.newPage({ viewport: { width: 1600, height: 900 } }); fresh.setDefaultTimeout(5000);
+      await fresh.goto(s.url);
+      const first = fresh.locator('.assessment-proposal').first();
+      await first.getByText('Accepted', { exact: true }).waitFor();
+      expect(await first.getByLabel('Review note', { exact: true }).inputValue()).toBe('Keep the uncertainty.');
+      await first.getByRole('button', { name: 'Reset to pending', exact: true }).click();
+      await first.getByText('Pending', { exact: true }).waitFor();
+      await first.getByRole('button', { name: 'Defer', exact: true }).click();
+      await first.getByText('Deferred', { exact: true }).waitFor();
+      await fresh.getByRole('button', { name: 'Batch overview', exact: true }).click();
+      expect(await fresh.getByRole('table', { name: 'Passage recommendations' }).textContent()).toContain('1 deferred');
+      const saved = await assessmentCommand(['show', s.state.id, '--dir', s.project]);
+      expect(saved.reviewCounts).toMatchObject({ deferred: 1, rejected: 1, pending: 7 });
+      expect(readFileSync(s.file)).toEqual(snapshot);
+    } finally { await browser.close(); }
+  }, 30_000);
+  it('retains unsaved notes through navigation and a stale decision, then reloads saved dispositions explicitly', async () => {
+    const s = await seed(), browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1600, height: 900 } }); page.setDefaultTimeout(5000);
+      await page.goto(s.url); const proposal = page.locator('.assessment-proposal').first();
+      await proposal.getByText('Add a review note', { exact: true }).click();
+      await proposal.getByLabel('Review note', { exact: true }).fill('My unsaved feedback.');
+      await page.getByRole('navigation', { name: 'Passages' }).getByRole('button', { name: /Passage 7,/ }).click();
+      await page.getByRole('navigation', { name: 'Passages' }).getByRole('button', { name: /Passage 1,/ }).click();
+      expect(await proposal.getByLabel('Review note', { exact: true }).inputValue()).toBe('My unsaved feedback.');
+      await assessmentCommand(['disposition', s.state.id, 'p1', s.state.passages[0].report.proposals[0].id, 'rejected', '--note', 'Another reviewer.', '--revision', s.state.revision, '--dir', s.project]);
+      await proposal.getByRole('button', { name: 'Accept', exact: true }).click();
+      await page.locator('#notice').waitFor();
+      expect(await page.locator('#notice').textContent()).toContain('changed elsewhere');
+      expect(await proposal.getByLabel('Review note', { exact: true }).inputValue()).toBe('My unsaved feedback.');
+      await page.getByRole('button', { name: 'Review settings' }).click();
+      await page.getByRole('button', { name: 'Reload saved decisions', exact: true }).click();
+      await proposal.getByText('Rejected', { exact: true }).waitFor();
+      expect(await proposal.getByLabel('Review note', { exact: true }).inputValue()).toBe('My unsaved feedback.');
+      expect(await proposal.getByText('Another reviewer.', { exact: true }).isVisible()).toBe(true);
+      await proposal.getByRole('button', { name: 'Save note', exact: true }).click();
+      await expect.poll(async () => (await assessmentCommand(['show', s.state.id, '--dir', s.project])).passages[0].report.proposals[0].decision.note).toBe('My unsaved feedback.');
+      await proposal.getByLabel('Review note', { exact: true }).fill('A draft I will discard.');
+      await proposal.getByRole('button', { name: 'Use saved note', exact: true }).click();
+      expect(await proposal.getByLabel('Review note', { exact: true }).inputValue()).toBe('My unsaved feedback.');
+      expect(await proposal.getByRole('button', { name: 'Save note', exact: true }).isDisabled()).toBe(true);
+    } finally { await browser.close(); }
+  }, 30_000);
   it('jumps among ten independent assessments, preserves location and exposes pending reports and the overview', async () => {
     const s = await seed(), browser = await chromium.launch({ headless: true });
     try {

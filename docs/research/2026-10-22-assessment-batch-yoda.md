@@ -33,3 +33,18 @@ theme persistence, pending/overview states, inert markup, source preservation, a
 implementation review. That review found a mobile fragment collision: jumping to the report
 replaced the selected passage state. A regression reproduced it before the jump was changed to
 scroll and focus without replacing the passage fragment.
+
+## Suggestion disposition follow-up
+
+A fresh same-turn pair checked recording several dispositions and a rejection note, handling a stale
+revision plus an explicit source-application request, and a student-answer grading near miss. The
+with-guidance arm supplied `assessment show/disposition`, actual-id lookup, the four statuses and
+fresh revisions between writes. The control handled intent and conflicts competently but acknowledged
+not knowing exact product controls or commands. Both distinguished acceptance from applying an edit,
+recognized that a separate explicit application request authorizes editing work, and routed student
+scoring away from the reading-suitability rubric. No actual dispositions were claimed by either arm.
+
+The evidence supports the concrete product handoff, not general superiority or automatic triggering.
+Independent implementation review found that conflict reload hid another session's saved note behind
+the preserved draft. A regression reproduced that issue; the viewer now displays both and offers
+Use saved note, while saving explicitly replaces the displayed saved feedback.

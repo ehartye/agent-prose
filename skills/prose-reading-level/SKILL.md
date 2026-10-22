@@ -1,6 +1,6 @@
 ---
 name: prose-reading-level
-description: Assess grade-level suitability for one passage or a batch, with rubric ratings, evidence and proposed changes. Use for a passage selection panel or writing, adapting and comparing U.S. grades 4–12 prose, including an average U.S. high school freshman audience.
+description: Assess grade-level suitability for one passage or a batch, with rubric ratings, evidence and proposed changes. Use for a passage selection panel, suggestion dispositions, or writing, adapting and comparing U.S. grades 4–12 prose, including an average U.S. high school freshman audience.
 when_to_use: Use when asked to evaluate ten passages, jump between passage assessments, assess a passage against a reading rubric, suggest changes for specified reader proficiency, write for a school grade or reading profile, or compare step-down/step-up versions. Teaching also uses prose-teach; an abstract or procedure keeps its genre skill. Grade-one decodability and CEFR or Lexile certification need distinct support.
 ---
 # prose-reading-level
@@ -26,6 +26,9 @@ For multiple passages or a passage selection panel, read [the batch assessment w
 as well. Assess each passage independently against the shared reader/task, then use `prose assessment`
 to open the reports in the shared review workbench. A requested workbench authorizes its local snapshots;
 ordinary inline assessments do not need files. The agent supplies judgments; the CLI validates and displays them.
+The same workbench saves accepted/rejected/deferred dispositions and optional notes per suggestion.
+Acceptance records intent; it does not apply an edit or change the assessment. Read saved decisions with
+`prose assessment show` before proposing a follow-up revision.
 
 Read [the adaptation reference](references/reading-level.md) before drafting or revising.
 [Source-backed examples](../prose-teach/references/examples.md) show actual assessed material and

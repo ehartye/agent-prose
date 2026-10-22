@@ -25,3 +25,26 @@ Add `src/assessment.ts` for validation and immutable storage, `src/commands/asse
 Test real ten-passage navigation, per-passage rubric/evidence/proposals, pending/malformed data, source binding, storage containment, auth/method behavior, selection persistence, independent scroll, narrow layout, shared appearance and inert hostile text. Reuse the existing assessment evidence and shared-UI decisions; the change adds browsing behavior, not a new scientific rubric. A local demo uses ten original passages with disclosed editorial assessments.
 
 The selected approach keeps time focused on one viewer and a small data/CLI boundary. Its main risks are mismatched evidence and misleading assessment status; validation and explicit pending/snapshot labels address them. Complexity is limited to a new domain controller within the current application. Reusing shell and server boundaries follows the established architecture. Maintenance adds one input contract and controller, with no duplicated theme or navigation framework.
+
+## Suggestion dispositions
+
+Each supplied proposal can be accepted, rejected, deferred, or reset to pending. An optional review
+note accompanies the saved disposition. Decisions persist across passage changes and browser sessions;
+the passage queue and overview show accepted/rejected/deferred/pending suggestion counts separately
+from whether a passage has an assessment. Acceptance records intent and does not apply edits, alter
+the source or rubric, or certify suitability. The same controls support text edits, teaching supports
+and content requests.
+
+Keep immutable batch snapshots unchanged. A separate `<uuid>.review.json` holds current decisions
+bound to the complete snapshot hash and stable, derived passage/proposal identities. `show` returns
+these decisions and a compound revision. Writes use the existing async directory lock and atomic
+replace, require the caller's current revision, and reject stale or mismatched snapshots. The UI
+retains unsaved notes on navigation and conflict, exposes an explicit reload, and never retries a
+stale decision automatically. Reset is reversible disposition, not deletion of source content.
+
+Expose `assessment disposition <id> <passage> <suggestion> <status> --revision <hash> [--note <text>]`
+and authenticated POST `/api/assessment/<uuid>/disposition`, reusing existing token, Host and Origin
+checks. Extend the shared review controller/styles and settings; bump the server API for new routes.
+Verify persistence, reset, notes, per-passage counts, snapshot preservation, conflicting writes,
+cross-passage identity rejection, state containment, authenticated transport, keyboard controls and
+mobile layout. This is a bounded extension of the current local feature, not a release.

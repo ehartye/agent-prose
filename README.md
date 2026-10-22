@@ -67,7 +67,9 @@ In the development checkout, also ask: “Evaluate these ten passages for an ave
 freshman and open a batch review.” The [batch workflow](skills/prose-reading-level/references/assessment-batch.md)
 uses a passage selection panel beside the selected source and its rubric, with a batch overview,
 independent scrolling and the shared appearance settings. The agent supplies the judgments;
-`prose assessment create/open/show` validates, snapshots and displays them. Source text stays unchanged.
+`prose assessment create/open/show` validates, snapshots and displays them. Each suggestion supports
+Accept, Reject, Defer, Reset to pending and a saved review note, also available through
+`prose assessment disposition`. Acceptance records intent while source text stays unchanged.
 This batch workbench is not included in the published 0.12.0 runtime.
 
 Saved Markdown can carry a reader profile. The textbook form also requires teaching goals:

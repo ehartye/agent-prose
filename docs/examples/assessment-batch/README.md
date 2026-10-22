@@ -18,6 +18,8 @@ node scripts/prose.mjs assessment open <returned-id> --dir <demo-project>
 ```
 
 Use the URL returned by `open`. Select any passage on the left; its source and report appear beside
-it. Use Batch overview for a cross-passage list without an averaged grade. The gear uses the shared
+it. Accept, Reject or Defer a suggestion, optionally save a note, or reset it to pending. These
+decisions persist separately from the source/report snapshot. Use Batch overview for a cross-passage
+list without an averaged grade. The gear uses the shared
 System/Light/Dark appearance preference. Source and reports are snapshots; proposing a change does
-not edit or approve the passage. To revise reports, create a new batch from updated input.
+not edit or certify the passage. To revise reports, create a new batch from updated input.
