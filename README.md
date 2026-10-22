@@ -34,7 +34,7 @@ For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headl
 | `prose-dialog` | Game dialogue: quest conversations, branching choices, barks and ambient lines as a checked YAML graph |
 | `prose-instruct` | User instructions, how-to procedures, troubleshooting, help articles and technical docs |
 | `prose-teach` | Textbook explanations, lessons and chapters with learner goals, examples, practice and source-backed reference excerpts |
-| `prose-reading-level` | Passage suitability assessment with evidence-linked rubric ratings and proposed changes; audience adaptation and source/variation comparison |
+| `prose-reading-level` | Single or batch passage suitability assessment, evidence-linked rubric ratings and saved suggestion dispositions; audience adaptation and source/variation comparison |
 | `prose-annotate` | Supplied or assistant-drafted highlights, vocabulary references, definitions, explanations and links for Markdown, static HTML and structured content |
 | `prose-annotation-review` | Local annotation workbench, feedback, acceptance, rejection, body edits, retargeting and approved publication exports |
 | `prose-formal` | Academic and professional prose: abstracts, papers, reports, proposals, memos, email |
@@ -63,14 +63,15 @@ edits or teaching supports. It leaves the source unchanged. Ratings are editoria
 no aggregate grade score or claim of student comprehension. See the [assessment workflow and original
 worked example](skills/prose-reading-level/references/assessment.md). This mode is included in 0.12.0.
 
-In the development checkout, also ask: “Evaluate these ten passages for an average U.S. high school
+Also ask: “Evaluate these ten passages for an average U.S. high school
 freshman and open a batch review.” The [batch workflow](skills/prose-reading-level/references/assessment-batch.md)
 uses a passage selection panel beside the selected source and its rubric, with a batch overview,
 independent scrolling and the shared appearance settings. The agent supplies the judgments;
 `prose assessment create/open/show` validates, snapshots and displays them. Each suggestion supports
 Accept, Reject, Defer, Reset to pending and a saved review note, also available through
 `prose assessment disposition`. Acceptance records intent while source text stays unchanged.
-This batch workbench is not included in the published 0.12.0 runtime.
+Batch assessment and suggestion dispositions require 0.13.0 or later; update the plugin and run
+`/agent-prose:prose-setup`.
 
 Saved Markdown can carry a reader profile. The textbook form also requires teaching goals:
 
