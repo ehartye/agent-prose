@@ -612,3 +612,91 @@ select { min-height: 44px; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1
 @media(forced-colors:active) {
   [data-review-mode="comparison"] .comparison-column[data-chosen="true"] { outline: 2px solid CanvasText; outline-offset: -2px; }
 }
+
+/* Assessment composition: one passage queue, one source, one independent editorial report. */
+[data-review-mode="assessment"] { height: 100dvh; overflow: hidden; }
+[data-review-mode="assessment"] .desk { display: grid; grid-template-columns: 15rem minmax(0,1fr); height: 100%; min-height: 0; }
+[data-review-mode="assessment"] .rail { height: 100%; position: static; min-height: 0; padding: 1rem 0.8rem; overscroll-behavior: contain; scrollbar-gutter: stable; }
+[data-review-mode="assessment"] .rail > button { width: 100%; margin: 0.5rem 0 1rem; font-size: 0.82rem; }
+[data-review-mode="assessment"] .rail label { display: block; font-size: 0.78rem; margin-bottom: 0.3rem; }
+[data-review-mode="assessment"] .rail input { width: 100%; min-height: 44px; background: var(--sheet); border: 1px solid var(--graphite); border-radius: 4px; padding: 0.4rem; }
+[data-review-mode="assessment"] .assessment-batch-title { font: 700 1.05rem/1.35 var(--script); margin: 0.5rem 0; overflow-wrap: anywhere; }
+[data-review-mode="assessment"] .assessment-kicker { font: 700 0.68rem/1.4 var(--script); letter-spacing: 0.04em; color: var(--graphite); margin: 0; }
+[data-review-mode="assessment"] .assessment-found { font-size: 0.75rem; }
+[data-review-mode="assessment"] .qitem { width: 100%; }
+[data-review-mode="assessment"] .qitem[aria-current="true"] .state { background: var(--blue); }
+[data-review-mode="assessment"] .qitem[data-recommendation="revise"] [data-state] { color: var(--red); }
+[data-review-mode="assessment"] .work { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+[data-review-mode="assessment"] .site-head { flex: none; width: 100%; max-width: none; padding: 0.35rem 0.8rem; }
+[data-review-mode="assessment"] .site-head h1 { font-size: 1rem; }
+[data-review-mode="assessment"] .sub { font-size: 0.75rem; }
+[data-review-mode="assessment"] .assessment-picker { display: none; }
+[data-review-mode="assessment"] main { flex: 1; min-height: 0; width: 100%; max-width: none; padding: 0 0.65rem 0.65rem; overflow: hidden; }
+[data-review-mode="assessment"] .notice { flex: none; width: calc(100% - 1.3rem); margin-block: 0.3rem; }
+[data-review-mode="assessment"] .assessment-board { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(21rem,1fr); gap: 0.65rem; height: 100%; min-height: 0; }
+[data-review-mode="assessment"] .assessment-source, [data-review-mode="assessment"] .assessment-inspector { display: flex; flex-direction: column; min-height: 0; margin: 0; padding: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+[data-review-mode="assessment"] .assessment-pane-head { flex: none; padding: 0.75rem 1.15rem 0.6rem; border-bottom: 1px solid var(--rule); }
+[data-review-mode="assessment"] .assessment-pane-head h2 { font: 700 1.05rem/1.35 var(--script); margin: 0.35rem 0 0; overflow-wrap: anywhere; }
+[data-review-mode="assessment"] .assessment-kicker:has(span) { display: flex; justify-content: space-between; gap: 0.5rem; }
+[data-review-mode="assessment"] .assessment-turn { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.45rem; }
+[data-review-mode="assessment"] .assessment-turn button { padding: 0.3rem 0.65rem; font-size: 0.75rem; }
+[data-review-mode="assessment"] .assessment-jump { display: none; }
+[data-review-mode="assessment"] .assessment-source-scroll, [data-review-mode="assessment"] .assessment-inspector-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 1rem 1.15rem 1.5rem; }
+[data-review-mode="assessment"] .assessment-text { max-width: 66ch; margin: 0 auto; font: 1.02rem/1.75 var(--ui); white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-review-mode="assessment"] .assessment-inspector-scroll { font-size: 0.87rem; line-height: 1.6; }
+[data-review-mode="assessment"] .assessment-inspector h3 { font: 700 0.88rem/1.4 var(--script); margin: 1.3rem 0 0.7rem; }
+[data-review-mode="assessment"] .assessment-summary { margin: 0.9rem 0; font-size: 0.97rem; }
+[data-review-mode="assessment"] .assessment-inspector .assessment-pane-head[data-recommendation="revise"] { border-left: 3px solid var(--red); }
+[data-review-mode="assessment"] .assessment-inspector .assessment-pane-head[data-recommendation="ready"] { border-left: 3px solid var(--blue); }
+[data-review-mode="assessment"] .assessment-criterion > summary { font-weight: 700; font-size: 0.82rem; line-height: 1.4; padding-block: 0.55rem; }
+[data-review-mode="assessment"] .assessment-criterion .disclosure-body { padding-bottom: 0.8rem; }
+[data-review-mode="assessment"] blockquote { white-space: pre-wrap; overflow-wrap: anywhere; border-left: 2px solid var(--rule); margin: 0.5rem 0; padding: 0.15rem 0 0.15rem 0.75rem; color: var(--graphite); }
+[data-review-mode="assessment"] .assessment-proposal { border-top: 1px solid var(--rule); padding-block: 0.9rem; }
+[data-review-mode="assessment"] .assessment-proposal h4 { font-size: 0.9rem; margin: 0.3rem 0; }
+[data-review-mode="assessment"] .assessment-proposal-review { margin-top: 0.9rem; }
+[data-review-mode="assessment"] .assessment-decision-state { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.7rem; margin-bottom: 0.5rem; }
+[data-review-mode="assessment"] .assessment-decision-state .quiet { font-size: 0.7rem; }
+[data-review-mode="assessment"] .assessment-proposal[data-disposition="accepted"] .assessment-disposition-status { color: var(--blue); }
+[data-review-mode="assessment"] .assessment-proposal[data-disposition="rejected"] .assessment-disposition-status { color: var(--red); }
+[data-review-mode="assessment"] .decision-buttons { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.4rem; }
+[data-review-mode="assessment"] .decision-buttons button { flex: 1 1 5rem; font-size: 0.8rem; padding: 0.35rem 0.6rem; }
+[data-review-mode="assessment"] .assessment-proposal-review label { display: block; font-size: 0.8rem; margin-bottom: 0.3rem; }
+[data-review-mode="assessment"] .assessment-proposal-review textarea { width: 100%; min-height: 5rem; resize: vertical; padding: 0.6rem; border: 1px solid var(--graphite); border-radius: 4px; background: var(--sheet); }
+[data-review-mode="assessment"] .assessment-note-state { font-size: 0.75rem; }
+[data-review-mode="assessment"] .assessment-saved-note { border: 1px solid var(--rule); border-radius: 4px; padding: 0.5rem 0.7rem; margin-block: 0.6rem; }
+[data-review-mode="assessment"] .assessment-saved-note[hidden] { display: none; }
+[data-review-mode="assessment"] .assessment-batch-progress { font-size: 0.72rem; line-height: 1.5; }
+[data-review-mode="assessment"] .assessment-edit { margin-top: 0.75rem; }
+[data-review-mode="assessment"] .assessment-edit > p { font: 0.68rem var(--script); text-transform: uppercase; }
+[data-review-mode="assessment"] .assessment-hash { font: 0.65rem/1.6 var(--script); overflow-wrap: anywhere; }
+[data-review-mode="assessment"] .assessment-anchors dt { font-weight: 700; margin-top: 0.7rem; }
+[data-review-mode="assessment"] .assessment-anchors dd { margin-left: 0; }
+[data-review-mode="assessment"] .assessment-overview { margin: 0; height: 100%; overflow: auto; padding: 1rem 1.3rem; }
+[data-review-mode="assessment"] .assessment-overview h2 { margin-top: 0; font-family: var(--script); }
+[data-review-mode="assessment"] .assessment-table-wrap { overflow: auto; margin-top: 1rem; }
+[data-review-mode="assessment"] table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+[data-review-mode="assessment"] th, [data-review-mode="assessment"] td { border-bottom: 1px solid var(--rule); padding: 0.7rem; vertical-align: top; }
+[data-review-mode="assessment"] th:first-child { min-width: 9rem; }
+[data-review-mode="assessment"] td:nth-child(2) { min-width: 11rem; }
+@media(max-width:1099px) {
+  [data-review-mode="assessment"] .desk { grid-template-columns: 12.5rem minmax(0,1fr); }
+  [data-review-mode="assessment"] .assessment-board { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+}
+@media(max-width:759px) {
+  [data-review-mode="assessment"] { height: auto; overflow: auto; }
+  [data-review-mode="assessment"] .desk { display: flex; flex-direction: column; height: auto; }
+  [data-review-mode="assessment"] .work { width: 100%; height: auto; }
+  [data-review-mode="assessment"] .rail { display: none; width: 100%; border-right: 0; border-bottom: 1px solid var(--rule); max-height: 65dvh; order: 1; }
+  [data-review-mode="assessment"] .work { display: contents; }
+  [data-review-mode="assessment"] .site-head { order: 0; grid-template-columns: minmax(0,1fr) auto auto; gap: 0.4rem; }
+  [data-review-mode="assessment"] .site-heading { display: block; }
+  [data-review-mode="assessment"] .assessment-picker { display: block; padding: 0.35rem 0.5rem; font-size: 0.73rem; }
+  [data-review-mode="assessment"] [data-picker-open="true"] .rail { display: block; }
+  [data-review-mode="assessment"] main { order: 2; overflow: visible; flex: none; }
+  [data-review-mode="assessment"] .notice { order: 1; }
+  [data-review-mode="assessment"] .assessment-board { display: block; height: auto; }
+  [data-review-mode="assessment"] .assessment-source, [data-review-mode="assessment"] .assessment-inspector { overflow: visible; margin-bottom: 0.65rem; }
+  [data-review-mode="assessment"] .assessment-source-scroll, [data-review-mode="assessment"] .assessment-inspector-scroll { overflow: visible; }
+  [data-review-mode="assessment"] .assessment-jump { display: inline-flex; align-items: center; min-height: 44px; font-size: 0.78rem; }
+  [data-review-mode="assessment"] .assessment-overview { height: auto; }
+}

@@ -1,0 +1,832 @@
+{
+  "schema": "prose/assessment-input@1",
+  "title": "Ten passages · evidence and explanation",
+  "reader": {
+    "language": "en-US",
+    "schoolGrade": 9,
+    "profile": "Average U.S. high school freshman",
+    "priorKnowledge": "Introductory topic knowledge; can compare simple quantities. No specialist statistics or public-policy knowledge assumed.",
+    "task": "Independently identify and explain each passage’s main claim using evidence it supplies.",
+    "supports": [
+      "Definitions, notes and prompts explicitly included in each supplied passage. No teacher assistance assumed."
+    ]
+  },
+  "passages": [
+    {
+      "id": "patterns",
+      "title": "A pattern is not a cause",
+      "text": "In a fictional survey at one school, students who chose an after-school reading club also reported reading more books than other students. The survey shows a pattern: club members reported more reading. It does not show that the club caused the difference. Students who already enjoyed books may have been more likely to join.\n\nTo investigate the club’s effect, researchers would need more information about the students and how the groups were formed. For now, the result supports a limited claim about what these students reported, rather than a claim that joining the club will make any student read more.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "ready",
+        "summary": "Ready for independent identification and explanation of the main claim: the fictional finding and an alternative explanation are explicit.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "ready",
+            "evidence": [
+              "a pattern: club members reported more reading"
+            ],
+            "reason": "The general term is explained in the sentence.",
+            "action": "Retain the local explanation."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "ready",
+            "evidence": [
+              "Students who already enjoyed books may have been more likely to join."
+            ],
+            "reason": "The actor and the tentative relationship are clear.",
+            "action": "Retain “may” and the named students."
+          },
+          {
+            "criterion": "organization",
+            "rating": "ready",
+            "evidence": [
+              "To investigate the club’s effect"
+            ],
+            "reason": "The second paragraph moves explicitly from the finding to what further investigation needs.",
+            "action": "Keep the paragraph transition."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "ready",
+            "evidence": [
+              "a fictional survey at one school"
+            ],
+            "reason": "The scope is supplied; no specialist study design is needed to explain the limited claim.",
+            "action": "Keep the fictional label and local scope."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "ready",
+            "evidence": [
+              "It does not show that the club caused the difference."
+            ],
+            "reason": "The central distinction is stated and supported by an alternative explanation.",
+            "action": "Retain the distinction between observation and cause."
+          },
+          {
+            "criterion": "task",
+            "rating": "ready",
+            "evidence": [
+              "rather than a claim that joining the club will make any student read more"
+            ],
+            "reason": "The closing contrast supports explaining the claim without reducing the intellectual goal.",
+            "action": "Keep the qualified conclusion."
+          }
+        ],
+        "proposals": [],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "dense-language",
+      "title": "A finding behind dense language",
+      "text": "The juxtaposition of participation status and self-reported reading frequency in the fictional survey constitutes an association whose causal interpretation remains underdetermined. Given the nonrandom allocation of participants and the plausible preexistence of differences in reading motivation, attribution of the observed differential to the program itself is unwarranted.\n\nThe result therefore warrants descriptive reporting while additional evidence about recruitment, prior reading habits, and the comparison group is sought.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "revise",
+        "summary": "Revise before independent use. Dense nominal phrases and unexplained study-design language obscure an appropriate evidence-to-claim distinction.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "substantial",
+            "evidence": [
+              "causal interpretation remains underdetermined"
+            ],
+            "reason": "Several abstract terms carry the central point without explanation.",
+            "action": "Explain the causal limit in familiar language while retaining the idea."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "substantial",
+            "evidence": [
+              "Given the nonrandom allocation of participants and the plausible preexistence of differences in reading motivation, attribution of the observed differential to the program itself is unwarranted."
+            ],
+            "reason": "The long opening condition delays the claim and hides actors in nouns.",
+            "action": "Name the students and state the claim before or after a short explicit reason."
+          },
+          {
+            "criterion": "organization",
+            "rating": "light",
+            "evidence": [
+              "The result therefore warrants descriptive reporting"
+            ],
+            "reason": "The conclusion follows the limitation, but “therefore” connects two dense claims.",
+            "action": "Make the link explicit in concrete terms."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "substantial",
+            "evidence": [
+              "nonrandom allocation of participants"
+            ],
+            "reason": "The text assumes knowledge of why group formation matters.",
+            "action": "Supply a supported explanation of selection into the groups."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "light",
+            "evidence": [
+              "plausible preexistence of differences in reading motivation"
+            ],
+            "reason": "An alternative explanation is present but hard to unpack.",
+            "action": "Express the possibility that students differed before the program."
+          },
+          {
+            "criterion": "task",
+            "rating": "substantial",
+            "evidence": [
+              "constitutes an association"
+            ],
+            "reason": "The language adds an access burden unrelated to the main-claim task.",
+            "action": "Retain the reasoning task while revising the language."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "text-edit",
+            "criterion": "vocabulary",
+            "location": "Opening sentence",
+            "description": "State the central limitation directly; this is a proposed local replacement, not a tested adaptation.",
+            "before": "The juxtaposition of participation status and self-reported reading frequency in the fictional survey constitutes an association whose causal interpretation remains underdetermined.",
+            "after": "The fictional survey links participation with reported reading frequency, but it does not establish that participation caused the difference."
+          },
+          {
+            "kind": "content-request",
+            "criterion": "knowledge",
+            "location": "Group formation explanation",
+            "description": "Request an authoritative explanation or supplied study details before adding claims about how participants were recruited."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "unclear-referents",
+      "title": "Who reached the decision?",
+      "text": "At a fictional school meeting, the students brought a request to the committee after the teachers had revised it. They said it should change because it had been unclear. This made them question whether they should support it.\n\nThe next week, the committee asked for a new version of the request. The passage does not identify who wanted each change or what wording caused the disagreement.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "revise",
+        "summary": "Revise before use: unclear referents prevent a reliable explanation of who requested a change and why.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "ready",
+            "evidence": [
+              "asked for a new version of the request"
+            ],
+            "reason": "The ordinary vocabulary is sufficient for the stated task.",
+            "action": "Keep familiar, precise wording."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "substantial",
+            "evidence": [
+              "They said it should change because it had been unclear."
+            ],
+            "reason": "Both “they” and “it” have competing referents.",
+            "action": "Ask the author to name the actor and the object of each change."
+          },
+          {
+            "criterion": "organization",
+            "rating": "light",
+            "evidence": [
+              "The next week"
+            ],
+            "reason": "Chronology is explicit, but the unresolved first paragraph weakens continuity.",
+            "action": "Keep the time cue after clarifying the actors."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "ready",
+            "evidence": [
+              "At a fictional school meeting"
+            ],
+            "reason": "The school setting supplies enough context to identify the stated events.",
+            "action": "Retain the fictional setting."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "substantial",
+            "evidence": [
+              "This made them question whether they should support it."
+            ],
+            "reason": "The chain of reasons cannot be reconstructed from the stated referents.",
+            "action": "Clarify whose reason led to whose decision."
+          },
+          {
+            "criterion": "task",
+            "rating": "substantial",
+            "evidence": [
+              "does not identify who wanted each change"
+            ],
+            "reason": "The passage itself names a gap that prevents explaining the decision.",
+            "action": "Treat the gap as an author query rather than guessing."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "content-request",
+            "criterion": "syntax",
+            "location": "First paragraph",
+            "description": "Ask the author who “they” and “them” identify, and whether each “it” is the request, wording, or another object. Revise only after those facts are supplied."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "context-gloss",
+      "title": "A term explained where it appears",
+      "text": "In this fictional town, the council has a quorum: enough members are present for the council to conduct its official business. The town’s rule requires at least five of its nine council members to attend. Six members arrive, so the meeting can proceed.\n\nA quorum does not decide whether a proposal will pass. It only answers whether enough members are present to conduct business. To explain the meeting’s status, compare the attendance with the town’s stated rule; do not treat attendance as a vote on the proposal.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "ready",
+        "summary": "Ready under the declared task. The unfamiliar term has a local definition and the passage distinguishes attendance from a vote.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "ready",
+            "evidence": [
+              "a quorum: enough members are present"
+            ],
+            "reason": "The essential term is defined at first use.",
+            "action": "Keep the term and definition together."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "ready",
+            "evidence": [
+              "Six members arrive, so the meeting can proceed."
+            ],
+            "reason": "The subject, count and consequence are explicit.",
+            "action": "Retain the causal connector."
+          },
+          {
+            "criterion": "organization",
+            "rating": "ready",
+            "evidence": [
+              "A quorum does not decide whether a proposal will pass."
+            ],
+            "reason": "The second paragraph resolves a likely confusion after the example.",
+            "action": "Keep the definition-example-limitation order."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "ready",
+            "evidence": [
+              "The town’s rule requires at least five of its nine council members to attend."
+            ],
+            "reason": "The invented rule and required quantities are supplied.",
+            "action": "Retain the fictional scope; do not generalize to actual council law."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "ready",
+            "evidence": [
+              "It only answers whether enough members are present to conduct business."
+            ],
+            "reason": "The passage explicitly bounds the concept.",
+            "action": "Retain the distinction."
+          },
+          {
+            "criterion": "task",
+            "rating": "ready",
+            "evidence": [
+              "compare the attendance with the town’s stated rule"
+            ],
+            "reason": "The directions support explaining the stated main claim.",
+            "action": "Keep the comparison instruction."
+          }
+        ],
+        "proposals": [],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "unstated-prerequisite",
+      "title": "A conclusion with a missing prerequisite",
+      "text": "In a fictional classroom exercise, the estimated difference between two groups is described as statistically significant. The report then announces that the new method is an important improvement and should replace the old one.\n\nNo effect size, uncertainty interval, study design, or information about the task is supplied. Students are asked to explain why the significance result proves that the new method is useful.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "revise",
+        "summary": "Revise the claim and task before use. The passage asks readers to treat a significance label as proof of practical usefulness despite missing evidence.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "substantial",
+            "evidence": [
+              "statistically significant"
+            ],
+            "reason": "A specialist term is essential and undefined.",
+            "action": "Request an accurate contextual definition."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "ready",
+            "evidence": [
+              "The report then announces"
+            ],
+            "reason": "The actor and the sequence are clear.",
+            "action": "Keep the named report as the source of the claim."
+          },
+          {
+            "criterion": "organization",
+            "rating": "ready",
+            "evidence": [
+              "No effect size, uncertainty interval, study design, or information about the task is supplied."
+            ],
+            "reason": "The second paragraph explicitly identifies missing information.",
+            "action": "Keep the evidence gap visible."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "major",
+            "evidence": [
+              "No effect size, uncertainty interval, study design"
+            ],
+            "reason": "The proposed explanation assumes statistical knowledge and unavailable evidence.",
+            "action": "Supply prerequisite instruction and the missing study details before this task."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "major",
+            "evidence": [
+              "proves that the new method is useful"
+            ],
+            "reason": "The requested inference is unsupported by the information supplied.",
+            "action": "Replace the proof claim with a question about what further evidence is needed."
+          },
+          {
+            "criterion": "task",
+            "rating": "major",
+            "evidence": [
+              "Students are asked to explain why the significance result proves"
+            ],
+            "reason": "The task demands an unjustified conclusion.",
+            "action": "Revise the task while preserving evidence-based reasoning."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "text-edit",
+            "criterion": "task",
+            "location": "Final sentence",
+            "description": "Ask for evaluation of the gap instead of endorsement of the claim.",
+            "before": "Students are asked to explain why the significance result proves that the new method is useful.",
+            "after": "Students are asked to identify what further evidence would be needed to judge whether the new method is useful."
+          },
+          {
+            "kind": "content-request",
+            "criterion": "knowledge",
+            "location": "Statistical claim",
+            "description": "Obtain an authoritative explanation of the reported result and actual study details before drafting additional statistical instruction."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "sequence",
+      "title": "A process in the wrong order",
+      "text": "In a fictional workshop, the final decision is to repeat a trial because the measurements disagree. Before that decision, the class had compared the two measurements. The class had first measured the same object twice, using the same instrument.\n\nThe activity asks readers to explain the sequence from collecting measurements to deciding what to do next. It gives the events in reverse order without a reason for that choice.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "revise",
+        "summary": "A local organization change would support the independent process-explanation task. The reverse order adds avoidable reconstruction.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "ready",
+            "evidence": [
+              "repeat a trial because the measurements disagree"
+            ],
+            "reason": "The basic action and reason use accessible language.",
+            "action": "Keep the reason for repeating."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "light",
+            "evidence": [
+              "Before that decision"
+            ],
+            "reason": "The time reference is resolvable but requires looking backward.",
+            "action": "Use direct chronological transitions for this procedural task."
+          },
+          {
+            "criterion": "organization",
+            "rating": "substantial",
+            "evidence": [
+              "The class had first measured the same object twice"
+            ],
+            "reason": "The initial event comes last, forcing readers to reorder the process.",
+            "action": "Present measurement, comparison, then decision."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "ready",
+            "evidence": [
+              "using the same instrument"
+            ],
+            "reason": "The activity supplies enough setup to explain the stated sequence without specialist knowledge.",
+            "action": "Retain the common instrument condition."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "ready",
+            "evidence": [
+              "because the measurements disagree"
+            ],
+            "reason": "The deciding reason is explicit.",
+            "action": "Preserve the disagreement as the reason for repeating, without inventing its cause."
+          },
+          {
+            "criterion": "task",
+            "rating": "light",
+            "evidence": [
+              "explain the sequence from collecting measurements to deciding"
+            ],
+            "reason": "The task is clear but conflicts with the presentation order.",
+            "action": "Align the order with the task."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "text-edit",
+            "criterion": "organization",
+            "location": "First paragraph",
+            "description": "Put the stated events in the order required by the task.",
+            "before": "In a fictional workshop, the final decision is to repeat a trial because the measurements disagree. Before that decision, the class had compared the two measurements. The class had first measured the same object twice, using the same instrument.",
+            "after": "In a fictional workshop, the class measured the same object twice, using the same instrument. The class then compared the two measurements. Because the measurements disagreed, the class decided to repeat the trial."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "missing-figure",
+      "title": "An argument whose figure is missing",
+      "text": "The fictional report compares two routes through the park. As Figure 1 shows, the first route has the greater change after the intervention. This is the main reason the author recommends it.\n\nFigure 1 and its caption are not included in this excerpt. The directions ask readers to explain the author’s main claim using the values in the figure.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "insufficient-context",
+        "summary": "The essential figure is missing, so the value-based explanation task cannot be judged or completed from this excerpt.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "light",
+            "evidence": [
+              "after the intervention"
+            ],
+            "reason": "The term is not explained in the excerpt.",
+            "action": "Request the report’s description of the intervention."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "light",
+            "evidence": [
+              "the author recommends it"
+            ],
+            "reason": "The first route is the likely referent, but naming it would reduce ambiguity.",
+            "action": "Name the recommended route when the figure and claim are confirmed."
+          },
+          {
+            "criterion": "organization",
+            "rating": "not-assessed",
+            "evidence": [
+              "Figure 1 and its caption are not included"
+            ],
+            "reason": "The relationship between prose, values and caption cannot be inspected.",
+            "action": "Obtain the complete figure and caption."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "not-assessed",
+            "evidence": [
+              "values in the figure"
+            ],
+            "reason": "Units, scale and needed graph-reading knowledge are unavailable.",
+            "action": "Inspect the supplied figure before specifying prerequisites."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "not-assessed",
+            "evidence": [
+              "the greater change"
+            ],
+            "reason": "The magnitude and basis of the comparison cannot be checked.",
+            "action": "Read the values and intervention details before judging the inference."
+          },
+          {
+            "criterion": "task",
+            "rating": "major",
+            "evidence": [
+              "using the values in the figure"
+            ],
+            "reason": "The task requires essential material absent from the supplied excerpt.",
+            "action": "Supply the figure or change the task explicitly."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "content-request",
+            "criterion": "reasoning",
+            "location": "Figure 1 and caption",
+            "description": "Supply the figure, caption, units, legend and intervention details. Reassess this complete learner-facing material; do not infer values from the prose."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "viewpoint",
+      "title": "A narrator who knows less than the reader",
+      "text": "When the envelope arrived in this fictional scene, Mara left it unopened on the table. “There is nothing important in it,” she told her brother. He looked at the official seal, then quietly moved the envelope away from the spilled tea.\n\nThe narrator does not reveal what the envelope contains. Readers are asked to explain what the scene suggests about Mara’s certainty, using the details that are actually present rather than inventing the message.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "ready",
+        "summary": "Ready for the stated evidence-based explanation task. The scene preserves useful ambiguity and the directions constrain unsupported inference.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "light",
+            "evidence": [
+              "official seal"
+            ],
+            "reason": "Some readers may need the document meaning of “seal.”",
+            "action": "If needed, gloss it as an identifying official mark without inventing the sender."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "ready",
+            "evidence": [
+              "He looked at the official seal, then quietly moved the envelope"
+            ],
+            "reason": "The brother’s actions and their sequence are clear.",
+            "action": "Retain the sequence."
+          },
+          {
+            "criterion": "organization",
+            "rating": "ready",
+            "evidence": [
+              "The narrator does not reveal what the envelope contains."
+            ],
+            "reason": "The closing paragraph explicitly distinguishes scene evidence from unavailable information.",
+            "action": "Keep that distinction."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "ready",
+            "evidence": [
+              "moved the envelope away from the spilled tea"
+            ],
+            "reason": "The action supplies a concrete clue without requiring specialist background.",
+            "action": "Do not add a speculative motive."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "ready",
+            "evidence": [
+              "rather than inventing the message"
+            ],
+            "reason": "The task requires bounded inference and leaves the central ambiguity intact.",
+            "action": "Preserve the unseen contents."
+          },
+          {
+            "criterion": "task",
+            "rating": "ready",
+            "evidence": [
+              "explain what the scene suggests about Mara’s certainty"
+            ],
+            "reason": "The task supports appropriate inference without demanding a single invented answer.",
+            "action": "Accept explanations grounded in the available details."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "support",
+            "criterion": "vocabulary",
+            "location": "Official seal",
+            "description": "An optional local gloss may help readers unfamiliar with the document meaning of “seal.” Keep the contents and sender of the envelope unknown."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "named-supports",
+      "title": "A comparison that needs a brief gloss",
+      "text": "In a fictional budget exercise, the class compares a fixed cost with a variable cost. The first stays the same when the number of participants changes; the second changes with participation. The worksheet lists a single room fee and a per-person materials charge.\n\nReaders must explain which charge changes as more people join. A margin note, available in this exercise, defines “per-person” as “for each person” and asks readers to connect each definition to one listed charge.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "supported",
+        "summary": "Suitable with the named margin note. The definitions and targeted prompt support an independent explanation after readers use the provided gloss.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "light",
+            "evidence": [
+              "per-person materials charge"
+            ],
+            "reason": "The compact modifier carries the changing-cost relationship.",
+            "action": "Use the provided margin gloss."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "ready",
+            "evidence": [
+              "The first stays the same"
+            ],
+            "reason": "The paired referents follow the named fixed and variable costs immediately.",
+            "action": "Keep the parallel comparison."
+          },
+          {
+            "criterion": "organization",
+            "rating": "ready",
+            "evidence": [
+              "connect each definition to one listed charge"
+            ],
+            "reason": "The closing direction links the definitions to the examples.",
+            "action": "Keep the linking prompt."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "light",
+            "evidence": [
+              "defines “per-person” as “for each person”"
+            ],
+            "reason": "The supplied gloss resolves the key quantity relationship without assuming it.",
+            "action": "Ensure the margin note is present in the published material."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "ready",
+            "evidence": [
+              "changes as more people join"
+            ],
+            "reason": "The requested inference follows directly from the definitions.",
+            "action": "Retain the explanation task, not only a matching label."
+          },
+          {
+            "criterion": "task",
+            "rating": "ready",
+            "evidence": [
+              "A margin note, available in this exercise"
+            ],
+            "reason": "The needed support is explicitly part of the declared material.",
+            "action": "Judge the complete exercise with this note."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "support",
+            "criterion": "vocabulary",
+            "location": "Margin note",
+            "description": "Retain the stated per-person gloss and linking prompt with the passage. The recommendation depends on this included support, not an assumed teacher explanation."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    },
+    {
+      "id": "qualification",
+      "title": "Keeping a necessary qualification",
+      "text": "A fictional student newspaper reports that three interviewees preferred the new lunch schedule. Those interviews show what these three people said. They do not establish what most students prefer, because the report does not explain how the interviewees were selected.\n\nReaders are asked to explain the strongest claim supported by the interviews. A revision that says “students prefer the new schedule” would be shorter, but it would erase the limit on the evidence. The qualification belongs in an accurate explanation, even when the wording is made easier to read.",
+      "report": {
+        "origin": "agent",
+        "recommendation": "ready",
+        "summary": "Ready for the declared task. The passage explains the evidence limit and shows why a shorter version would change the claim.",
+        "criteria": [
+          {
+            "criterion": "vocabulary",
+            "rating": "light",
+            "evidence": [
+              "The qualification belongs"
+            ],
+            "reason": "“Qualification” may need a brief local gloss as a limit on a claim.",
+            "action": "Tie the term to the stated three-person limit."
+          },
+          {
+            "criterion": "syntax",
+            "rating": "ready",
+            "evidence": [
+              "They do not establish what most students prefer, because"
+            ],
+            "reason": "The sentence explicitly connects the limit with its reason.",
+            "action": "Keep the causal connection when revising."
+          },
+          {
+            "criterion": "organization",
+            "rating": "ready",
+            "evidence": [
+              "A revision that says"
+            ],
+            "reason": "The second paragraph introduces a concrete counterexample after the main limitation.",
+            "action": "Keep the claim-limit-counterexample progression."
+          },
+          {
+            "criterion": "knowledge",
+            "rating": "ready",
+            "evidence": [
+              "the report does not explain how the interviewees were selected"
+            ],
+            "reason": "The relevant evidence gap is supplied without demanding specialist sampling terminology.",
+            "action": "Retain the selection gap."
+          },
+          {
+            "criterion": "reasoning",
+            "rating": "ready",
+            "evidence": [
+              "it would erase the limit on the evidence"
+            ],
+            "reason": "The consequence of the shorter claim is explicit.",
+            "action": "Preserve the distinction between three interviewees and most students."
+          },
+          {
+            "criterion": "task",
+            "rating": "ready",
+            "evidence": [
+              "the strongest claim supported by the interviews"
+            ],
+            "reason": "The task retains the intellectual goal of evaluating evidence.",
+            "action": "Keep the evidence-based task."
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "text-edit",
+            "criterion": "vocabulary",
+            "location": "Final sentence",
+            "description": "Keep the essential limit while explaining the term in context.",
+            "before": "The qualification belongs in an accurate explanation, even when the wording is made easier to read.",
+            "after": "That qualification—the limit on what the interviews show—belongs in an accurate explanation, even when the wording is made easier to read."
+          }
+        ],
+        "checks": [
+          "Agent qualitative review of the complete supplied text; no numerical readability diagnostic was run."
+        ],
+        "limits": [
+          "Original fictional demonstration text and illustrative editorial assessment; no independent educator review or intended-reader testing.",
+          "The recommendation applies only to the stated reader, task and included material."
+        ]
+      }
+    }
+  ]
+}

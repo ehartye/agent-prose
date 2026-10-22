@@ -184,7 +184,7 @@ describe('vendored fonts', () => {
 
   it('names a font file that is missing from the runtime as E_SERVER at start', async () => {
     const dir = tmp('prose-rt-');
-    for (const f of ['index.html', 'app.js', 'style.css', 'review.js', 'annotations.js', 'comparisons.js']) writeFileSync(join(dir, f), 'x');
+    for (const f of ['index.html', 'app.js', 'style.css', 'review.js', 'annotations.js', 'comparisons.js', 'assessments.js']) writeFileSync(join(dir, f), 'x');
     mkdirSync(join(dir, 'fonts'));
     const server = new ReadingServer({ host: '127.0.0.1', port: 0, persist: false, runtimeDir: dir });
     const err = await server.listen().catch(e => e);
@@ -217,16 +217,16 @@ describe('static pages', () => {
     expect(html).not.toMatch(/\son[a-z]+\s*=/i);
     expect(html).not.toMatch(/javascript:/i);
     const scripts = [...html.matchAll(/<script\b[^>]*>/gi)].map(m => m[0]);
-    expect(scripts).toHaveLength(4);
+    expect(scripts).toHaveLength(5);
     expect(scripts.at(-1)).toMatch(/src="\/app\.js"/);
-    expect(html.match(/(?:src|href)="[^"]*"/g)!.sort()).toEqual(['href="/fonts/OFL-Atkinson.txt"', 'href="/fonts/OFL-CourierPrime.txt"', 'href="/style.css"', 'src="/annotations.js"', 'src="/app.js"', 'src="/comparisons.js"', 'src="/review.js"']);
+    expect(html.match(/(?:src|href)="[^"]*"/g)!.sort()).toEqual(['href="/fonts/OFL-Atkinson.txt"', 'href="/fonts/OFL-CourierPrime.txt"', 'href="/style.css"', 'src="/annotations.js"', 'src="/app.js"', 'src="/assessments.js"', 'src="/comparisons.js"', 'src="/review.js"']);
   });
 
   it('never reads anything outside the allow-list: traversal, encodings, near-misses and the runtime path all fail', async () => {
     const dir = tmp('prose-rt-');
     const run = join(dir, 'reading');
     mkdirSync(run);
-    for (const f of ['index.html', 'app.js', 'style.css', 'review.js', 'annotations.js', 'comparisons.js']) writeFileSync(join(run, f), `served ${f}`);
+    for (const f of ['index.html', 'app.js', 'style.css', 'review.js', 'annotations.js', 'comparisons.js', 'assessments.js']) writeFileSync(join(run, f), `served ${f}`);
     mkdirSync(join(run, 'fonts'));
     for (const f of FONT_FILES) writeFileSync(join(run, 'fonts', f), `served ${f}`);
     writeFileSync(join(run, 'fonts', 'secret.txt'), 'CANARY-FONTS');

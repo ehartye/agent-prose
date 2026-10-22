@@ -40,10 +40,11 @@ import { removedView } from '../strike/apply.ts';
 import { planRemoval, verifiedLines } from '../strike/plan.ts';
 import { MAX_NOTE, STRIKE_REASONS, foldStrikes, parseStrikeLog, strikeKey, undoableApply, type StrikeEvent } from '../strike/store.ts';
 import { comparisonExists, readComparison, editComparison, chooseComparison } from '../comparison.ts';
+import { assessmentExists, readAssessmentBatch, dispositionAssessment } from '../assessment.ts';
 
 export const DEFAULT_PORT = 47311;
 /** Bump when routes change: a running server of another API level is replaced, not reused. */
-export const SERVER_API = 7;
+export const SERVER_API = 9;
 const PROBE_MS = 1500;
 /** Connections the HTTP server accepts at once, and how long a client may take to send headers, a whole request, or sit idle. */
 const MAX_CONNECTIONS = 200;
@@ -565,6 +566,8 @@ export class ReadingServer {
     this.projects = (opts.projects ?? []).map(p => resolve(p));
     this.routes = [
       { method: 'GET', re: /^\/api\/comparison\/([a-z0-9-]+)$/, handler: c => this.json(c.res, 200, readComparison(this.findComparison(c.match[1]), c.match[1])) },
+      { method: 'GET', re: /^\/api\/assessment\/([a-z0-9-]+)$/, handler: c => this.json(c.res, 200, readAssessmentBatch(this.findAssessment(c.match[1]), c.match[1])) },
+      { method: 'POST', re: /^\/api\/assessment\/([a-z0-9-]+)\/disposition$/, handler: c => this.postAssessmentDisposition(c) },
       { method: 'POST', re: /^\/api\/comparison\/([a-z0-9-]+)\/edit$/, handler: c => this.postComparison(c, 'edit') },
       { method: 'POST', re: /^\/api\/comparison\/([a-z0-9-]+)\/choose$/, handler: c => this.postComparison(c, 'choose') },
       { method: 'GET', re: /^\/api\/sessions$/, handler: c => this.json(c.res, 200, { sessions: this.listSessions() }) },
@@ -604,6 +607,19 @@ export class ReadingServer {
   private findComparison(id: string): string {
     for (const root of this.knownProjects()) if (comparisonExists(root, id)) return root;
     throw new ProseError('E_NOT_FOUND', 'No such reading comparison');
+  }
+
+  private findAssessment(id: string): string {
+    for (const root of this.knownProjects()) if (assessmentExists(root, id)) return root;
+    throw new ProseError('E_NOT_FOUND', 'No such passage assessment batch');
+  }
+
+  private async postAssessmentDisposition(c: Ctx): Promise<void> {
+    const root = this.findAssessment(c.match[1]);
+    const text = await readBody(c.req, MAX_BODY);
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { throw new ProseError('E_USAGE', 'The request body is not valid JSON'); }
+    this.json(c.res, 200, await dispositionAssessment(root, c.match[1], body));
   }
 
   private async postComparison(c: Ctx, kind: 'edit' | 'choose'): Promise<void> {
@@ -1471,7 +1487,7 @@ export class ReadingServer {
     res.end(JSON.stringify(body));
   }
 
-  private page(res: ServerResponse, key: PageKey, mode: 'reading' | 'comparison' = 'reading'): void {
+  private page(res: ServerResponse, key: PageKey, mode: 'reading' | 'comparison' | 'assessment' = 'reading'): void {
     res.writeHead(200, { 'content-type': PAGES[key].type });
     const page = this.pages.get(key);
     res.end(key === 'index' && mode !== 'reading' ? reviewModePage(page!.toString('utf8'), mode) : page);
@@ -1524,10 +1540,10 @@ export class ReadingServer {
       return this.asset(res, path);
     }
     if (!path.startsWith('/api/')) {
-      const key: PageKey | null = path === '/' || /^\/(?:s|q|c)\/[a-z0-9-]+$/.test(path) ? 'index' : Object.hasOwn(REVIEW_ROUTES,path) ? REVIEW_ROUTES[path] : null;
+      const key: PageKey | null = path === '/' || /^\/(?:s|q|c|a)\/[a-z0-9-]+$/.test(path) ? 'index' : Object.hasOwn(REVIEW_ROUTES,path) ? REVIEW_ROUTES[path] : null;
       if (!key) throw NOT_FOUND();
       if (method !== 'GET') throw methodNotAllowed();
-      return this.page(res, key, path.startsWith('/c/') ? 'comparison' : 'reading');
+      return this.page(res, key, path.startsWith('/a/') ? 'assessment' : path.startsWith('/c/') ? 'comparison' : 'reading');
     }
 
     const token = query.get('t') ?? (req.headers['x-prose-token'] as string | undefined) ?? '';
@@ -1622,3 +1638,4 @@ export class ReadingServer {
 export const sessionUrl = (info: Pick<ServerInfo, 'url' | 'token'>, id: string) => `${info.url}/s/${id}?t=${info.token}`;
 export const queueUrl = (info: Pick<ServerInfo, 'url' | 'token'>, id: string) => `${info.url}/q/${id}?t=${info.token}`;
 export const comparisonUrl = (info: Pick<ServerInfo, 'url' | 'token'>, id: string) => `${info.url}/c/${id}?t=${info.token}`;
+export const assessmentUrl = (info: Pick<ServerInfo, 'url' | 'token'>, id: string) => `${info.url}/a/${id}?t=${info.token}`;

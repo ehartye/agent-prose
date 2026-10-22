@@ -18,6 +18,7 @@ import { registerRenderCommands } from './commands/render.ts';
 import { registerDialogCommands } from './commands/dialog.ts';
 import { registerAnnotationCommands } from './commands/annotation.ts';
 import { registerCompareCommands } from './commands/compare.ts';
+import { registerAssessmentCommands } from './commands/assessment.ts';
 
 export function buildProgram(io: Io): Command {
   const program = new Command('prose')
@@ -41,6 +42,7 @@ export function buildProgram(io: Io): Command {
   registerDialogCommands(program, io);
   registerAnnotationCommands(program, io);
   registerCompareCommands(program, io);
+  registerAssessmentCommands(program, io);
   return program;
 }
 

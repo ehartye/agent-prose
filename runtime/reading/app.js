@@ -2,7 +2,7 @@
 // reach the page through textContent or createTextNode (see review.js), never as markup.
 (function () {
   'use strict';
-  if (!window.__READING_TEST__ && ['annotations', 'comparison'].includes(document.body.dataset.reviewMode)) { window.ProseReview.startMode(document.body.dataset.reviewMode); return; }
+  if (!window.__READING_TEST__ && ['annotations', 'comparison', 'assessment'].includes(document.body.dataset.reviewMode)) { window.ProseReview.startMode(document.body.dataset.reviewMode); return; }
 
   // ---- pure helpers (exposed to tests through window.__reading when window.__READING_TEST__ is set) ----
 
