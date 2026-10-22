@@ -63,6 +63,13 @@ edits or teaching supports. It leaves the source unchanged. Ratings are editoria
 no aggregate grade score or claim of student comprehension. See the [assessment workflow and original
 worked example](skills/prose-reading-level/references/assessment.md). This mode is included in 0.12.0.
 
+In the development checkout, also ask: “Evaluate these ten passages for an average U.S. high school
+freshman and open a batch review.” The [batch workflow](skills/prose-reading-level/references/assessment-batch.md)
+uses a passage selection panel beside the selected source and its rubric, with a batch overview,
+independent scrolling and the shared appearance settings. The agent supplies the judgments;
+`prose assessment create/open/show` validates, snapshots and displays them. Source text stays unchanged.
+This batch workbench is not included in the published 0.12.0 runtime.
+
 Saved Markdown can carry a reader profile. The textbook form also requires teaching goals:
 
 ```yaml

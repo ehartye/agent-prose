@@ -1,7 +1,7 @@
 ---
 name: prose-reading-level
-description: Assess passage suitability, give evidence-linked rubric ratings and propose changes for U.S. grades 4–12 or a specified reader profile. Also draft, adapt and compare reading-level versions, including writing for an average U.S. high school freshman or ninth grader.
-when_to_use: Use when asked whether a passage suits a school grade, to evaluate reading-level suitability, rate reading suitability against a rubric, suggest changes for specified reader proficiency, write or adapt for a school grade or reading profile, or compare step-down/step-up versions. Teaching also uses prose-teach; an abstract or procedure keeps its genre skill. Grade-one decodability and CEFR or Lexile certification need distinct support.
+description: Assess grade-level suitability for one passage or a batch, with rubric ratings, evidence and proposed changes. Use for a passage selection panel or writing, adapting and comparing U.S. grades 4–12 prose, including an average U.S. high school freshman audience.
+when_to_use: Use when asked to evaluate ten passages, jump between passage assessments, assess a passage against a reading rubric, suggest changes for specified reader proficiency, write for a school grade or reading profile, or compare step-down/step-up versions. Teaching also uses prose-teach; an abstract or procedure keeps its genre skill. Grade-one decodability and CEFR or Lexile certification need distinct support.
 ---
 # prose-reading-level
 
@@ -21,6 +21,11 @@ For evaluating a passage's reading suitability or giving reader-specific rubric 
 leaves the source unchanged. Report six evidence-linked criteria, anchored support needs, a conditional
 recommendation and prioritized proposals. These are editorial judgments, not a validated grade score.
 Do not total or average them into grade placement. Save a report only when requested.
+
+For multiple passages or a passage selection panel, read [the batch assessment workflow](references/assessment-batch.md)
+as well. Assess each passage independently against the shared reader/task, then use `prose assessment`
+to open the reports in the shared review workbench. A requested workbench authorizes its local snapshots;
+ordinary inline assessments do not need files. The agent supplies judgments; the CLI validates and displays them.
 
 Read [the adaptation reference](references/reading-level.md) before drafting or revising.
 [Source-backed examples](../prose-teach/references/examples.md) show actual assessed material and

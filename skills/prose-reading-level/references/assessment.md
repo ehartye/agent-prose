@@ -85,7 +85,8 @@ Check a later revision against the original meaning inventory and intended quest
 
 Qualitative assessment does not require a numerical estimate. If requested or useful, run existing
 `prose measure <file>` and `prose lint <file>` and inspect their actual results. These commands do
-not perform this rubric review. Do not invent a `prose assess` command.
+not perform this rubric review. `prose assessment` stores and displays supplied reports; it does not
+evaluate prose or generate judgments. Do not invent a `prose assess` command.
 
 Use a valid existing draft unchanged. If a passage lacks supported metadata, an explicit temporary
 analysis copy can wrap its unchanged text in supported Markdown metadata, for example `form: academic`
@@ -116,7 +117,7 @@ Lead with the conditional recommendation and decisive reason. Then provide:
 Write an ordinary Markdown response; save only when requested. Distinguish agent review, independent
 reviewer, educator review and intended-reader testing. Claim those checks only if they happened.
 For a requested comparison after revision, use separate versions in the existing shared comparison
-workbench. The rubric adds no separate review UI.
+workbench. Multiple passage reports use the batch mode in that same shared review shell.
 
 ## Original worked example
 

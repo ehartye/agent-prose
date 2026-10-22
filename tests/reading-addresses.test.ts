@@ -131,7 +131,7 @@ describe('probe', () => {
     expect(await probe(info({ port: 1 }))).toBe(false);
   });
   it('has the documented defaults', () => {
-    expect(SERVER_API).toBe(7);
+    expect(SERVER_API).toBe(8);
     expect(DEFAULT_PORT).toBe(47311);
   });
 });

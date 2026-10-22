@@ -10,6 +10,7 @@ export const REVIEW_PAGES = {
   review: { file: 'review.js', type: 'text/javascript; charset=utf-8' },
   annotations: { file: 'annotations.js', type: 'text/javascript; charset=utf-8' },
   comparisons: { file: 'comparisons.js', type: 'text/javascript; charset=utf-8' },
+  assessments: { file: 'assessments.js', type: 'text/javascript; charset=utf-8' },
 } as const;
 export type PageKey = keyof typeof REVIEW_PAGES;
 /** The vendored fonts and their licences, by exact request path (a font fetch cannot carry the token header, so these are served without one).
@@ -25,15 +26,15 @@ export const REVIEW_FONTS = {
 export type AssetPath = keyof typeof REVIEW_FONTS;
 
 export const REVIEW_RUNTIME = join(import.meta.dirname, '..', '..', 'runtime', 'reading');
-export const REVIEW_ROUTES: Readonly<Record<string,PageKey>> = Object.freeze({ '/app.js':'app', '/style.css':'style', '/review.js':'review', '/annotations.js':'annotations', '/comparisons.js':'comparisons' });
+export const REVIEW_ROUTES: Readonly<Record<string,PageKey>> = Object.freeze({ '/app.js':'app', '/style.css':'style', '/review.js':'review', '/annotations.js':'annotations', '/comparisons.js':'comparisons', '/assessments.js':'assessments' });
 export const reviewAssetBody=(key:PageKey,body:Buffer):Buffer=>key==='style'?Buffer.concat([body,Buffer.from(annotationHighlightCSS)]):body;
-export function reviewPage(mode: 'reading'|'annotations'|'comparison' = 'reading'): string {
+export function reviewPage(mode: 'reading'|'annotations'|'comparison'|'assessment' = 'reading'): string {
   const page=readFileSync(join(REVIEW_RUNTIME,'index.html'),'utf8');
   return reviewModePage(page, mode);
 }
 /** Apply a mode to the cached shared shell without reading a page per request. */
-export function reviewModePage(page: string, mode: 'reading'|'annotations'|'comparison' = 'reading'): string {
-  return mode === 'reading' ? page : page.replace('<body>', `<body data-review-mode="${mode}">`).replace('<title>Reading</title>', `<title>${mode === 'annotations' ? 'Annotations' : 'Reading comparison'} | Prose review</title>`);
+export function reviewModePage(page: string, mode: 'reading'|'annotations'|'comparison'|'assessment' = 'reading'): string {
+  return mode === 'reading' ? page : page.replace('<body>', `<body data-review-mode="${mode}">`).replace('<title>Reading</title>', `<title>${mode === 'annotations' ? 'Annotations' : mode === 'assessment' ? 'Passage assessment' : 'Reading comparison'} | Prose review</title>`);
 }
 export function reviewAssets(): Map<string,{type:string;body:Buffer}> {
   const result=new Map<string,{type:string;body:Buffer}>();

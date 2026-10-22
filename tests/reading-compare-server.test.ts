@@ -35,7 +35,7 @@ function seedMany(count: number, lines: number, over: { original?: string } = {}
 const variantKeys = (compare: any) => [...new Set(compare.rows.flatMap((r: any) => Object.keys(r.cells ?? {})))].sort();
 
 describe('compare in the session payload', () => {
-  it('shared review asset routes use API level 7 so older servers are replaced', () => { expect(SERVER_API).toBe(7); });
+  it('shared review asset routes use API level 8 so older servers are replaced', () => { expect(SERVER_API).toBe(8); });
 
   it('has rows keyed by candidate index in the lineup, without a Current column when the set has no original', async () => {
     const s = seed();
