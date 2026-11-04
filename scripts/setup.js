@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Install/check the managed runtime; --pdf explicitly installs its paired browser. Usage: node scripts/setup.js [--check] [--json] [--pdf]
+// Install/check the managed runtime; --no-link preserves the optional global CLI.
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectInstallation, installRuntime, installPdfBrowser, inspectPdfBrowser } from './managed-runtime.js';
@@ -8,9 +8,9 @@ class UsageError extends Error {}
 const source = join(dirname(fileURLToPath(import.meta.url)), '..');
 try {
   const args = process.argv.slice(2);
-  if (args.some(arg => !['--check', '--json', '--pdf'].includes(arg))) throw new UsageError('Usage: node scripts/setup.js [--check] [--json] [--pdf]');
+  if (args.some(arg => !['--check', '--json', '--pdf', '--no-link'].includes(arg))) throw new UsageError('Usage: node scripts/setup.js [--check] [--json] [--pdf] [--no-link]');
   if (!args.includes('--check')) {
-    const runtime = installRuntime(source);
+    const runtime = installRuntime(source, { link: !args.includes('--no-link') });
     if (args.includes('--pdf')) installPdfBrowser(runtime.root);
   }
   const report = inspectInstallation(source);
