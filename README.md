@@ -23,6 +23,19 @@ Every command prints JSON (except `--help` and `--version`); failures print `{"e
 
 Run `/agent-prose:prose-setup` after every install or update; it installs the managed runtime
 (Node 24+ required). From a clone, `node scripts/setup.js` does the same.
+Use `node scripts/setup.js --no-link` to install or repair the managed runtime
+without replacing an existing global `prose` command. Plain setup still links by
+default. `node scripts/setup.js --check --json` reports launcher readiness in `ok`;
+`linked`, `linkedVersion` and `warnings` describe the optional global link separately.
+A stale or unavailable global link does not make a healthy managed runtime fail.
+Skills always use `node scripts/run-managed.js`, which selects this plugin's release.
+
+For isolated validation, set `AGENT_PROSE_HOME` to a disposable directory and use
+`--no-link`. Scope `npm_config_prefix` to a disposable directory too when testing
+the default linking behavior (or validating versions before 0.13.1). A temporary
+managed home alone does not isolate the global npm link. `--check` is read-only;
+it accepts `--no-link` as well. Do not run bare `prose` to validate an unlinked release.
+
 For PDF rendering, run `node scripts/setup.js --pdf` to install the paired headless Chromium;
 `--check --pdf --json` verifies it. HTML, Markdown and dialogue JSON exports need no browser.
 

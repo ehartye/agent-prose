@@ -2,7 +2,7 @@
 // Shared by setup and the skill launcher. Runtime selection never uses PATH.
 // The Claude Code plugin cache is a bare git checkout with no node_modules.
 // Setup copies the runtime files to ~/.agent-prose/releases/<key>, installs dependencies there,
-// then links the CLI. Skills run the launcher only.
+// then optionally links the CLI. Skills run the launcher only.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
@@ -130,7 +130,8 @@ export function inspectPdfBrowser(root, { home = managedHome() } = {}) {
   return { installed: existsSync(path), executable: path, repair: 'node scripts/setup.js --pdf' };
 }
 
-export function installRuntime(source, { home = managedHome(), npm = runNpm, checkDependencies: check = checkDependencies } = {}) {
+export function installRuntime(source, { home = managedHome(), npm = runNpm, checkDependencies: check = checkDependencies, link = true } = {}) {
+  if (typeof link !== 'boolean') throw new TypeError('link must be a boolean');
   const runtime = location(source, home);
   mkdirSync(runtime.home, { recursive: true });
   const lock = join(runtime.home, 'setup.lock');
@@ -163,10 +164,12 @@ export function installRuntime(source, { home = managedHome(), npm = runNpm, che
         check(runtime.root);
       }
     }
-    npm(['link', '--omit=dev', '--no-audit', '--no-fund'], { cwd: runtime.root, progress: true });
-    const globalRoot = npm(['root', '--global'], { cwd: runtime.root });
-    const linked = join(globalRoot, NAME);
-    if (!existsSync(linked) || !samePath(realpathSync(linked), realpathSync(runtime.root))) throw new Error('npm link did not select the managed runtime');
+    if (link) {
+      npm(['link', '--omit=dev', '--no-audit', '--no-fund'], { cwd: runtime.root, progress: true });
+      const globalRoot = npm(['root', '--global'], { cwd: runtime.root });
+      const linked = join(globalRoot, NAME);
+      if (!existsSync(linked) || !samePath(realpathSync(linked), realpathSync(runtime.root))) throw new Error('npm link did not select the managed runtime');
+    }
     return runtime;
   } finally {
     closeSync(fd);
@@ -177,21 +180,27 @@ export function installRuntime(source, { home = managedHome(), npm = runNpm, che
 
 export function inspectInstallation(source, { home = managedHome(), npm = runNpm, checkDependencies: check = checkDependencies } = {}) {
   const expected = location(source, home);
-  const report = { ok: false, pluginVersion: expected.version, cliVersion: null, runtimeRoot: expected.root, fingerprint: expected.fingerprint, linked: false, dependencies: false, errors: [] };
+  const report = { ok: false, pluginVersion: expected.version, cliVersion: null, runtimeRoot: expected.root, fingerprint: expected.fingerprint, linked: false, linkedVersion: null, dependencies: false, errors: [], warnings: [] };
   try {
     const runtime = resolveRuntime(source, { home });
     report.cliVersion = runtime.version;
     check(runtime.root); report.dependencies = true;
-    const globalRoot = npm(['root', '--global'], { cwd: runtime.root });
+  } catch (error) { report.errors.push(error.message); }
+  // Optional global command diagnostics must not change launcher readiness.
+  // Use the source cwd so a missing managed release can still report a stale link.
+  try {
+    const globalRoot = npm(['root', '--global'], { cwd: expected.source });
     const linked = join(globalRoot, NAME);
     report.linkedRoot = existsSync(linked) ? realpathSync(linked) : null;
-    report.linked = !!report.linkedRoot && samePath(report.linkedRoot, realpathSync(runtime.root));
-    if (!report.linked) report.errors.push('npm link points elsewhere or is missing; rerun prose-setup');
-    const prefix = npm(['prefix', '--global'], { cwd: runtime.root });
+    report.linked = !!report.linkedRoot && samePath(report.linkedRoot, canonical(expected.root));
+    if (report.linkedRoot) report.linkedVersion = readJson(join(report.linkedRoot, 'package.json')).version ?? null;
+    if (!report.linked) report.warnings.push('Optional global prose link points elsewhere or is missing; skills use the checked launcher. Run setup without --no-link only to replace the global link.');
+    if (report.linkedVersion && report.linkedVersion !== expected.version) report.warnings.push(`Global prose version ${report.linkedVersion} differs from plugin ${expected.version}; use the checked launcher for this plugin.`);
+    const prefix = npm(['prefix', '--global'], { cwd: expected.source });
     report.pathDirectory = process.platform === 'win32' ? prefix : join(prefix, 'bin');
     report.pathConfigured = (process.env.PATH || '').split(delimiter).filter(Boolean).some(path => samePath(resolve(path), resolve(report.pathDirectory)));
     if (!report.pathConfigured) report.pathHint = `Add ${report.pathDirectory} to your user PATH for the optional bare prose command. Skills use the checked launcher regardless of PATH.`;
-  } catch (error) { report.errors.push(error.message); }
-  report.ok = report.dependencies && report.linked && report.errors.length === 0;
+  } catch (error) { report.warnings.push(`Optional global prose link could not be inspected: ${error.message}`); }
+  report.ok = report.dependencies && report.errors.length === 0;
   return report;
 }
