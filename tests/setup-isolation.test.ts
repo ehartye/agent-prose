@@ -91,7 +91,12 @@ it('setup CLI --no-link and --check preserve sentinel global state and the check
     else if(command==='prefix') console.log(${JSON.stringify(f.prefix)});
     else { console.error('unexpected npm mutation: '+command);process.exit(9); }
   `);
-  const env = { ...process.env, AGENT_PROSE_HOME: f.home, npm_config_prefix: f.prefix, npm_execpath: fakeNpm };
+  // npm supplies upper-case variants on Windows. Node passes only the first
+  // case-insensitive key to a child, so remove inherited spellings before
+  // selecting the disposable prefix and fake npm (never the machine's npm).
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+    !['agent_prose_home', 'npm_config_prefix', 'npm_execpath'].includes(key.toLowerCase())));
+  Object.assign(env, { AGENT_PROSE_HOME: f.home, npm_config_prefix: f.prefix, npm_execpath: fakeNpm });
   for (const args of [['--no-link', '--json'], ['--check', '--no-link', '--json']]) {
     const result = spawnSync(process.execPath, [join(root, 'scripts/setup.js'), ...args], { env, encoding: 'utf8' });
     expect(result.status, result.stderr).toBe(0);
